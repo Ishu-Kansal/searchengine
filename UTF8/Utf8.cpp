@@ -31,8 +31,8 @@ size_t IndicatedLength(const Utf8 *p) {
         ++numSet;
         mask >>= 1;
     }
-    if (numSet == 0 || numSet > 6) return 1;
-    return numSet == 1 ? 1 : numSet;
+    if (numSet == 0 || numSet > 6) return -1;
+    return numSet;
 }
 
 // Get the UTF-8 character as a Unicode value.
