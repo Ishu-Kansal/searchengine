@@ -220,42 +220,43 @@ Utf8 ToLower(const Utf8 *a)
 // Case-independent compares.
 int StringCompareI(const Utf8 *a, const Utf8 *b)
 {
-  const Utf8 *aStart = a;
-  const Utf8 *bStart = b;
-  while (*a && *b)
-  {
-    if (IndicatedLength(a) != 1 || IndicatedLength(b) != 1)
-    {
-    }
-    char lower_a = ToLower(a);
-    char lower_b = ToLower(b);
-    if (lower_a != lower_b)
-      return *a - *b;
-    ++a;
-    ++b;
-  }
-  return *a - *b;
+    while (*a && *b)
+        {
+            size_t len_a = IndicatedLength(a);
+            size_t len_b = IndicatedLength(b);
+            Utf8 *temp_a = a;
+            Utf8 *temp_b = b;
+            if (len_a == 1 && len_b == 1)
+                {
+                    temp_a = ToLower(a);
+                    temp_b = ToLower(b);
+                }
+            else if ((len_a != 1 && len_b == 1) || (len_a == 1 && len_b != 1)) return *a - *b;
+            
+            if (*temp_a != *temp_b) return *a - *b;
+        }
+    return *a - *b;
 }
 
 int StringCompareI(const Utf8 *a, const Utf8 *b, size_t N)
 {
-  const Utf8 *aStart = a;
-  const Utf8 *bStart = b;
-  size_t i = 0;
-  while (*a && *b && i++ < N)
-  {
-    if (IndicatedLength(a) != 1 || IndicatedLength(b) != 1)
-    {
-      return StringCompare(aStart, bStart);
-    }
-    char lower_a = ToLower(a);
-    char lower_b = ToLower(b);
-    if (lower_a != lower_b)
-      return *a - *b;
-    ++a;
-    ++b;
-  }
-  return StringCompare(a, b, N);
+    size_t i = 0;
+    while (*a && *b && i++ < N)
+        {
+            size_t len_a = IndicatedLength(a);
+            size_t len_b = IndicatedLength(b);
+            Utf8 *temp_a = a;
+            Utf8 *temp_b = b;
+            if (len_a == 1 && len_b == 1)
+                {
+                    temp_a = ToLower(a);
+                    temp_b = ToLower(b);
+                }
+            else if ((len_a != 1 && len_b == 1) || (len_a == 1 && len_b != 1)) return *a - *b;
+            
+            if (*temp_a != *temp_b) return *a - *b;
+        }
+    return *a - *b;
 }
 
 // Lower-case only Ascii characters < 0x80 except
