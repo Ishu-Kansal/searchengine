@@ -12,13 +12,7 @@
 
 size_t SizeOfUtf8(Unicode c)
 {
-  uint8_t leftmostBit = 0;
-  while (c)
-  {
-    ++leftmostBit;
-    c >>= 1;
-  }
-  return (leftmostBit >= 0) + (leftmostBit > 7) + (leftmostBit > 11);
+  return (c >= 0) + (c > 0x7F) + (c > 0x7FF);
 }
 
 // IndicatedLength looks at the first byte of a Utf8 sequence
@@ -46,7 +40,7 @@ size_t IndicatedLength(const Utf8 *p)
     ++numSet;
     mask >>= 1;
   }
-  if (numSet <= 1)
+  if (numSet < 1 || numSet > 6)
     return 1;
   return numSet;
 >>>>>>> f2d37be (Fixed boundary issues)
@@ -98,17 +92,6 @@ Unicode GetUtf8(const Utf8 *p, const Utf8 *bound)
     return GetUtf8(p);
 }
 
-const Utf8 *FindNext(const Utf8 *p, const Utf8 *bound, size_t length)
-{
-  const Utf8 *start = p + 1;
-  for (size_t i = 1; i < length; ++i, ++start)
-  {
-    if (*start >> 6 != 0b10)
-      return start;
-  }
-  return start;
-}
-
 // NextUtf8 will determine the length of the Utf8 character at p
 // by examining the first byte, then scan forward that amount,
 // stopping early if it encounters an invalid continuation byte
@@ -117,29 +100,6 @@ const Utf8 *FindNext(const Utf8 *p, const Utf8 *bound, size_t length)
 const Utf8 *NextUtf8(const Utf8 *p, const Utf8 *bound)
 {
   const size_t initLength = IndicatedLength(p);
-  switch (initLength)
-  {
-  case 1:
-    return p + 1;
-  case 2:
-    if ((p[0] & 0b00011110) == 0)
-      return FindNext(p, bound, initLength);
-    break;
-  case 3:
-    if ((p[0] == (0b111 << 5)) && ((p[1] >> 5) == 0b100))
-      return FindNext(p, bound, initLength);
-    break;
-  case 4:
-    if (p[0] == 0b11110000 && ((p[1] >> 4) == 0b1000))
-      return FindNext(p, bound, initLength);
-    break;
-  case 5:
-    if (p[0] == 0b11111000 && ((p[1] >> 3) == 0b10000))
-      return FindNext(p, bound, initLength);
-    break;
-  default:
-    break;
-  }
   const Utf8 *curPtr = p + 1;
   for (size_t i = 1; i < initLength; ++i, ++curPtr)
   {
@@ -168,25 +128,24 @@ const Utf8 *PreviousUtf8(const Utf8 *p)
 
 Utf8 *WriteUtf8(Utf8 *p, Unicode c)
 {
-  static const Utf8 block = 0b10000000;
-  size_t length = SizeOfUtf8(c);
-  switch (length)
+  static const Utf8 block = 0b10000000, block_mask = (1 << 6) - 1;
+  if (c >> 11)
   {
-  case 1:
-    *p = static_cast<Utf8>(c);
-    return p + 1;
-  case 2:
-    *p = 0b11000000 | (c >> 6);
-    *(p + 1) = block | (c & ((1 << 6) - 1));
-    return p + 2;
-  case 3:
     *p = 0b11100000 | (c >> 12);
-    *(p + 1) = block | ((c >> 6) & ((1 << 6) - 1));
-    *(p + 2) = block | (c & ((1 << 6) - 1));
+    *(p + 1) = block | ((c >> 6) & block_mask);
+    *(p + 2) = block | (c & block_mask);
     return p + 3;
-  default:
-    std::cerr << "Oops! Invalid length of UTF-8" << std::endl;
-    exit(EXIT_FAILURE);
+  }
+  else if (c >> 7)
+  {
+    *p = 0b11000000 | (c >> 6);
+    *(p + 1) = block | (c & block_mask);
+    return p + 2;
+  }
+  else
+  {
+    *p = c;
+    return p + 1;
   }
 }
 
@@ -197,78 +156,85 @@ int StringCompare(const Utf8 *a, const Utf8 *b)
 {
   // -1 if a < b, 0 if a = b, 1 if a > b
   // https://en.cppreference.com/w/c/string/byte/strcmp
-  while (*a && *b)
+  for (; *a && *b; ++a, ++b)
   {
-    if (*a != *b)
-      return *a - *b;
-    ++a;
-    ++b;
+    if (*a < *b)
+      return -1;
+    if (*b < *a)
+      return 1;
   }
-  return *a - *b;
+  return *a == *b ? 0 : (*a < *b ? -1 : 1);
 }
 // Unicode string compare up to 'N' UTF-8 characters (not bytes)
 // from two UTF-8 strings.
 
 int StringCompare(const Utf8 *a, const Utf8 *b, size_t N)
 {
-  size_t i = 0;
-  while (*a && *b && i++ < N)
+  for (size_t i = 0; i < N && *a && *b; ++i)
   {
-    if (*a++ != *b)
-      return *a - *b;
-    ++a;
-    ++b;
+    size_t l1 = IndicatedLength(a), l2 = IndicatedLength(b);
+    if (l1 < l2)
+      return -1;
+    if (l2 < l1)
+      return 1;
+    for (size_t i = 0; i < l1; ++i, ++a, ++b)
+    {
+      if (*a < *b)
+        return -1;
+      if (*b < *a)
+        return 1;
+    }
+    a += l1;
+    b += l2;
   }
-  return *a - *b;
-}
-
-// Only works if UTF-8 character is 1 byte (aka ascii)
-Utf8 ToLower(const Utf8 *a)
-{
-  if (*a >= 0b01000001 && *a <= 0b01011010)
-    return *a + 26;
+  return 0;
 }
 
 // Case-independent compares.
 int StringCompareI(const Utf8 *a, const Utf8 *b)
 {
-    while (*a && *b)
-        {
-            size_t len_a = IndicatedLength(a);
-            size_t len_b = IndicatedLength(b);
-            Utf8 *temp_a = a;
-            Utf8 *temp_b = b;
-            if (len_a == 1 && len_b == 1)
-                {
-                    temp_a = ToLower(a);
-                    temp_b = ToLower(b);
-                }
-            else if ((len_a != 1 && len_b == 1) || (len_a == 1 && len_b != 1)) return *a - *b;
-            
-            if (*temp_a != *temp_b) return *a - *b;
-        }
-    return *a - *b;
+  for (; *a && *b; ++a, ++b)
+  {
+    if (IndicatedLength(a) == 1 && IndicatedLength(b) == 1)
+    {
+      const Unicode c1 = GetUtf8(a), c2 = GetUtf8(b);
+      const Unicode lower1 = ToLower(c1), lower2 = ToLower(c2);
+      if (c1 < c2)
+        return -1;
+      if (c2 < c1)
+        return 1;
+    }
+    else
+    {
+      if (*a < *b)
+        return -1;
+      if (*b < *a)
+        return 1;
+    }
+  }
+  return *a == *b ? 0 : (*a < *b ? -1 : 1);
 }
 
 int StringCompareI(const Utf8 *a, const Utf8 *b, size_t N)
 {
-    size_t i = 0;
-    while (*a && *b && i++ < N)
-        {
-            size_t len_a = IndicatedLength(a);
-            size_t len_b = IndicatedLength(b);
-            Utf8 *temp_a = a;
-            Utf8 *temp_b = b;
-            if (len_a == 1 && len_b == 1)
-                {
-                    temp_a = ToLower(a);
-                    temp_b = ToLower(b);
-                }
-            else if ((len_a != 1 && len_b == 1) || (len_a == 1 && len_b != 1)) return *a - *b;
-            
-            if (*temp_a != *temp_b) return *a - *b;
-        }
-    return *a - *b;
+  for (size_t i = 0; i < N && *a && *b; ++i)
+  {
+    size_t l1 = IndicatedLength(a), l2 = IndicatedLength(b);
+    if (l1 < l2)
+      return -1;
+    if (l2 < l1)
+      return 1;
+    for (size_t i = 0; i < l1; ++i, ++a, ++b)
+    {
+      if (*a < *b)
+        return -1;
+      if (*b < *a)
+        return 1;
+    }
+    a += l1;
+    b += l2;
+  }
+  return 0;
 }
 
 // Lower-case only Ascii characters < 0x80 except
@@ -276,13 +242,36 @@ int StringCompareI(const Utf8 *a, const Utf8 *b, size_t N)
 
 Unicode ToLower(Unicode c)
 {
-  if (c >= 0b01000001 && c <= 0b01011010)
-    return c + 26;
+  if ('A' <= c && c <= 'Z')
+    return (c - 'A') + 'a';
+  else
+    return c;
 }
 
 // Identify Unicode code points representing Ascii
 // punctuation, spaces and control characters.
 
-bool IsPunctuation(Unicode c);
-bool IsSpace(Unicode c);
-bool IsControl(Unicode c);
+bool IsPunctuation(Unicode c)
+{
+  static const char punct[] = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+  for (size_t i = 0; i < sizeof(punct); ++i)
+  {
+    if (c == punct[i])
+      return true;
+  }
+  return false;
+}
+bool IsSpace(Unicode c)
+{
+  static const char spaces[] = " \f\n\r\t\v";
+  for (size_t i = 0; i < sizeof(spaces); ++i)
+  {
+    if (c == spaces[i])
+      return true;
+  }
+  return false;
+}
+bool IsControl(Unicode c)
+{
+  return (0x00 <= c && c <= 0x1f) || (c == 0x7f);
+}
