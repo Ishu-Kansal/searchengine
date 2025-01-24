@@ -38,7 +38,7 @@ std::vector<Unicode> GetUnicodeMem(const Utf8 *fileStart, const Utf8 *fileEnd)
 return_t GetUtf8Mem(const Unicode *fileStart, const Unicode *fileEnd)
 {
   size_t worstCase = (fileEnd - fileStart + 1) * 3;
-  Utf8 *mem = new Utf8[worstCase]();
+  Utf8 *mem = new Utf8[worstCase];
   Utf8 *start = mem;
   start = WriteUtf8(start, ByteOrderMark);
   while (fileStart < fileEnd)
@@ -53,8 +53,8 @@ int main(int argc, char **argv)
 {
   if (argc == 1)
   {
-    std::cerr << "Usage: flip <filename>\n";
-    std::cerr << "Convert Unicode to Utf8 and Utf8 or ASCII to Unicode and "
+    std::cerr << "Usage: flip <filename>\n"
+              << "Convert Unicode to Utf8 and Utf8 or ASCII to Unicode and "
                  "write to stdout.\n";
     return 0;
   }
@@ -70,14 +70,14 @@ int main(int argc, char **argv)
   Utf8 *UtfFile = (Utf8 *)(mmap(nullptr, size, PROT_READ, MAP_PRIVATE, f, 0));
   Utf8 *UtfEnd = UtfFile + size;
   Unicode *UnicodeFile = reinterpret_cast<Unicode *>(UtfFile);
-  Unicode *UnicodeEnd = reinterpret_cast<Unicode *>(UtfEnd);
+  Unicode *UnicodeEnd = reinterpret_cast<Unicode *>(UtfEnd); // may be unsafe
   if (GetUtf8(UtfFile, UtfEnd) == ByteOrderMark)
   {
     const std::vector<Unicode> unicode = GetUnicodeMem(UtfFile + 3, UtfEnd);
     write(STDOUT_FILENO, unicode.data(),
           unicode.size() * sizeof(unicode[0]));
   }
-  else if (UnicodeFile[0] == ByteOrderMark)
+  else if (size > 1 && UnicodeFile[0] == ByteOrderMark)
   {
     const return_t data = GetUtf8Mem(UnicodeFile + 1, UnicodeEnd);
     write(STDOUT_FILENO, data.memStart, data.numBytes);
