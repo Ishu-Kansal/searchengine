@@ -89,5 +89,6 @@ int main(int argc, char **argv)
     write(STDOUT_FILENO, unicode.data(),
           unicode.size() * sizeof(unicode[0]));
   }
+  munmap(UtfFile, size);
   close(f);
 }
