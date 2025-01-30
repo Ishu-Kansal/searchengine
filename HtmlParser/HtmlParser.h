@@ -223,8 +223,9 @@ class HtmlParser
 
       HtmlParser( const char *buffer, size_t length ) // Your code here
       {
-         // Your code here.
+         bool closing_tag = false;
          size_t i = 0;
+
          while (i < length)
          {
             if (buffer[i] == '<')
@@ -237,6 +238,7 @@ class HtmlParser
                size_t tag_size = 0;
                if (buffer[i] == '/')
                {
+                  closing_tag = true;
                   i++;
                }
                if (i == length)
@@ -256,20 +258,31 @@ class HtmlParser
                if (action == DesiredAction::Base) {
                   i = extract_base(buffer, length, i);
                }
-               else if (action == DesiredAction::Title) {
-                  //      <title> should cause all the words between the opening and closing
-                  //          tags to be added to the titleWords vector rather than the default
-                  //          words vector.  A closing </title> without an opening <title> is discarded.
 
-                  while (buffer[i] != '<' && i < length) {
+               else if (action == DesiredAction::Title) {
+                  
+                  while (buffer[i] != '<' && i < length && !closing_tag) {
                      size_t word_len = 0;
-                     while (buffer[i] != ' ' && buffer[i] != '<') {
+
+                     while ((i + word_len) < length && buffer[i + word_len] != ' ' && buffer[i + word_len] != '<'
+                            && buffer[i + word_len] != '\n' && buffer[i + word_len] != '\t') {
+
                         word_len++;
                      }
-                     std::string word(i, word_len + i);
+                     std::string word(buffer + i, buffer + i + word_len);
                      titleWords.push_back(word);
+
+                     if (buffer[i + word_len] == '<')
+                        i += word_len;
+                        break;
+
+                     i += (word_len + 1);
                   }
-               }
+                  while (buffer[i] != '>') {
+                     i++;
+                  }
+               } // Title
+
                else if (action == DesiredAction::Comment) {
                   
                }
