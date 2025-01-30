@@ -21,6 +21,7 @@ size_t SizeOfUtf8(Unicode c)
 // for an invalid first byte.
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 size_t IndicatedLength(const Utf8 *p) {
     uint16_t mask = 1 << 7;
     size_t numSet = 0;
@@ -31,6 +32,8 @@ size_t IndicatedLength(const Utf8 *p) {
     if (numSet == 0 || numSet > 6) return -1;
     return numSet;
 =======
+=======
+>>>>>>> 0baf073 (Fixed merge conflict hopefully)
 size_t IndicatedLength(const Utf8 *p)
 {
   uint16_t mask = 1 << 7;
@@ -43,7 +46,21 @@ size_t IndicatedLength(const Utf8 *p)
   if (numSet < 1 || numSet > 6)
     return 1;
   return numSet;
+<<<<<<< HEAD
 >>>>>>> f2d37be (Fixed boundary issues)
+=======
+=======
+size_t IndicatedLength(const Utf8 *p) {
+    uint16_t mask = 1 << 7;
+    size_t numSet = 0;
+    while (*p & mask) {
+        ++numSet;
+        mask >>= 1;
+    }
+    if (numSet == 0 || numSet > 6) return -1;
+    return numSet;
+>>>>>>> b7ebe09 (Update Utf8.cpp)
+>>>>>>> 0baf073 (Fixed merge conflict hopefully)
 }
 
 // Get the UTF-8 character as a Unicode value.
