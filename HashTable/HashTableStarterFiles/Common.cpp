@@ -23,13 +23,26 @@ bool optVerbose = false;
 
 // Compare C-strings, return true if they are the same.
 
-bool CompareEqual(const char *L, const char *R) {
+bool CompareEqual(const char *L, const char *R)
+{
   // Your code here.
-  while (*L && *R && *L == *R) {
+  for (; *L || *R; ++L, ++R)
+  {
+    if (*L != *R)
+    {
+      std::cout << "here\n";
+      return false;
+    }
+  }
+  return *L == *R;
+  /*while (*L && *R && *L == *R)
+  {
     ++L;
     ++R;
   }
-  return *L == *R;
+  if (*L == *R)
+    std::cout << "here";
+  return *L == *R;*/
 }
 
 using Hash = HashTable<const char *, size_t>;
@@ -44,14 +57,15 @@ using Pair = Tuple<const char *, size_t>;
 
 // Caller is responsible for deleting the Hash.
 
-Hash *BuildHashTable(const vector<string> &words) {
+Hash *BuildHashTable(const vector<string> &words)
+{
   // Your code here.
   Hash *table = new Hash();
-  for (const string &word : words) {
-    auto it = table->Find(word.data(), 0);
+  for (const string &word : words)
+  {
+    auto it = table->Find(word.c_str(), 0);
     ++it->value;
   }
-  table->Optimize();
   return table;
 }
 
@@ -59,20 +73,24 @@ Hash *BuildHashTable(const vector<string> &words) {
 // as either individual word or whole lines in a vector of
 // strings.
 
-void CollectWordsIn(int argc, char **argv, vector<string> &words) {
+void CollectWordsIn(int argc, char **argv, vector<string> &words)
+{
   bool optLines = false;
 
   assert(argc > 1);
 
   argc--, argv++;
-  while (**argv == '-') {
-    for (char *p = *argv; *++p;) switch (*p) {
-        case 'L':
-          optLines = true;
-          break;
-        case 'v':
-        case 'V':
-          optVerbose = true;
+  while (**argv == '-')
+  {
+    for (char *p = *argv; *++p;)
+      switch (*p)
+      {
+      case 'L':
+        optLines = true;
+        break;
+      case 'v':
+      case 'V':
+        optVerbose = true;
       }
     argc--, argv++;
   }
@@ -88,20 +106,24 @@ void CollectWordsIn(int argc, char **argv, vector<string> &words) {
   size_t sumLengths = 0;
 
   if (optLines)
-    while (!wordsin.eof()) {
+    while (!wordsin.eof())
+    {
       getline(wordsin, word);
-      if (word != "") {
+      if (word != "")
+      {
         words.push_back(word);
         sumLengths += word.size();
       }
     }
   else
-    while (wordsin >> word) {
+    while (wordsin >> word)
+    {
       words.push_back(word);
       sumLengths += word.size();
     }
 
-  if (optVerbose) {
+  if (optVerbose)
+  {
     size_t numberOfTokens = words.size();
     cout << "Number of tokens = " << numberOfTokens << endl;
     cout << "Total characters = " << sumLengths << endl;

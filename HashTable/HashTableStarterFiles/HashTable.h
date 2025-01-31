@@ -18,21 +18,26 @@ using namespace std;
 bool CompareEqual(const char *L, const char *R);
 
 template <typename T>
-struct Hash {
-  size_t operator()(const T &t) const {
+struct HashT
+{
+  size_t operator()(const T &t) const
+  {
     assert(false);
     return 0;
   }
 };
 
-template <const char *>
-struct Hash {
+template <>
+struct HashT<const char *>
+{
   // Uses Fowler-Noll-Vo hash function
-  size_t operator()(const char *c) const {
+  size_t operator()(const char *c) const
+  {
     static const size_t FnvOffsetBasis = 146959810393466560UL;
     static const size_t FnvPrime = 1099511628211UL;
     size_t hash = FnvOffsetBasis;
-    for (; *c; ++c) {
+    for (; *c; ++c)
+    {
       hash *= FnvPrime;
       hash ^= *c;
     }
@@ -41,23 +46,33 @@ struct Hash {
 };
 
 template <typename T>
-struct Equals {
-  bool operator()(const T &t1, const T &t2) const {
+struct EqualsT
+{
+  bool operator()(const T &t1, const T &t2) const
+  {
     assert(false);
     return t1 == t2;
   }
 };
 
-template <const char *>
-struct Equals {
-  bool operator()(const char *c1, const char *c2) const {
-    return CompareEqual(c1, c2);
+template <>
+struct EqualsT<const char *>
+{
+  bool operator()(const char *L, const char *R) const
+  {
+    while (*L && *R && *L == *R)
+    {
+      ++L;
+      ++R;
+    }
+    return *L == *R;
   }
 };
 
 template <typename Key, typename Value>
-class Tuple {
- public:
+class Tuple
+{
+public:
   Key key;
   Value value;
 
@@ -65,52 +80,64 @@ class Tuple {
 };
 
 template <typename Key, typename Value>
-class Bucket {
- public:
+class Bucket
+{
+public:
   Bucket *next;
-  uint32_t hashValue;
+  size_t hashValue;
   Tuple<Key, Value> tuple;
 
-  Bucket(const Key &k, uint32_t h, const Value v)
+  Bucket(const Key &k, size_t h, const Value v)
       : tuple(k, v), next(nullptr), hashValue(h) {}
 
   ~Bucket() { delete next; }
 };
 
 template <typename Key, typename Value>
-class HashTable {
- private:
+class HashTable
+{
+private:
   // Your code here.
 
-  Bucket<Key, Value> **buckets;
-  size_t numberOfBuckets;
-  size_t numberOfElements;
+  Bucket<Key, Value> **buckets = nullptr;
+  size_t numberOfBuckets = 0;
+  size_t numberOfElements = 0;
 
   friend class Iterator;
   friend class HashBlob;
 
- public:
-  Tuple<Key, Value> *Find(const Key k, const Value initialValue) {
+public:
+  Tuple<Key, Value> *Find(const Key k, const Value initialValue)
+  {
     // Search for the key k and return a pointer to the
     // ( key, value ) entry.  If the key is not already
     // in the hash, add it with the initial value.
 
     // Your code here.
-    size_t hash = Hash<Key>()(k);
+    size_t hash = HashT<Key>()(k);
     size_t index = hash % numberOfBuckets;
     Bucket<Key, Value> *cur = buckets[index];
-    if (!cur) {
+    if (!cur)
+    {
       buckets[index] = new Bucket<Key, Value>(k, hash, initialValue);
       ++numberOfElements;
       return &(buckets[index]->tuple);
     }
-    while (cur && cur->next && cur->hash != hash &&
-           Equals<Key>()(cur->tuple.key, k)) {
-      cur = cur->next;
+    while (cur->next)
+    {
+      if (cur->hashValue != hash)
+        cur = cur->next;
+      else if (!EqualsT<Key>()(cur->tuple.key, k))
+        cur = cur->next;
+      else
+        return &cur->tuple;
     }
-    if (cur->hash == hash && Equals<Key>()(cur->tuple.key, k)) {
+    if (cur->hashValue == hash && EqualsT<Key>()(cur->tuple.key, k))
+    {
       return &cur->tuple;
-    } else {
+    }
+    else
+    {
       cur->next = new Bucket<Key, Value>(k, hash, initialValue);
       ++numberOfElements;
       return &(cur->next->tuple);
@@ -119,40 +146,85 @@ class HashTable {
     return nullptr;
   }
 
-  Tuple<Key, Value> *Find(const Key k) const {
+  Tuple<Key, Value> *Find(const Key k) const
+  {
     // Search for the key k and return a pointer to the
     // ( key, value ) enty.  If the key is not already
     // in the hash, return nullptr.
 
     // Your code here.
-
+    size_t hash = HashT<Key>()(k);
+    size_t index = hash % numberOfBuckets;
+    Bucket<Key, Value> *cur = buckets[index];
+    if (!cur)
+    {
+      return nullptr;
+    }
+    while (cur->next)
+    {
+      if (cur->hashValue != hash)
+        cur = cur->next;
+      else if (!EqualsT<Key>()(cur->tuple.key, k))
+        cur = cur->next;
+      else
+        return &cur->tuple;
+    }
+    if (cur->hashValue == hash && EqualsT<Key>()(cur->tuple.key, k))
+    {
+      return &cur->tuple;
+    }
+    else
+    {
+      return nullptr;
+    }
     return nullptr;
   }
 
-  void Optimize(double loading = 1.5) {
+  void Optimize(double loading = 1.5)
+  {
     // Modify or rebuild the hash table as you see fit
     // to improve its performance now that you know
     // nothing more is to be added.
 
     // Your code here.
+    HashTable<Key, Value> *t = new HashTable<Key, Value>(loading * numberOfElements);
+    for (auto it = begin(); it != end(); ++it)
+      t->Find(it->key, it->value);
+    swap(t->numberOfBuckets, this->numberOfBuckets);
+    swap(t->numberOfElements, this->numberOfElements);
+    swap(t->buckets, this->buckets);
+    delete t;
   }
 
   // Your constructor may take as many default arguments
   // as you like.
 
-  HashTable() {
+  HashTable()
+  {
     // Your code here.
-    numberOfBuckets = 1000;
-    buckets = new Bucket<Key, Value> *[numberOfBuckets];
+    numberOfBuckets = 50000;
+    buckets = new Bucket<Key, Value> *[numberOfBuckets]();
   }
 
-  ~HashTable() {
+  ~HashTable()
+  {
     // Your code here.
+    for (size_t i = 0; i < numberOfBuckets; ++i)
+    {
+      delete buckets[i];
+    }
     delete[] buckets;
   }
 
-  class Iterator {
-   private:
+  HashTable(size_t numberOfBuckets)
+  {
+    this->numberOfBuckets = numberOfBuckets;
+    buckets = new Bucket<Key, Value> *[numberOfBuckets]();
+  }
+
+  class Iterator
+  {
+  private:
     friend class HashTable;
 
     // Your code here.
@@ -160,68 +232,86 @@ class HashTable {
     size_t bucket;
     Bucket<Key, Value> *b;
 
-    Iterator(HashTable *table, size_t bucket, Bucket<Key, Value> *b) {
+    Iterator(HashTable *table, size_t bucket, Bucket<Key, Value> *b)
+    {
       // Your code here.
       this->table = table;
       this->bucket = bucket;
       this->b = b;
     }
 
-   public:
+  public:
     Iterator() : Iterator(nullptr, 0, nullptr) {}
 
     ~Iterator() {}
 
-    Tuple<Key, Value> &operator*() {
+    Tuple<Key, Value> &operator*()
+    {
       // Your code here.
+      assert(b);
       return b->tuple;
     }
 
-    Tuple<Key, Value> *operator->() const {
+    Tuple<Key, Value> *operator->() const
+    {
       // Your code here.
+      assert(b);
       return &b->tuple;
     }
 
     // Prefix ++
-    Iterator &operator++() {
+    Iterator &operator++()
+    {
       // Your code here.
-      if (b && b->next) {
+      if (b && b->next)
+      {
         b = b->next;
-        return;
+        return *this;
       }
-      while (bucket < table->numberOfBuckets && !table->buckets[bucket])
+      do
+      {
         ++bucket;
+      } while (bucket < table->numberOfBuckets && !table->buckets[bucket]);
       if (bucket != table->numberOfBuckets)
         b = table->buckets[bucket];
       else
         b = nullptr;
+      return *this;
     }
 
     // Postfix ++
-    Iterator operator++(int) {
+    Iterator operator++(int)
+    {
       // Your code here.
       Iterator it = *this;
       ++(*this);
       return it;
     }
 
-    bool operator==(const Iterator &rhs) const {
+    bool operator==(const Iterator &rhs) const
+    {
       // Your code here.
       return (table == rhs.table) && (bucket == rhs.bucket) && (b == rhs.b);
     }
 
-    bool operator!=(const Iterator &rhs) const {
+    bool operator!=(const Iterator &rhs) const
+    {
       // Your code here.
       return !(*this == rhs);
     }
   };
 
-  Iterator begin() {
+  Iterator begin()
+  {
     // Your code here.
-    return ++Iterator(this, 0, nullptr);
+    if (buckets[0])
+      return Iterator(this, 0, buckets[0]);
+    else
+      return ++Iterator(this, 0, nullptr);
   }
 
-  Iterator end() {
+  Iterator end()
+  {
     // Your code here.
     return Iterator(this, numberOfBuckets, nullptr);
   }
