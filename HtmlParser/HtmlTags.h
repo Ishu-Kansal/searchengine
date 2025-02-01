@@ -215,3 +215,4 @@ const HtmlTag TagsRecognized[ ] =
 
 const size_t LongestTagLength = 10;
 const int NumberOfTags = sizeof( TagsRecognized )/sizeof( HtmlTag );
+const char* printAction(enum DesiredAction action);

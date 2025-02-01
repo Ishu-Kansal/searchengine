@@ -2,6 +2,7 @@
 #include <cstring>
 #include <cassert>
 #include "HtmlTags.h"
+#include <iostream>
 
 // name points to beginning of the possible HTML tag name.
 // nameEnd points to one past last character.
@@ -17,6 +18,7 @@ DesiredAction LookupPossibleTag( const char *name, const char *nameEnd ) {
    char *lowerName = new char[len + 1];
    std::strncpy(lowerName, name, len);
    lowerName[len] = '\0';
+   // std::cout <<"name: " << lowerName << "btw" << std::endl;
 
    // Convert to lowercase
    for (size_t i = 0; i < len; ++i) {
@@ -45,35 +47,36 @@ DesiredAction LookupPossibleTag( const char *name, const char *nameEnd ) {
 }
 
 
-// char* printAction(enum DesiredAction action) {
-//    switch(action) {
-//       case DesiredAction::OrdinaryText:
-//          return "OrdinaryText";
-//       case DesiredAction::Title:
-//          return "Title";
-//       case DesiredAction::Comment:
-//          return "Comment";
-//       case DesiredAction::Discard:
-//          return "Discard";
-//       case DesiredAction::DiscardSection:
-//          return "DiscardSection";
-//       case DesiredAction::Anchor:
-//          return "Anchor";
-//       case DesiredAction::Base:
-//          return "Base";
-//       case DesiredAction::Embed:
-//          return "Embed";
-//       default:
-//          return "false tag";
-//    }
-// }
+const char* printAction(enum DesiredAction action) {
+   switch(action) {
+      case DesiredAction::OrdinaryText:
+         return "OrdinaryText";
+      case DesiredAction::Title:
+         return "Title";
+      case DesiredAction::Comment:
+         return "Comment";
+      case DesiredAction::Discard:
+         return "Discard";
+      case DesiredAction::DiscardSection:
+         return "DiscardSection";
+      case DesiredAction::Anchor:
+         return "Anchor";
+      case DesiredAction::Base:
+         return "Base";
+      case DesiredAction::Embed:
+         return "Embed";
+      default:
+         return "false tag";
+   }
+}
 
 // #include <iostream>
 // int main(int argc, char** argv) {
 //    int len = atoi(argv[2]);
-//    char* tag = "title";
+//    const char* tag = "n <base";
+//    std::cout << *(tag+3) << std::endl;
 //    // DesiredAction act = LookupPossibleTag(argv[1], argv[1]+len);
-//    DesiredAction act = LookupPossibleTag(tag, tag + 5);
+//    DesiredAction act = LookupPossibleTag(tag+3, tag + 3 + 4);
 
 //    std::cout << printAction(act) << std::endl;
 // }

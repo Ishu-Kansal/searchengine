@@ -4,6 +4,8 @@
 #pragma once
 
 #include <vector>
+#include <string>
+#include <iostream>
 #include <cstring>
 #include "HtmlTags.h"
 
@@ -44,7 +46,7 @@
 //    opening and closing tag.  Unmatched closing tags are discarded.
 //
 // 9. <!--, <title>, <a>, <base> and <embed> require special processing.
-// 
+//
 //      <-- is the beginng of a comment.  Everything up to the ending -->
 //          is discarded.
 //
@@ -67,229 +69,415 @@
 //     <embed> may contain a src="...url..." parameter.  If present, it should be
 //          added to the links with no anchor text.
 
-
-
 class Link
+{
+public:
+   std::string URL;
+   std::vector<std::string> anchorText;
+
+   Link(std::string URL) : URL(URL)
    {
-   public:
-      std::string URL;
-      std::vector< std::string > anchorText;
-
-      Link( std::string URL ) : URL( URL )
-         {
-         }
-   };
-
+   }
+};
 
 class HtmlParser
+{
+public:
+   std::vector<std::string> words, titleWords;
+   std::vector<Link> links;
+   std::string base;
+
+private:
+   // Your code here.
+
+   bool is_tag_ending(const char c)
    {
-   public:
+      return c == ' ' || c == '/' || c == '>';
+   }
 
-      std::vector< std::string > words, titleWords;
-      std::vector< Link > links;
-      std::string base;
+   bool is_a_whitespace(const char c)
+   {
+      return c == ' ' || c == '\n' || c == '\t';
+   }
 
-   private:
-      // Your code here.
-
-      bool is_tag_ending(const char c)
-      {
-         return c == ' ' || c == '/' || c == '>';
-      }
-
-      size_t extract_base(const char* buffer, size_t length, size_t i)
-      {
-         // <base href="url" />
-         bool in_quotes = false;
-         char quote_type;
-         while (i < length && (buffer[i] != '>' && !in_quotes))
-         {
-            if (buffer[i] == '"' || buffer[i] == '\'')
-            {
-               if (in_quotes)
-               {
-                  if (buffer[i] == quote_type)
-                  {
-                     in_quotes = false;
-                  }
-               }
-               else
-               {
-                  in_quotes = true;
-                  quote_type = buffer[i];
-               }
+   size_t extract_base(const char *buffer, size_t length, size_t i)
+   {
+      // <base href="url" />
+      bool in_quotes = false;
+      char quote_type;
+      while (i < length) {
+         if (buffer[i] == '>' && !in_quotes) {
+            i++;
+            break;
+         }
+         if (buffer[i] == '"' || buffer[i] == '\'') {
+            if (in_quotes  && (buffer[i] == quote_type)) {
+               in_quotes = false;
             }
-            // This will be wrong if href is found in quotes before the actual href
-            if (!strcmp(buffer + i, "href"))
-            {
-               i += 4;
-               while (buffer[i] != '=' && i < length)
-               {
-                  i++;
-               }
-               while (buffer[i] != '"' && buffer[i] != '\'' && i < length)
-               {
-                  i++;
-               }
-
+            else {
                in_quotes = true;
                quote_type = buffer[i];
-
-               int url_start = i + 1;
-
-               while (buffer[i] != quote_type)
-               {
-                  i++;
-               }
-               int url_end = i;
-
-               base = std::string(url_start, url_end);
             }
-            i++;
          }
-         return i;
-      }
-
-      /*
-      std::string extract_base(const char* ptr) {
-         if (!ptr) return "";
-
-         // Skip spaces after "base"
-         while (*ptr && std::isspace(*ptr))
-         {
-            ++ptr;
-         }
-
-         // Look for closing tag
-         std::strstr(ptr, ">");
-
-         // Look for href
-         
-
-         if (std::strcmp(ptr, "href") != 0)
-         {
-            return "";
-         }
-
-         // Move past "href"
-         ptr += 4;
-
-         // Skip spaces after "href"
-         while (*ptr && std::isspace(*ptr))
-         {
-            ++ptr;
-         }
-
-         // Ensure '=' is present
-         if (std::strcmp(ptr, "=") != 0) 
-         {
-            return "";
-          }
-
-         // Move past '='
-         ++ptr;
-
-         // Skip spaces after '='
-         while (*ptr && std::isspace(*ptr)) {
-            ++ptr;
-         }
-
-         // Ensure it starts with a valid quote
-         if (*ptr != '"' && *ptr != '\'') return "";
-
-         char quoteType = *ptr;  // Remember whether it's a single or double quote
-         ++ptr;  // Move past the quote
-
-         // Find the closing quote
-         const char* endPtr = ptr;
-         while (*endPtr && *endPtr != quoteType) {
-            ++endPtr;
-         }
-
-         if (*endPtr != quoteType) return "";  // No closing quote found
-
-         return std::string(ptr, endPtr);
-      }
-      */
-
-   public:
-
-      // The constructor is given a buffer and length containing
-      // presumed HTML.  It will parse the buffer, stripping out
-      // all the HTML tags and producing the list of words in body,
-      // words in title, and links found on the page.
-
-      // < html>
-
-      HtmlParser( const char *buffer, size_t length ) // Your code here
-      {
-         bool closing_tag = false;
-         size_t i = 0;
-
-         while (i < length)
-         {
-            if (buffer[i] == '<')
-            {  
+         // This will be wrong if href is found in quotes before the actual href
+         if (!strncmp(buffer + i, "href", 4)) {
+            // std::cout << buffer + i;
+            i += 4;
+            while (buffer[i] != '=' && i < length) {
                i++;
-               if (i == length) 
-               {
+            }
+            while (buffer[i] != '"' && buffer[i] != '\'' && i < length) {
+               i++;
+            }
+            in_quotes = true;
+            quote_type = buffer[i];
+            //now that we are inside the quotes, read in the base url
+            i++;
+            int url_start = i;
+            while (buffer[i] != quote_type) {
+               i++;
+            }
+            int url_end = i;
+            base = std::string(buffer + url_start, buffer + url_end);
+            while(buffer[i] != '>')
+               i++;
+            // std::cout << base << '\n';
+            return i+1;
+         }
+         i++;
+      }
+      return i;
+   }
+
+   size_t extract_embed(const char *buffer, size_t length, size_t i)
+   {
+      // <base href="url" />
+      bool in_quotes = false;
+      char quote_type;
+      while (i < length) {
+         if (buffer[i] == '>' && !in_quotes) {
+            i++;
+            break;
+         }
+         if (buffer[i] == '"' || buffer[i] == '\'') {
+            if (in_quotes  && (buffer[i] == quote_type)) {
+               in_quotes = false;
+            }
+            else {
+               in_quotes = true;
+               quote_type = buffer[i];
+            }
+         }
+         // This will be wrong if href is found in quotes before the actual href
+         if (!strncmp(buffer + i, "src", 3)) {
+            // std::cout << buffer + i;
+            i += 3;
+            while (buffer[i] != '=' && i < length) {
+               i++;
+            }
+            while (buffer[i] != '"' && buffer[i] != '\'' && i < length) {
+               i++;
+            }
+            in_quotes = true;
+            quote_type = buffer[i];
+            //now that we are inside the quotes, read in the base url
+            i++;
+            int url_start = i;
+            while (buffer[i] != quote_type) {
+               i++;
+            }
+            int url_end = i;
+            std::string url = std::string(buffer + url_start, buffer + url_end);
+            while(buffer[i] != '>')
+               i++;
+            Link link(url);
+            links.push_back(link);
+            return i;
+         }
+         i++;
+      }
+      return i;
+   }
+
+public:
+   // The constructor is given a buffer and length containing
+   // presumed HTML.  It will parse the buffer, stripping out
+   // all the HTML tags and producing the list of words in body,
+   // words in title, and links found on the page.
+
+   HtmlParser(const char *buffer, size_t length) // Your code here
+   {
+      std::string word = "";
+      size_t index = 0;
+      while (index < length)
+      {
+
+         bool closing_token = false;
+
+         // start of a tag
+         // std::cout << "Curr Character: " << buffer[index] << '\n';
+         if (buffer[index] == '<')
+         {
+            if (word != "")
+            {
+               words.push_back(word);
+               word = "";
+            }
+            index++;
+            if (index == length)
+               return;
+
+            if (buffer[index] == '/')
+            {
+               closing_token = true;
+               index++;
+               if (index == length)
                   return;
-               }
-               size_t tag_size = 0;
-               if (buffer[i] == '/')
+            }
+
+            size_t tag_size = 0;
+            while (index + tag_size < length && !is_tag_ending(buffer[index + tag_size]))
+            {
+               tag_size++;
+            }
+
+            // store tag in a c string
+            std::string tag_string = std::string(buffer + index, buffer + index + tag_size);
+            char *tag = new char[tag_string.length() + 1];
+            std::strcpy(tag, tag_string.c_str());
+
+            // grab tag action based on name
+            DesiredAction action = LookupPossibleTag(buffer + index, buffer + index + tag_size-1);
+            
+            // std::cout << tag_string << '\n';
+            // std::cout << printAction(action) << '\n';
+
+            index += tag_size;
+
+            if (action == DesiredAction::Discard)
+            {
+               // <tag targwte=sdofa asodfao=saodfja>
+               while (index < length)
                {
-                  closing_tag = true;
-                  i++;
-               }
-               if (i == length)
-               {
-                  return;
-               }
-
-               // Run until there is a whitespace or / or >
-               while (i + tag_size < length && !is_tag_ending(buffer[i + tag_size]))
-               {
-                  tag_size++;
-               }
-               
-               //rn buffer is going from start to tag size, and reads like "link" or "head"
-               DesiredAction action = LookupPossibleTag(buffer + i, buffer + i + tag_size);
-               
-               if (action == DesiredAction::Base) {
-                  i = extract_base(buffer, length, i);
-               }
-
-               else if (action == DesiredAction::Title) {
-                  
-                  while (buffer[i] != '<' && i < length && !closing_tag) {
-                     size_t word_len = 0;
-
-                     while ((i + word_len) < length && buffer[i + word_len] != ' ' && buffer[i + word_len] != '<'
-                            && buffer[i + word_len] != '\n' && buffer[i + word_len] != '\t') {
-
-                        word_len++;
-                     }
-                     std::string word(buffer + i, buffer + i + word_len);
-                     titleWords.push_back(word);
-
-                     if (buffer[i + word_len] == '<')
-                        i += word_len;
-                        break;
-
-                     i += (word_len + 1);
+                  // This code does not ensure that </tag> is outside of any quotes
+                  if (buffer[index] == '>')
+                  {
+                     index++;
+                     break;
                   }
-                  while (buffer[i] != '>') {
-                     i++;
-                  }
-               } // Title
-
-               else if (action == DesiredAction::Comment) {
-                  
+                  index++;
                }
             }
-            i++;
+
+            else if (action == DesiredAction::DiscardSection)
+            {
+               // discard all text between starting and closing tags
+               while (index < length)
+               {
+                  // This code does not ensure that </tag> is outside of any quotes
+                  if (strncmp(buffer + index, "</", 2) == 0 && strncmp(buffer + index + 2, tag, tag_size) == 0)
+                  {
+                     index += tag_size + 3;
+                     break;
+                  }
+                  index++;
+               }
+            }
+
+            // should be correct
+            else if (action == DesiredAction::Comment)
+            {
+
+               // loop until find ending of comment
+               while ((index + 2) < length && buffer[index] != '-' && buffer[index + 1] != '-' && buffer[index + 2] != '>')
+               {
+                  index++;
+               }
+               index += 4;
+            }
+
+            // should be correct
+            else if (action == DesiredAction::Title)
+            {
+
+               while (index < length)
+               {
+                  if (buffer[index] == '>')
+                  {
+                     index++;
+                     break;
+                  }
+                  index++;
+               }
+
+               // grab each word in between title tags
+               while (index < length && buffer[index] != '<' && !closing_token)
+               {
+                  size_t word_len = 0;
+
+                  while ((index + word_len) < length && buffer[index + word_len] != '<' && !is_a_whitespace(buffer[index + word_len]))
+                  {
+
+                     word_len++;
+                  }
+                  // apend word to vector
+                  std::string word(buffer + index, buffer + index + word_len);
+                  titleWords.push_back(word);
+
+                  // last word found
+                  if (buffer[index + word_len] == '<')
+                  {
+                     index += word_len;
+                     break;
+                  }
+
+                  index += (word_len + 1);
+               }
+               index += 8;
+            }
+
+            else if (action == DesiredAction::Anchor)
+            {
+               // find href
+               while (index < length)
+               {
+                  if (strncmp(buffer + index, "href", 4) == 0)
+                  {
+                     break;
+                  }
+                  index++;
+               }
+
+               // find url start quote
+               size_t url_start;
+               while (index < length)
+               {
+                  if (buffer[index] == '"' || buffer[index] == '\'')
+                  {
+                     url_start = ++index;
+                     break;
+                  }
+                  index++;
+               }
+
+               // find url end quote
+               size_t url_end;
+               while (index < length)
+               {
+                  if (buffer[index] == '"' || buffer[index] == '\'')
+                  {
+                     url_end = index;
+                     break;
+                  }
+                  index++;
+               }
+
+               // create link with url
+               std::string url(buffer + url_start, buffer + url_end);
+               Link link(url);
+
+               while (index < length)
+               {
+                  if (buffer[index] == '>')
+                  {
+                     index++;
+                     break;
+                  }
+                  index++;
+               }
+
+               // add link text to link object
+               std::string word = "";
+               bool inside_bracket = false;
+               while (index < length)
+               {
+                  if (strncmp(buffer + index, "</a>", 4) == 0)
+                  {
+                     if (word != "")
+                     {
+                        words.push_back(word);
+                        link.anchorText.push_back(word);
+                     }
+                     index += 4;
+                     break;
+                  }
+
+                  if (buffer[index] == '<')
+                  {
+                     if (word.size() > 0)
+                     {
+                        words.push_back(word);
+                        link.anchorText.push_back(word);
+                        word = "";
+                     }
+                     inside_bracket = true;
+                  }
+                  else if (buffer[index] == '>')
+                  {
+                     inside_bracket = false;
+                  }
+                  else if (!inside_bracket)
+                  {
+                     if (buffer[index] == ' ' || buffer[index] == '\t' || buffer[index] == '\r' || 
+                         buffer[index] == '\n' || strncmp(buffer + index, "\r\n", 2) == 0)
+                     {
+                        if (word.size() > 0)
+                        {
+                           words.push_back(word);
+                           link.anchorText.push_back(word);
+                           word = "";
+                        }
+                     }
+                     else
+                     {
+                        word += buffer[index];
+                     }
+                  }
+
+                  index++;
+               }
+
+               links.push_back(link);
+            }
+
+            else if (action == DesiredAction::Base)
+            {
+               index = extract_base(buffer, length, index);
+            }
+
+            else if (action == DesiredAction::Embed)
+            {
+               index = extract_embed(buffer, length, index);
+            }
+
+            else if (action == DesiredAction::OrdinaryText) {
+               if (buffer[index] == ' ')
+               {
+                  words.push_back(word + '<' + tag_string);
+                  index++;
+               }
+               word = '<' + tag_string + buffer[index];
+               index++;
+            }
+         }
+         else
+         {
+            if (buffer[index] == ' ' || buffer[index] == '\t' || buffer[index] == '\r' || 
+                buffer[index] == '\n' || strncmp(buffer + index, "\r\n", 2) == 0)
+            {
+               if (word.size() > 0)
+               {
+                  words.push_back(word);
+                  // std::cout << "Add word: " << word << '\n';
+                  word = "";
+               }
+            }
+            else
+            {
+               word += buffer[index];
+            }
+            index++;
          }
       }
-   };
-
-
+   }
+};
