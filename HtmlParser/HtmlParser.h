@@ -93,69 +93,74 @@ private:
 
    bool is_tag_ending(const char c)
    {
-      return c == ' ' || c == '/' || c == '>';
+      return c == ' ' || c == '\n' || c == '/' || c == '>' || c == '\r' || c == '\f' || c == '\t';
    }
 
    size_t extract_anchor(const char *buffer, size_t length, size_t index, bool in_title)
    {
-      // move past the next href
-      while (index < length)
+      // move past the first href
+      while (strncmp(buffer + index, "href", 4) != 0)
       {
          if (buffer[index] == '>')
          {
             return index + 1;
          }
-         if (strncmp(buffer + index, "href", 4) == 0)
-         {
-            break;
-         }
+         // if (strncmp(buffer + index, "href", 4) == 0)
+         // {
+         //    break;
+         // }
          index++;
       }
 
       // move past the first open quote
       size_t url_start;
-      while (index < length)
+      while (buffer[index] != '"' && buffer[index] != '\'')
       {
          if (buffer[index] == '>')
          {
             return index + 1;
          }
-         if (buffer[index] == '"' || buffer[index] == '\'')
-         {
-            url_start = ++index;
-            break;
-         }
+         // if (buffer[index] == '"' || buffer[index] == '\'')
+         // {
+         //    url_start = ++index;
+         //    break;
+         // }
          index++;
       }
+      char quote_type = buffer[index];
+      url_start = ++index;
 
       // move past the next end quote
       size_t url_end;
-      while (index < length)
+      while (buffer[index] != quote_type)
       {
-         if (buffer[index] == '"' || buffer[index] == '\'')
-         {
-            url_end = index;
-            break;
-         }
+         // if (buffer[index] == '"' || buffer[index] == '\'')
+         // {
+         //    url_end = index;
+         //    break;
+         // }
          index++;
       }
+      url_end = index;
 
       // create link with url
       std::string url(buffer + url_start, buffer + url_end);
+
       links.emplace_back(url);
 
       size_t link_idx = links.size() - 1;
 
       // move past the next >
-      while (index < length)
+      while (buffer[index] != '>')
       {
-         if (buffer[index] == '>')
-         {
-            index++;
-            break;
-         }
+         // if (buffer[index] == '>')
+         // {
+         //    index++;
+         //    break;
+         // }
          index++;
       }
+      index++;
 
       // add link text to link object
       std::string word = "";
@@ -176,6 +181,20 @@ private:
             break;
          }
 
+         else if ((strncmp(buffer + index, "</a\n>", 4) == 0) || (strncmp(buffer + index, "</a\r>", 4) == 0) || (strncmp(buffer + index, "</a\f>", 4) == 0))
+         {
+            if (word != "")
+            {
+               if (!in_title)
+               {
+                  words.push_back(word);
+               }
+               links[link_idx].anchorText.push_back(word);
+            }
+            index += 6;
+            break;
+         }
+
          if (buffer[index] == '<')
          {
             if (strncmp(buffer + index, "<a", 2) == 0)
@@ -190,6 +209,8 @@ private:
                   return extract_anchor(buffer, length, index + 2, in_title);
                }
             }
+
+
             else if (strncmp(buffer + index, "<base", 5) == 0)
             {
                return extract_base(buffer, length, index + 5);
@@ -211,8 +232,6 @@ private:
 
                // store tag in a c string
                std::string tag_string = std::string(buffer + index, buffer + index + tag_size);
-               char *tag = new char[tag_string.length() + 1];
-               std::strcpy(tag, tag_string.c_str());
 
                // grab tag action based on name
                DesiredAction action = LookupPossibleTag(buffer + index, buffer + index + tag_size - 1);
@@ -322,13 +341,14 @@ private:
       // <base href="url" />
       bool in_quotes = false;
       char quote_type;
-      while (i < length) {
-         if (buffer[i] == '>' && !in_quotes) {
-            i++;
-            break;
-         }
+      while (!(buffer[i] == '>' && !in_quotes)) 
+      {
+         // if (buffer[i] == '>' && !in_quotes) {
+         //    i++;
+         //    break;
+         // }
          if (buffer[i] == '"' || buffer[i] == '\'') {
-            if (in_quotes  && (buffer[i] == quote_type)) {
+            if (in_quotes && (buffer[i] == quote_type)) {
                in_quotes = false;
             }
             else {
@@ -364,6 +384,7 @@ private:
          }
          i++;
       }
+      i++;
       return i;
    }
 
@@ -375,19 +396,23 @@ public:
 
    HtmlParser(const char *buffer, size_t length) // Your code here
    {
+      words.reserve(160000);
+      titleWords.reserve(400);
+      links.reserve(16000);
+
       base = "";
 
       std::string word = "";
       size_t index = 0;
       while (index < length)
       {
-
          bool closing_token = false;
 
          // start of a tag
          // std::cout << "Curr Character: " << buffer[index] << '\n';
          if (buffer[index] == '<')
          {
+            //std::cout << "hello" << std::endl;
             index++;
             if (index == length)
                return;
@@ -407,13 +432,20 @@ public:
             }
 
             // store tag in a c string
+
+            //TODO: Maybe make this a c string
             std::string tag_string = std::string(buffer + index, buffer + index + tag_size);
-            char *tag = new char[tag_string.length() + 1];
-            std::strcpy(tag, tag_string.c_str());
 
             // grab tag action based on name
-            DesiredAction action = LookupPossibleTag(buffer + index, buffer + index + tag_size-1);
-            
+            //std::cout << tag_size << std::endl;
+            DesiredAction action;
+            if (tag_size == 0) {
+               action = DesiredAction::OrdinaryText;
+            }
+            else {
+               action = LookupPossibleTag(buffer + index, buffer + index + tag_size-1);
+            }
+
             // std::cout << tag_string << '\n';
             // std::cout << printAction(action) << '\n';
 
@@ -428,143 +460,178 @@ public:
                }
             }
 
-            if (action == DesiredAction::Discard)
-            {
-               // <tag targwte=sdofa asodfao=saodfja>
-               while (index < length)
-               {
-                  // This code does not ensure that </tag> is outside of any quotes
-                  if (buffer[index] == '>')
+            bool inside_bracket = false;
+
+            //std::cout << "start\n";
+            switch (action) {
+               case DesiredAction::Discard:
+                  while (buffer[index] != '>')
+                  {
+                     // This code does not ensure that </tag> is outside of any quotes
+                     // if (buffer[index] == '>')
+                     // {
+                     //    index++;
+                     //    break;
+                     // }
+                     index++;
+                  }
+                  index++;
+                  break;
+
+               case DesiredAction::DiscardSection:
+
+                  if (tag_string == "svg") {
+                     while (index < length)
+                     {
+                        // This code does not ensure that </tag> is outside of any quotes
+                        if (strncmp(buffer + index, "</", 2) == 0 && strncmp(buffer + index + 2, "svg", tag_size) == 0)
+                        {
+                           index += tag_size + 3;
+                           break;
+                        }
+                        index++;
+                     }
+                  }
+                  else if (tag_string == "style") {
+                     while (index < length)
+                     {
+                        // This code does not ensure that </tag> is outside of any quotes
+                        if (strncmp(buffer + index, "</", 2) == 0 && strncmp(buffer + index + 2, "style", tag_size) == 0)
+                        {
+                           index += tag_size + 3;
+                           break;
+                        }
+                        index++;
+                     }
+                  }
+                  else {
+                     while (index < length)
+                     {
+                        // This code does not ensure that </tag> is outside of any quotes
+                        if (strncmp(buffer + index, "</", 2) == 0 && strncmp(buffer + index + 2, "script", tag_size) == 0)
+                        {
+                           index += tag_size + 3;
+                           break;
+                        }
+                        index++;
+                     }
+                  }
+
+                  break;
+
+               case DesiredAction::Comment:
+                  // loop until find ending of comment
+                  while ((index + 2) < length && (buffer[index] != '-' || buffer[index + 1] != '-' || buffer[index + 2] != '>'))
                   {
                      index++;
-                     break;
                   }
-                  index++;
-               }
-            }
+                  index += 4;
 
-            else if (action == DesiredAction::DiscardSection)
-            {
-               // discard all text between starting and closing tags
-               while (index < length)
-               {
-                  // This code does not ensure that </tag> is outside of any quotes
-                  if (strncmp(buffer + index, "</", 2) == 0 && strncmp(buffer + index + 2, tag, tag_size) == 0)
+                  break;
+
+               case DesiredAction::Title:
+
+                  while (buffer[index] != '>')
                   {
-                     index += tag_size + 3;
-                     break;
-                  }
-                  index++;
-               }
-            }
-
-            else if (action == DesiredAction::Comment)
-            {
-
-               // loop until find ending of comment
-               while ((index + 2) < length && buffer[index] != '-' && buffer[index + 1] != '-' && buffer[index + 2] != '>')
-               {
-                  index++;
-               }
-               index += 4;
-            }
-
-            else if (action == DesiredAction::Title)
-            {
-               while (index < length)
-               {
-                  if (buffer[index] == '>')
-                  {
+                     // if (buffer[index] == '>')
+                     // {
+                     //    index++;
+                     //    break;
+                     // }
                      index++;
-                     break;
                   }
                   index++;
-               }
 
-               // grab each word in between title tags
-               bool inside_bracket = false;
-               while (index < length && strncmp(buffer + index, "</title>", 8) && !closing_token)
-               {
-                  if (buffer[index] == '<')
+                  // grab each word in between title tags
+                  inside_bracket = false;
+                  while (index < length && strncmp(buffer + index, "</title>", 8) && !closing_token)
                   {
-                     if (strncmp(buffer + index, "<a", 2) == 0)
+                     if (!(strncmp(buffer + index, "</title\n>", 8) && strncmp(buffer + index, "</title\r>", 8) && strncmp(buffer + index, "</title\f>", 8)))
                      {
-                        extract_anchor(buffer, length, index + 2, true);
-                        links.pop_back();
+                        index += 2;
+                        break;
                      }
-                     if (word.size() > 0)
+                     if (buffer[index] == '<')
                      {
-                        titleWords.push_back(word);
-                        word = "";
-                     }
-                     inside_bracket = true;
-                  }
-                  else if (buffer[index] == '>')
-                  {
-                     inside_bracket = false;
-                  }
-                  else if (!inside_bracket)
-                  {
-                     if (buffer[index] == ' ' || buffer[index] == '\t' || buffer[index] == '\r' ||
-                         buffer[index] == '\n' || strncmp(buffer + index, "\r\n", 2) == 0)
-                     {
+                        if (strncmp(buffer + index, "<a", 2) == 0)
+                        {
+                           extract_anchor(buffer, length, index + 2, true);
+                           links.pop_back();
+                        }
                         if (word.size() > 0)
                         {
                            titleWords.push_back(word);
                            word = "";
                         }
+                        inside_bracket = true;
                      }
-                     else
+                     else if (buffer[index] == '>')
                      {
-                        word += buffer[index];
+                        inside_bracket = false;
                      }
+                     else if (!inside_bracket)
+                     {
+                        if (buffer[index] == ' ' || buffer[index] == '\t' || buffer[index] == '\r' ||
+                           buffer[index] == '\n' || strncmp(buffer + index, "\r\n", 2) == 0)
+                        {
+                           if (word.size() > 0)
+                           {
+                              titleWords.push_back(word);
+                              word = "";
+                           }
+                        }
+                        else
+                        {
+                           word += buffer[index];
+                        }
+                     }
+                     index++;
                   }
-                  index++;
-               }
-               if (word.size() > 0)
-               {
-                  titleWords.push_back(word);
-                  word = "";
-               }
-               index += 8;
+                  if (word.size() > 0)
+                  {
+                     titleWords.push_back(word);
+                     word = "";
+                  }
+                  index += 8;
+
+                  break;
+
+               case DesiredAction::Anchor:
+                  index = extract_anchor(buffer, length, index, false);
+                  break;
+
+               case DesiredAction::Base:
+                  if (base.size() > 0)
+                  {
+                     std::string save = base;
+                     index = extract_base(buffer, length, index);
+                     base = save;
+                  }
+                  else {
+                     index = extract_base(buffer, length, index);
+                  }
+                  break;
+               
+               case DesiredAction::Embed:
+                  index = extract_embed(buffer, length, index);
+                  break;
+
+               case DesiredAction::OrdinaryText:
+                  if (buffer[index] == ' ')
+                  {
+                     words.push_back(word + '<' + tag_string);
+                     word = "";
+                     index++;
+                  }
+                  else
+                  {
+                     word += '<' + tag_string + buffer[index];
+                     index++;
+                  }
+                  break;
+
             }
 
-            else if (action == DesiredAction::Anchor)
-            {
-               index = extract_anchor(buffer, length, index, false);
-            }
-
-            else if (action == DesiredAction::Base)
-            {
-               if (base.size() > 0)
-               {
-                  std::string save = base;
-                  index = extract_base(buffer, length, index);
-                  base = save;
-               }
-               else {
-                  index = extract_base(buffer, length, index);
-               }
-            }
-
-            else if (action == DesiredAction::Embed)
-            {
-               index = extract_embed(buffer, length, index);
-            }
-
-            else if (action == DesiredAction::OrdinaryText) {
-               if (buffer[index] == ' ')
-               {
-                  words.push_back(word + '<' + tag_string);
-                  word = "";
-                  index++;
-               }
-               else
-               {
-                  word += '<' + tag_string + buffer[index];
-                  index++;
-               }
-            }
          }
          else
          {
