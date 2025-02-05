@@ -1,0 +1,17 @@
+Number of tokens = 215994
+Total characters = 1782086
+Average token length = 8.25063 characters
+
+Finding top 10
+Elapsed time = 422250 ticks
+
+1768   </td>
+1837   is
+1930   C
+2059   of
+2223   and
+3088   a
+3144   to
+3314   <a
+6605   the
+11931   <li><a
