@@ -144,7 +144,7 @@ public:
       size_t hashValue = HashT<const char *>()(key);
       size_t bucketOffset = Buckets[hashValue % NumberOfBuckets];
 
-      const char * bucket = reinterpret_cast<const char *>(this) + bucketOffset;
+      const char *bucket = reinterpret_cast<const char *>(this) + bucketOffset;
 
       while (bucket < reinterpret_cast<const char *>(this) + BlobSize)
       {
@@ -171,10 +171,10 @@ public:
       // all the serialized tuples.
       size_t total = 4 * sizeof(size_t);
       total += hashTable->numberOfBuckets * sizeof(size_t);
-      for(size_t i = 0; i < hashTable->numberOfBuckets; ++i)
+      for (size_t i = 0; i < hashTable->numberOfBuckets; ++i)
       {
-         const HashBucket* bucket = hashTable->buckets[i];
-         while(bucket)
+         const HashBucket *bucket = hashTable->buckets[i];
+         while (bucket)
          {
             total += SerialTuple::BytesRequired(bucket);
             bucket = bucket->next;
@@ -182,7 +182,6 @@ public:
       }
       return RoundUp(total, sizeof(size_t));
       // Your code here.
-
    }
 
    // Write a HashBlob into a buffer, returning a
@@ -197,7 +196,21 @@ public:
       {
          return nullptr;
       }
-      
+      char *buffer = reinterpret_cast<char *>(hb);
+      char *bufferEnd = buffer + bytes;
+
+      buffer += sizeof(HashBlob) + hashTable->numberOfBuckets * sizeof(size_t);
+      for (size_t i = 0; i < hashTable->numberOfBuckets; ++i)
+      {
+         HashBucket *bucket = hashTable->buckets[i];
+         while (bucket)
+         {
+            buffer = SerialTuple::Write(buffer, bufferEnd, bucket);
+            bucket = bucket->next;
+         }
+      }
+
+      return hb;
    }
 
    // Create allocates memory for a HashBlob of required size
@@ -209,11 +222,17 @@ public:
 
    static HashBlob *Create(const Hash *hashTable)
    {
-      size_t size = BytesRequired(hashTable);
 
-      void* mem = operator new(size);
+      size_t bytes = BytesRequired(hashTable);
 
-      HashBlob* hb = new (mem) HashBlob();
+      void *mem = operator new(bytes);
+
+      HashBlob *hb = new (mem) HashBlob();
+      hb->MagicNumber = 1;
+      hb->Version = 1;
+      hb->BlobSize = bytes;
+      hb->NumberOfBuckets = hashTable->numberOfBuckets;
+      hb = Write(hb, bytes, hashTable);
 
       return hb;
    }
@@ -223,6 +242,7 @@ public:
    static void Discard(HashBlob *blob)
    {
       // Your code here.
+      operator delete(blob);
    }
 };
 
