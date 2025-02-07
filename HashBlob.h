@@ -48,7 +48,7 @@ public:
    // (Actual length is not given but not needed.)
 
    size_t Length, Value;
-   uint32_t HashValue;
+   size_t HashValue;
 
    // The Key will be a C-string of whatever length.
    char Key[Unknown];
@@ -62,8 +62,8 @@ public:
       {
          return 0;
       }
-      size_t base = sizeof(Length) + sizeof(Value) + sizeof(HashValue);
-      size_t keyLen = (strlen(b->tuple.key) == 0) ? 0 : strlen(b->tuple.key) + 1;
+      size_t base = sizeof(Length) + sizeof(Value) + sizeof(size_t);
+      size_t keyLen = strlen(b->tuple.key) + 1;
 
       size_t total = base + keyLen;
       return RoundUp(total, sizeof(size_t));
@@ -102,9 +102,9 @@ public:
       size_t keyLen = strlen(b->tuple.key) + 1;
       std::memcpy(buffer, b->tuple.key, keyLen);
       buffer += keyLen;
-
+      size_t total = keyLen + 24;
       // Aligns buffer
-      size_t padding = RoundUp(len, sizeof(size_t)) - len;
+      size_t padding = len - total;
       if (padding > 0)
       {
          std::memset(buffer, 0, padding);
@@ -143,10 +143,10 @@ public:
    {
       size_t hashValue = HashT<const char *>()(key);
       size_t bucketOffset = Buckets[hashValue % NumberOfBuckets];
-
+      const char *blobEnd = reinterpret_cast<const char *>(this) + BlobSize;
       const char *bucket = reinterpret_cast<const char *>(this) + bucketOffset;
 
-      while (bucket < reinterpret_cast<const char *>(this) + BlobSize)
+      while (bucket < blobEnd)
       {
          const SerialTuple *tuple = reinterpret_cast<const SerialTuple *>(bucket);
          if (tuple->Length == 0)
@@ -196,16 +196,24 @@ public:
       {
          return nullptr;
       }
+      size_t headerSize = 4 * sizeof(size_t) + hb->NumberOfBuckets * sizeof(size_t);
       char *buffer = reinterpret_cast<char *>(hb);
+      char *cur = buffer + headerSize;
       char *bufferEnd = buffer + bytes;
 
-      buffer += sizeof(HashBlob) + hashTable->numberOfBuckets * sizeof(size_t);
+      size_t *bucketOffsets = hb->Buckets;
+
       for (size_t i = 0; i < hashTable->numberOfBuckets; ++i)
       {
+         bucketOffsets[i] = cur - buffer;
          HashBucket *bucket = hashTable->buckets[i];
          while (bucket)
          {
-            buffer = SerialTuple::Write(buffer, bufferEnd, bucket);
+            if (strcmp(bucket->tuple.key, "the") == 0)
+            {
+               int s = 0;
+            }
+            cur = SerialTuple::Write(cur, bufferEnd, bucket);
             bucket = bucket->next;
          }
       }
@@ -226,14 +234,13 @@ public:
       size_t bytes = BytesRequired(hashTable);
 
       void *mem = operator new(bytes);
-
+      std::memset(mem, 0, bytes);
       HashBlob *hb = new (mem) HashBlob();
       hb->MagicNumber = 1;
       hb->Version = 1;
       hb->BlobSize = bytes;
       hb->NumberOfBuckets = hashTable->numberOfBuckets;
       hb = Write(hb, bytes, hashTable);
-
       return hb;
    }
 
@@ -250,7 +257,7 @@ class HashFile
 {
 private:
    HashBlob *blob;
-
+   int fileDescrip;
    size_t FileSize(int f)
    {
       struct stat fileInfo;
@@ -264,25 +271,43 @@ public:
       return blob;
    }
 
-   HashFile(const char *filename)
+   HashFile(const char *filename) : blob(nullptr)
    {
       // Open the file for reading, map it, check the header,
       // and note the blob address.
 
       // Your code here.
+      fileDescrip = open(filename, O_RDONLY);
+      size_t fileSize = FileSize(fileDescrip);
+      void *map = mmap(nullptr, fileSize, PROT_READ, MAP_PRIVATE, fileDescrip, 0);
+
+      blob = reinterpret_cast<HashBlob *>(map);
    }
 
-   HashFile(const char *filename, const Hash *hashtable)
+   HashFile(const char *filename, const Hash *hashtable) : blob(nullptr)
    {
       // Open the file for write, map it, write
       // the hashtable out as a HashBlob, and note
       // the blob address.
-
       // Your code here.
+      blob = HashBlob::Create(hashtable);
+      fileDescrip = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0666);
+
+      size_t requiredSize = HashBlob::BytesRequired(hashtable);
+      ftruncate(fileDescrip, requiredSize);
+      void *map = mmap(nullptr, requiredSize, PROT_WRITE, MAP_SHARED, fileDescrip, 0);
+      std::memcpy(map, blob, requiredSize);
    }
 
    ~HashFile()
    {
-      // Your code here.
+      if (blob)
+      {
+         munmap(blob, blob->BlobSize);
+      }
+      if (fileDescrip >= 0)
+      {
+         close(fileDescrip);
+      }
    }
 };
