@@ -92,23 +92,24 @@ int main(int argc, char **argv) {
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
-    std::cout << url.Host << std::endl;
-    getaddrinfo(url.Host, "80", &hints, &address);
+    //  std::cout << url.Host << std::endl;
+    getaddrinfo(url.Host, (*url.Port ? url.Port : "80"), &hints, &address);
 
-    url.printURL();
+    //  url.printURL();
 
     // Create a TCP/IP socket.
     int socketFD = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
     // Connect the socket to the host address.
-    printAddrInfo(*address);
+    //  printAddrInfo(*address);
     int connectResult =
         connect(socketFD, address->ai_addr, address->ai_addrlen);
-    std::cout << "working" << std::endl;
+    //  std::cout << "working" << std::endl;
 
     // Send a GET message.
     std::string req =
-        "GET / HTTP/1.1\r\nHost: www.nytimes.com\r\nUser-Agent: "
+        "GET / HTTP/1.1\r\nHost: " + std::string(url.Host) +
+        "\r\nUser-Agent: "
         "LinuxGetUrl/2.0 ikansal@umich.edu (Linux)\r\nAccept: "
         "*/*\r\nAccept-Encoding: identity\r\nConnection: close\r\n\r\n";
 
@@ -120,7 +121,6 @@ int main(int argc, char **argv) {
     int bytes;
     while ((bytes = recv(socketFD, buffer, sizeof(buffer), 0)) > 0) {
         write(1, buffer, bytes);
-        printf(buffer);
     }
 
     // Close the socket and free the address info structure.
