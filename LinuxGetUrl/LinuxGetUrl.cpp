@@ -101,14 +101,15 @@ int main(int argc, char **argv) {
     int socketFD = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
     // Connect the socket to the host address.
-    //  printAddrInfo(*address);
+    // printAddrInfo(*address);
     int connectResult =
         connect(socketFD, address->ai_addr, address->ai_addrlen);
     //  std::cout << "working" << std::endl;
 
     // Send a GET message.
     std::string req =
-        "GET / HTTP/1.1\r\nHost: " + std::string(url.Host) +
+        "GET /" + std::string(url.Path) +
+        " HTTP/1.1\r\nHost: " + std::string(url.Host) +
         "\r\nUser-Agent: "
         "LinuxGetUrl/2.0 ikansal@umich.edu (Linux)\r\nAccept: "
         "*/*\r\nAccept-Encoding: identity\r\nConnection: close\r\n\r\n";

@@ -1,40 +1,208 @@
 HTTP/1.1 200 OK
-Date: Thu, 13 Feb 2025 21:17:57 GMT
+Date: Fri, 14 Feb 2025 19:42:18 GMT
 Server: Apache/2.4.6 (Red Hat Enterprise Linux) OpenSSL/1.0.2k-fips mod_auth_gssapi/1.5.1 mod_auth_kerb/5.4 mod_fcgid/2.3.9 mod_nss/1.0.14 NSS/3.28.4 PHP/5.6.40 SVN/1.7.14 mod_wsgi/3.4 Python/2.7.5
 Strict-Transport-Security: max-age=63072000; includeSubdomains; preload
-X-Powered-By: PHP/5.6.40
-Content-Length: 151
+Last-Modified: Wed, 29 Dec 2021 18:05:31 GMT
+ETag: "24e1-5d44cc89002fd"
+Accept-Ranges: bytes
+Content-Length: 9441
 Connection: close
 Content-Type: text/html; charset=UTF-8
 
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+ 	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
 
 <head>
-<title>EECS Department</title>
-<meta HTTP-EQUIV="REFRESH"
-CONTENT="0; url=https://www.eecs.umich.edu/">
+	<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+	
+	<title>Nicole Hamilton</title>
+	
+	<link href="Styles/Hamilton.css" rel="stylesheet" type="text/css" />
+	<link href="Styles/PrintStyles.css" rel="stylesheet" media="print" type="text/css" />
+	<link href="https://umich.edu/favicon.ico" rel="shortcut icon" />
+	<meta name="DC.Rights" content="Copyright 2016 Nicole Hamilton"/>
+	
+	<meta name="description" content="Nicole Hamilton was a lecturer in computer science and engineering at the University of Michigan Ann Arbor from 2017 to 2021."/>
+	
+	<meta name="keywords" content="Nicole Hamilton, lecturer, computer science, engineering, C++, OOP, digital design, Verilog, circuits, search engines, operating systems,
+	transistors, Hamilton C shell"/>
 </head>
 
 <body>
-</body>
-</html>
-HTTP/1.1 200 OK
-Date: Thu, 13 Feb 2025 21:17:57 GMT
-Server: Apache/2.4.6 (Red Hat Enterprise Linux) OpenSSL/1.0.2k-fips mod_auth_gssapi/1.5.1 mod_auth_kerb/5.4 mod_fcgid/2.3.9 mod_nss/1.0.14 NSS/3.28.4 PHP/5.6.40 SVN/1.7.14 mod_wsgi/3.4 Python/2.7.5
-Strict-Transport-Security: max-age=63072000; includeSubdomains; preload
-X-Powered-By: PHP/5.6.40
-Content-Length: 151
-Connection: close
-Content-Type: text/html; charset=UTF-8
+	<div id="container">
+		<div id="masthead" style="padding-top: 20px; padding-left:74px">
+       		<a href="https://www.eecs.umich.edu/cse/">
+       		<img src="Images/CSE-acronym-formal.png"
+       			alt="University of Michigan Computer Science and Engineering logo" width="354px"/>
+       		</a>
+		</div>
+		
+		<div id="navigation">
+			<ul>
+				<li><a href="https://web.eecs.umich.edu/~nham/eecs440w21">EECS 440 W21 System Design of a Search Engine archive</a></li>
+				<li><a href="https://web.eecs.umich.edu/~nham/eecs482ss20">EECS 482 SS20 Introduction to Operating Systems archive</a></li>
+			</ul>
+			<hr/>
+			<ul>
+				<li><a href="https://web.eecs.umich.edu/~nham/NicoleHamiltonCV2021.pdf">Curriculum vitae</a></li>
+				<li><a href="https://web.eecs.umich.edu/~nham/CourseEvals">Course evals</a></li>
+				<li><a href="https://faculty.washington.edu/kd1uj/">My faculty page at Univerity of Washington</a></li>
+				<li><a href="https://nicolehamilton.com">My personal website</a></li>
+				<li><a href="https://hamiltonlabs.com/Cshell.htm">Hamilton C shell homepage</a></li>
+				<li><a href="https://web.eecs.umich.edu/~nham/HamiltonCshell/">Free Hamilton C shell download for UMich students and faculty</a></li>
+				<li><a href="Playlists">My playlists</a></li>
+			</ul>
+			<hr/>
+			<ul>
+				<li><a href="#Credentials">Credentials</a></li>
+				<li><a href="#Career">Career</a></li>
+				<li><a href="#MyAccidentalPath">My accidental path<br/> to Ann Arbor</a></li>
+				<li><a href="#Personal">Personal</a></li>
+			</ul>
+		</div>
+		
+		<div id="content">
+		
+			<p>
+			<a href="Images/NicoleHamilton-2015-04-17.jpg">
+			<img src="Images/NicoleHamilton-2015-04-17-Square-800x800.jpg"
+				width="250"
+				alt="Nicole Hamilton, April 4, 2015"
+				title="Nicole Hamilton, April 4, 2015"
+				class="shadow"/>
+			</a>
+			</p>
 
-<html>
+			<h3 style="margin-bottom:0">Nicole Hamilton</h3>
+			<p>
+			Lecturer III (2017 to 2021)<br/>
+			Computer Science and Engineering<br/>
+			University of Michigan<br/>
+			Ann Arbor, MI  48109-2121
+			</p>
+			
+			<p>
+			<i>Cell</i>&nbsp;  425-765-9574<br/>
+			<a href="mailto:nham@umich.edu">nham@umich.edu</a><br/>
+			<a href="mailto:nicole@nicolehamilton.com">nicole@nicolehamilton.com</a><br/>
+			</p>
+			
+		</div>
+		
+		<div id="sidebar" style="left: 0px; top: 0px">
+			<p> 
+			I retired from the University of Michigan at the end of my appointment in May 2021 after four mostly
+			wonderful years here.  Before this, I was at the University of Washington Bothell for four years in the electrical
+			engineering department.
+			</p>
+			
+			<p>
+			While here at Michigan, I taught <a href="https://eecs280.org">EECS 280</a> C++ and Object-Oriented Programming
+			many times, typically with around 1000 to 1100 students spread across 5 sections with 3 or 4 instructors
+			and around 60 very gifted student staff. Summer 2020, I taught <a href="eecs482ss20/index.html">EECS 482</a> Introduction
+			to Operating Systems, a topic I've always enjoyed.	Winter 2021, I taught <a href="https://eecs485.org">EECS 485</a>
+			Web Systems for the first time and <a href="eecs440w21/index.html">EECS 440</a> System Design of a Search Engine for
+			fourth time, but for the first and last time with its new permanent number.  This is a course I created where students
+			worked in teams of six to build complete internet search engines from scratch in C++. The last two times I taught this, the top
+			teams indexed over 500M documents. (My 440 and 482 archives have links to my lecture recordings.)
+			</p>
+			
+			<p>
+			I also served as our <a href="https://www.abet.org/">ABET</a> coordinator and, in past years, on our
+			program and lecturer search committees and as an undergraduate advisor.
+			</p>
+			
+			<h4><a name="Credentials"></a>Credentials</h4>
+			
+			<p>
+			I have a BS and MS EE from Stanford (1973) and an MBA valedictorian from
+			Boston University (1987).  I am a life senior member of the IEEE and a registered
+			professional engineer in Texas and Massachusetts. In 2014, I was
+			inducted as an eminent engineer by the Stanford chapter of Tau Beta Pi.
+			</p>
+			
+			<p>
+			I have 11 issued patents and my publications have received over
+			<a href="https://scholar.google.com/citations?user=6j7pvpIHC9wC&hl=en">
+			3200 citations</a>.  A paper on search engine ranking I co-authored
+			at Microsoft won a <a href="https://icml.cc/2015/index.html%3Fp=51.html">
+			<i>10-year test-of-time award</i></a> at the 2015 International
+			Conference on Machine Learning.
+			</p>
+			
+			<h4><a name="Career"></a>Career</h4>
+			
+			<p>
+			I have spent my career as a designer, most of that as an entrepreneur.  Every
+			design project I can think of that I have ever worked on has always started
+			as a blank sheet of paper.  This is what I think I can teach.
+			</p>
+			
+			<p>
+			I started my career in gate-level chip design at IBM in the 1970s building
+			a reliable serial communications chip, a display processor and various other
+			hardware devices.  But most of my work has been in software.
+			</p>
+			
+			<p>
+			I'm the author of <a href="https://hamiltonlabs.com/Cshell.htm">Hamilton C shell</a>,
+			now a little over 250K lines of C.  In December 1988, my C shell became the first
+			multithreaded third-party application to ship on a PC.  It remains the only
+			multithreaded Unix shell in existence on any OS.
+			</p>			
+			
+			<p>
+			I was also the 9th member of the team at Microsoft that created the Bing
+			search engine.  I personally wrote the query language (the compiler) and ranker
+			for our first release, which went live in January 2005.  My code, roughly 30K
+			lines of C++ out of a little over 300K in the backend, decided what our users
+			were looking for, searched our index and then ordered the results.  This was
+			both the best and the worst job I have ever had.
+			</p>
+						
+			<h4><a name="MyAccidentalPath"></a>My accidental path to Ann Arbor</h4>
+		
+			<p>
+			I fell into teaching by accident in 2013.  I thought I was retired and volunteering to act as
+			a free advisor to seniors in electrical engineering on their Capstone projects at the University
+			of Washington Bothell. I was surprised to find it paid and even more so, that they would pay
+			me.  Without a PhD, it was never on my radar that I would someday be teaching at a university.  For
+			the next four years, I taught digital design and Verilog, entrepreneurship, circuits and
+			transistors and advised perhaps a dozen Capstone teams. I love teaching and feel honored and
+			delighted every day that I get to do this.  I love working with my students.  It makes me feel young.
+			</p>
+			
+			<p>
+			The move to Michigan also began quite by accident when I went offline at Wikipedia to discuss an article on
+			flip-flops that another editor and I had been working on.  Most people use pseudonyms on Wikipedia but
+			when we went offline and introduced ourselves, it was <a href="https://web.eecs.umich.edu/~brehob/">Mark Brehob</a>,
+			who insisted I should come to Michigan.  I wasn't looking forward to moving but decided that my advice to
+			students applied to me:  If you care about your career, you need to go where the opportunity is.  University
+			of Michigan has the #7 undergraduate computer engineering program in the country, so after a visit and
+			<a href="https://leccap.engin.umich.edu/leccap/viewer/r/hrssfl">teaching demo</a> and when it finally
+			came down to an offer, it was clearly an offer I couldn't refuse.  I mothballed my house in Redmond,
+			rented a townhouse here without ever seeing it, shipped only what I needed and drove here with my
+			cat in the back seat of my aging BMW.
+			</p>
+			
+			<p>
+			I had a wonderful time here.  My students are smart and interesting and I really liked most of my colleagues.  The move
+			was definitely worth it, even if in the end, I decided it was time to head home to Seattle.
+			</p>
+						
+			<h4><a name="Personal"></a>Personal</h4>
+			
+			<p>
+			I'm an Amateur Extra, callsign KD1UJ, though I confess I haven't been
+			on the air in years.  I've been an avid bicyclist all my life.  I'm liberal and I
+			care deeply about civil rights, especially for LGBT.
+			</p>
 
-<head>
-<title>EECS Department</title>
-<meta HTTP-EQUIV="REFRESH"
-CONTENT="0; url=https://www.eecs.umich.edu/">
-</head>
-
-<body>
+		</div>
+		<div id="footer">
+			<img src="Images/WhiteDot1000x1.png" alt="white dot"/>
+		</div>
+	</div>
 </body>
 </html>

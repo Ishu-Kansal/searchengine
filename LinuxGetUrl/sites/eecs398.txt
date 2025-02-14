@@ -1,0 +1,255 @@
+HTTP/1.1 200 OK
+Date: Fri, 14 Feb 2025 19:41:30 GMT
+Server: Apache/2.4.6 (Red Hat Enterprise Linux) OpenSSL/1.0.2k-fips mod_auth_gssapi/1.5.1 mod_auth_kerb/5.4 mod_fcgid/2.3.9 mod_nss/1.0.14 NSS/3.28.4 PHP/5.6.40 SVN/1.7.14 mod_wsgi/3.4 Python/2.7.5
+Strict-Transport-Security: max-age=63072000; includeSubdomains; preload
+Last-Modified: Fri, 20 Sep 2019 00:55:39 GMT
+ETag: "20be-592f1875ad212"
+Accept-Ranges: bytes
+Content-Length: 8382
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+ 	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+	<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+	
+	<title>EECS 398-001 W19 System Design of a Search Engine</title>
+	
+	<link href="../Styles/Hamilton.css" rel="stylesheet" type="text/css" />
+	<link href="../Styles/PrintStyles.css" rel="stylesheet" media="print" type="text/css" />
+	<link href="https://umich.edu/favicon.ico" rel="shortcut icon" />
+	<meta name="DC.Rights" content="Copyright 2016 Nicole Hamilton"/>
+	
+	<meta name="description" content="EECS 398 System Design in C++."/>
+	
+	<meta name="keywords" content="Nicole Hamilton, System design, Search engines"/>
+	<style type="text/css">
+	.numberedlist {
+		padding-left:22px;
+	}
+	</style>
+</head>
+
+<body>
+	<div id="container">
+		<div id="masthead" style="padding-top: 20px; padding-left:74px">
+       		<a href="https://www.eecs.umich.edu/cse/">
+       		<img src="../Images/CSE-acronym-formal.png"
+       			alt="University of Michigan Computer Science and Engineering logo" width="354px"/>
+       		</a>
+		</div>
+		
+		<div id="navigation">
+			<ul>
+				<li><p><i>Winter 2019</i></p></li>
+				<li><a href="EECS398W19 System Design in C++ Syllabus.pdf">Syllabus</a></li>
+				<li><a href="EECS398W19 Group photos.pdf">First assignment Group photos</a></li>
+				<li><a href="EECS398-Stylesheet.pdf">Stylesheet</a></li>
+			</ul>
+			<hr/>
+			<ul>
+				<li><p><i>Winter 2018</i></p></li>
+				<li><a href="EECS398W18 Instructor and comments report.pdf">
+				Student evaluations summary report</a></li>
+				<li><a href="EECS398W18 Individual responses.pdf">
+				Student evaluations individual responses</a></li>
+				<li><a href="EECS398W18 Reflections.pdf">Reflections</a></li>
+			</ul>
+			<hr/>
+			<ul>
+				<li><a href="https://web.eecs.umich.edu/~nham/">My faculty page</a></li>
+				<li><a href="https://web.eecs.umich.edu/~nham/HamiltonCshell/">
+				Free Hamilton C shell download for UMich students and faculty</a></li>
+			</ul>
+		</div>
+		
+		<div id="content">
+		
+			<p>
+			<a href="../Images/NicoleHamilton-2015-04-17.jpg">
+			<img src="../Images/NicoleHamilton-2015-04-17-Square-800x800.jpg"
+				width="250"
+				alt="Nicole Hamilton, April 4, 2015"
+				title="Nicole Hamilton, April 4, 2015"
+				class="shadow"/>
+			</a>
+			</p>
+
+			<h3 style="margin-bottom:0">Nicole Hamilton</h3>
+			<p>
+			Lecturer III<br/>
+			Computer Science and Engineering<br/>
+			University of Michigan<br/>
+			2649 Beyster<br/>
+			2260 Hayward Street<br/>
+			Ann Arbor, MI  48109-2121
+			</p>
+			
+			<p>
+			C: 425-765-9574<br/>
+			<a href="mailto:nham@umich.edu">nham@umich.edu</a><br/>
+			<a href="https://web.eecs.umich.edu/~nham">https://web.eecs.umich.edu/~nham</a>
+			</p>
+			
+			<p>
+			<b>Bio</b>
+			</p>
+			
+			<p>
+			I've spent most of my career as a system designer on new product teams and as an entrepreneur
+			selling <a href="https://hamiltonlabs.com/Cshell.htm">Hamilton C shell</a>, a product I wrote
+			in my living room 30 years ago.
+			</p>
+			
+			<p>
+			In early 2003, I became the ninth dev on the team that created what became the Bing
+			engine.  I wrote the ranker, the part that orders the results, and the query compiler, that part
+			that decides what the user is looking for.  Overall, I contributed about 30 KLOC to the first
+			release, representing about 10% of all the code in the backend as of the time we went live.
+			</p>
+			
+			<p>
+			I never expected to be teaching at a university.  I feel lucky to be here.
+			</p>
+			
+		</div>
+		
+		<div id="sidebar">
+			<h3>EECS 398 System Design of a Search Engine<br/>
+			Winter 2019</h3>
+			
+			<p>
+			<b>Lectures</b><br/>
+			Dow 1014, Tuesdays and Thursdays, 3:00 pm to 5:00 pm<br/>
+			Lectures will be recorded but attendance is strongly advised.
+			</p>
+			
+			<p>
+			<b>Office hours</b><br/>
+			Beyster 2649<br/>
+			Monday through Thursday, 5:00 pm to 6:00 pm
+			</p>
+			
+			<p>
+			<b>Prerequisites</b><br/>
+			EECS 280 and 281
+			</p>
+			
+			<p>
+			<b>Classification</b><br/>
+			Depending on your major:<br/>
+			CSE and CE:&nbsp; MDE or CS Flex Tech<br/>
+			CS-LSA:&nbsp;  Capstone or CS Flex Tech<br/>
+			EE:&nbsp; Technical elective<br/>
+			DS:&nbsp; Advanced Technical or Flex Tech elective
+			</p>	
+			<p>
+			<b>Overview</b>
+			</p>
+			
+			<p>
+			This is a course in how to tackle a large system programming project in C++.  You’ll
+			work on a team of 6 to write a complete multithreaded internet search engine from scratch.
+			</p>
+			
+			<p>
+			My objective is to offer students an opportunity to work on a significant <i>relatable</i>
+			project (something you can explain to your family and to recruiters) early in your
+			undergraduate careers.  I want the experience to be like working on the startup dev
+			team for a new product (like the one I had on the startup team for what became the Bing
+			engine.)
+			</p>
+			
+			<p>
+			Sixty percent of your grade will be on the project and will be competitive, based mostly
+			on your team’s performance compared to the others and on your individual contribution
+			to your team.  Thirty percent of your grade will be on the exams.  Ten percent is homework.
+			</p>
+			
+			<p>
+			<b>System design</b>
+			</p>
+			
+			<p>
+			System design projects always seem to have some defining characteristics.
+			</p>
+			
+			<ol class="numberedlist">
+			<li>
+			<p>
+			There’s an important domain-specific part that asks you to learn something new about an interesting
+			problem you’ve never seen before, in this case, how a search engine works.
+			</p>
+			</li>
+			<li>
+			<p>
+			There’s a need to invent a solution, an architecture, breaking the problem down into lots of moving
+			parts, with lots of data structures and algorithms.
+			</p>
+			</li>
+			<li>
+			<p>
+			It’s usually “close to the metal” with lots of low-level OS calls everywhere and the need to define
+			file and interchange formats, perform handshakes, share resources using locks, deal seriously with
+			error recovery, etc.
+			</p>
+			</li>
+			<li>
+			<p>
+			They're usually team efforts because they're too big to do any other way.
+			</p>
+			</li>
+			<li>
+			<p>
+			You build the whole thing, often from scratch, and at the end, you get to see it work and it feels good.
+			</p>
+			</li>
+			</ol>
+			
+			<p>
+			Every new design project always has a new domain-specific part, which keeps a career in system design
+			interesting, but the rest of the skills are the same and they’re things most people learn by doing.
+			</p>
+			
+			<p>
+			What I like about a search engine as a case study in system design is that it’s really compact fun project that hits
+			on every bit of what, to me, system design is all about.
+			</p>
+
+			<p>
+			<b>Results from last time</b>
+			</p>
+			
+			<p>
+			This will be the second time for this course.  The engines submitted last time ranged in
+			size from about 4.2 to just over 14 KLOC; most were about 6 KLOC.  (Yes, a little smaller
+			than you might have guessed.)  Sounds easy (maybe) but you will deal with a lot more
+			ambiguity than in most classes, in part because the course is still so raw and under
+			construction.
+			</p>
+			
+			<p>
+			Last time, the big risk was whether an entire engine could be scaled down into a project
+			that a small team of undergraduates could finish in one semester, especially as I'd
+			never tried this before and I was starting with zero course content.  But (tada!)
+			every team successfully built and demonstrated a working engine.  (It needs to be said:
+			Michigan students are amazing.)  But as anyone can see from the evals, there was a
+			lot of needs improvement, which I hope to improve this time.
+			</p>
+			
+			<p>
+			This time, I'm not starting from scratch and I'll have some help.  Expect more content,
+			more structure, better guidance on the project, better communication of what's expected.
+			But I'll still be creating parts of it on-the-fly, pedaling as fast as I can.
+			</p>
+
+		</div>
+		<div id="footer">
+			<img src="../Images/WhiteDot1000x1.png" alt="white dot"/>
+		</div>
+	</div>
+</body>
+</html>
