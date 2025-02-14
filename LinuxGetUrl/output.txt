@@ -1,0 +1,287 @@
+HTTP/1.1 200 OK
+Date: Fri, 14 Feb 2025 21:11:08 GMT
+Server: Apache/2.4.6 (Red Hat Enterprise Linux) OpenSSL/1.0.2k-fips mod_auth_gssapi/1.5.1 mod_auth_kerb/5.4 mod_fcgid/2.3.9 mod_nss/1.0.14 NSS/3.28.4 PHP/5.6.40 SVN/1.7.14 mod_wsgi/3.4 Python/2.7.5
+Strict-Transport-Security: max-age=63072000; includeSubdomains; preload
+Accept-Ranges: bytes
+Content-Length: 23549
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+<html>
+
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=windows-1252">
+<meta name=Generator content="Microsoft Word 15 (filtered)">
+<title>John P. Hayes</title>
+
+<style>
+<!--
+ /* Font Definitions */
+ @font-face
+	{font-family:"MS Mincho";
+	panose-1:2 2 6 9 4 2 5 8 3 4;}
+@font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:Consolas;
+	panose-1:2 11 6 9 2 2 4 3 2 4;}
+@font-face
+	{font-family:Tahoma;
+	panose-1:2 11 6 4 3 5 4 4 2 4;}
+@font-face
+	{font-family:"\@MS Mincho";
+	panose-1:2 2 6 9 4 2 5 8 3 4;}
+ /* Style Definitions */
+ p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{margin:0in;
+	margin-bottom:.0001pt;
+	font-size:12.0pt;
+	font-family:"Times New Roman",serif;}
+h1
+	{mso-style-link:"Heading 1 Char";
+	margin-right:0in;
+	margin-left:0in;
+	font-size:24.0pt;
+	font-family:"Times New Roman",serif;
+	font-weight:bold;}
+h2
+	{mso-style-link:"Heading 2 Char";
+	margin-right:0in;
+	margin-left:0in;
+	font-size:18.0pt;
+	font-family:"Times New Roman",serif;
+	font-weight:bold;}
+a:link, span.MsoHyperlink
+	{color:blue;
+	text-decoration:underline;}
+a:visited, span.MsoHyperlinkFollowed
+	{color:blue;
+	text-decoration:underline;}
+p.MsoPlainText, li.MsoPlainText, div.MsoPlainText
+	{mso-style-link:"Plain Text Char";
+	margin:0in;
+	margin-bottom:.0001pt;
+	font-size:10.0pt;
+	font-family:"Courier New";}
+p
+	{margin-right:0in;
+	margin-left:0in;
+	font-size:12.0pt;
+	font-family:"Times New Roman",serif;}
+p.MsoAcetate, li.MsoAcetate, div.MsoAcetate
+	{mso-style-link:"Balloon Text Char";
+	margin:0in;
+	margin-bottom:.0001pt;
+	font-size:8.0pt;
+	font-family:"Tahoma",sans-serif;}
+p.MsoListParagraph, li.MsoListParagraph, div.MsoListParagraph
+	{margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:.0001pt;
+	font-size:12.0pt;
+	font-family:"Times New Roman",serif;}
+p.MsoListParagraphCxSpFirst, li.MsoListParagraphCxSpFirst, div.MsoListParagraphCxSpFirst
+	{margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:.0001pt;
+	font-size:12.0pt;
+	font-family:"Times New Roman",serif;}
+p.MsoListParagraphCxSpMiddle, li.MsoListParagraphCxSpMiddle, div.MsoListParagraphCxSpMiddle
+	{margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:.0001pt;
+	font-size:12.0pt;
+	font-family:"Times New Roman",serif;}
+p.MsoListParagraphCxSpLast, li.MsoListParagraphCxSpLast, div.MsoListParagraphCxSpLast
+	{margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:.0001pt;
+	font-size:12.0pt;
+	font-family:"Times New Roman",serif;}
+span.Heading1Char
+	{mso-style-name:"Heading 1 Char";
+	mso-style-link:"Heading 1";
+	font-family:"Cambria",serif;
+	color:#365F91;
+	font-weight:bold;}
+span.Heading2Char
+	{mso-style-name:"Heading 2 Char";
+	mso-style-link:"Heading 2";
+	font-family:"Cambria",serif;
+	color:#4F81BD;
+	font-weight:bold;}
+span.PlainTextChar
+	{mso-style-name:"Plain Text Char";
+	mso-style-link:"Plain Text";
+	font-family:Consolas;}
+span.BalloonTextChar
+	{mso-style-name:"Balloon Text Char";
+	mso-style-link:"Balloon Text";
+	font-family:"Tahoma",sans-serif;}
+p.Paper, li.Paper, div.Paper
+	{mso-style-name:Paper;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:2.0pt;
+	margin-left:.35in;
+	text-align:justify;
+	text-indent:-.35in;
+	punctuation-wrap:simple;
+	text-autospace:none;
+	font-size:10.0pt;
+	font-family:"Times New Roman",serif;
+	color:black;}
+span.eudoraheader
+	{mso-style-name:eudoraheader;}
+span.nowrap
+	{mso-style-name:nowrap;}
+span.go
+	{mso-style-name:go;}
+span.org-top-card-moduledot-separated-list
+	{mso-style-name:org-top-card-module__dot-separated-list;}
+.MsoChpDefault
+	{font-size:10.0pt;}
+@page WordSection1
+	{size:8.5in 11.0in;
+	margin:1.0in 1.25in 1.0in 1.25in;}
+div.WordSection1
+	{page:WordSection1;}
+ /* List Definitions */
+ ol
+	{margin-bottom:0in;}
+ul
+	{margin-bottom:0in;}
+-->
+</style>
+
+</head>
+
+<body lang=EN-US link=blue vlink=blue>
+
+<div class=WordSection1>
+
+<p class=MsoNormal><img width=2102 height=12 src="index_files/image002.jpg"
+alt=cline><br>
+<br>
+<br>
+</p>
+
+<h1><img width=154 height=206 src="index_files/image003.jpg" align=right>JOHN
+P. HAYES </h1>
+
+<h2><span style='color:green'>Claude E. Shannon Professor of Engineering
+Science </span></h2>
+
+<p class=MsoNormal>Department of Electrical Engineering and Computer
+ Science</p>
+
+<p class=MsoNormal>Computer Science and Engineering Division <br>
+Beyster Building, Room 4713<br>
+University of Michigan <br>
+2260 Hayward Street<br>
+Ann Arbor, MI 48109-2121, USA<br>
+<br>
+Telephone: +1 (734) 763-0386 <br>
+Fax: +1 (734) 763-4617 <br>
+E-mail: <a href="mailto:jhayes@umich.edu">jhayes@umich.edu</a><br>
+<br>
+<img border=0 width=2102 height=12 src="index_files/image002.jpg" alt=cline></p>
+
+<h2 align=center style='text-align:center'><span style='color:red'>BACKGROUND</span></h2>
+
+<p class=MsoNormal style='margin-top:6.0pt;text-align:justify'>John P. Hayes is
+a professor in the <a href="http://www.eecs.umich.edu/">EECS</a> Department at
+the <a href="http://www.umich.edu/">University of Michigan</a>, where he holds
+the endowed Claude E. Shannon Chair of Engineering Science. Prior to that he
+was on the faculty of the University of Southern California. He also worked in
+industry for a couple of years, and has held visiting positions at Stanford
+University, McGill University, the University of Montreal, Logicvision Inc., the
+ University of Freiburg, and the University of Passau. Professor Hayes teaches
+and conducts research in the general area of computer science and engineering,
+with specific interests in computer-aided design, verification and testing of VLSI
+circuits; reliable computer architecture; neural networks; and unconventional
+computing techniques such as neural networks and machine learning, as well as stochastic
+and quantum computing. He was the founding director of Michigan's Advanced
+Computer Architecture Laboratory, now called the <a
+href="http://www.eecs.umich.edu/celab/">Computer Engineering Laboratory</a>. He
+is the author of seven books, including <em>Computer Architecture and
+Organization,</em> (McGraw-Hill, 3rd ed. 1998), <em>Quantum Circuit Simulation</em>
+(Springer, 2009), and <i>Design, Analysis and Test of Logic Circuits under
+Uncertainty</i> (Springer, 2012), as well as over 300 technical papers and
+several patents. He obtained his B.E. degree in electrical engineering from the
+National University of Ireland, Dublin, and his M.S. and Ph.D. degrees from the
+  University of Illinois at Urbana-Champaign. He received the University of
+Michigan's Distinguished Faculty Award in 1999, and the Alexander von Humboldt
+Foundation's Research Prize in 2004. In 2013 he was awarded a Lifetime
+Contribution Medal from IEEE for outstanding contributions to test technology,
+while he was the recipient of the <span style='font-size:11.0pt'>ACM SIGDA
+Pioneering Achievement Award for contributions to logic design, fault tolerant
+computing, and testing in 2014. </span>Professor Hayes is a Fellow of both IEEE
+and ACM.</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal><img border=0 width=2102 height=12
+src="index_files/image002.jpg" alt=cline><br>
+<br>
+</p>
+
+<h2 align=center style='text-align:center'><span style='color:red'>RESEARCH </span></h2>
+
+<p style='margin-left:.5in;text-indent:-.25in'><span style='font-family:Symbol'><img
+width=17 height=17 src="index_files/image001.gif" alt="*"><span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp; </span></span><b>Areas
+of Interest: </b>Our group is currently conducting research on the following
+topics: </p>
+
+<p class=MsoNormal style='margin-left:.5in'>* Unconventional and emerging computing
+technologies including stochastic and quantum circuits, and neuromorphic
+computing.</p>
+
+<p class=MsoNormal style='margin-left:.5in'>* Computing principles underlying
+natural and artificial neural networks.</p>
+
+<p class=MsoNormal style='margin-left:.5in'>* Design of computer architectures
+for machine learning.</p>
+
+<p class=MsoNormal style='margin-left:.5in'>* CAD tools and techniques to
+design, verify and test VLSI circuits</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal style='margin-left:.25in;text-indent:.25in'>For more
+information on our research activities, see <i>Selected Publications</i> below.</p>
+
+<p style='margin-left:.5in;text-align:justify;text-indent:-.25in'><span
+style='font-family:Symbol'><img width=17 height=17
+src="index_files/image001.gif" alt="*"><span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span><b>Research Assistantships: </b>Openings for graduate student
+research assistants (RAs) are available from time to time. There is currently (2018)
+an RA position in the area of stochastic computing and its application to
+neural network design. </p>
+
+<p style='margin-left:.5in;text-align:justify'>RA applicants should apply to
+(or be already admitted<i> </i>into) one of the EECS Department's PhD programs,
+normally Computer Science and Engineering (CSE), and send me an e-mail message
+with a copy of their detailed CV. For information about Michigan's various graduate
+programs in EECS, including admission requirements, application procedures, deadlines,
+etc., go to the <a
+href="http://www.eecs.umich.edu/eecs/graduate/grad_admissions.html">EECS
+Graduate Admissions</a> web site.</p>
+
+<p style='margin-left:.5in;text-align:justify;text-indent:-.25in'><span
+style='font-family:Symbol'><img width=17 height=17
+src="index_files/image001.gif" alt="*"><span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span><b>Financial Aid</b>: This is available in the form of
+fellowships, research assistantships, and teaching assistantships. New students
+are admitted at two levels, MS and PhD, depending on their qualifications.
+Students entering with a BS degree may be admitted at eit

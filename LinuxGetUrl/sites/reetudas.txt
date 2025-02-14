@@ -1,0 +1,222 @@
+2b6a
+<!doctype html>
+	<html lang="en" xmlns="https://web.eecs.umich.edu/~reetudas/">
+	<head>
+
+		<meta property="og:image" content="https://web.eecs.umich.edu/~reetudas/images/Das.jpg" />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://web.eecs.umich.edu/~reetudas/" />
+		<meta property="og:title" content="Reetuparna Das" />
+		<meta property="og:description" content="Reetu Das - Computer Science Professor" />
+
+		<!-- Required meta tags -->
+		<link rel="SHORTCUT ICON" href="images/m.png" />
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+		<!-- Bootstrap CSS -->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+		<link rel="stylesheet" href="main.css">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Reetuparna Das </title>
+
+
+		<!-- Scripts -->
+		<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+	</head>
+	<body>
+
+    
+<nav class="navbar fixed-top navbar-expand-lg navbar-light navbar-custom">
+    	<a class="navbar-brand" href="https://ce.engin.umich.edu/"><img class = "maxheight" style = "max-height: 65px; width: auto;" src="images/ce-logo_white.png" alt="CE Lab logo" width="100%"></a>
+    	<button class="navbar-toggler custom-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+    		<span class="navbar-toggler-icon"></span>
+    	</button>
+
+
+    	<div class="collapse navbar-collapse" id="navbarSupportedContent">
+    		<div class="container">
+    			<div class="row cse" style="background-color: #000;">
+    				<div class="navbar-nav ml-auto mobileshow">
+    					<a class="nav-item nav-link" href="https://eecs.engin.umich.edu/">EECS &nbsp; |</a>
+    					<a class="nav-item nav-link" href="https://cse.engin.umich.edu/">CSE &nbsp; |</a>
+    					<a class="nav-item nav-link" href="https://ece.engin.umich.edu/">ECE</a>
+    				</div>
+    				<div class="navbar-nav ml-auto mobilehide">
+    					<a class="nav-item nav-link" href="https://eecs.engin.umich.edu/">EECS &nbsp; |</a>
+    					<a class="nav-item nav-link" href="https://cse.engin.umich.edu/">Computer Science and Engineering&nbsp; &nbsp; |</a>
+    					<a class="nav-item nav-link" href="https://ece.engin.umich.edu/">Electrical and Computer Engineering &nbsp; &nbsp;</a>
+    				</div>
+    				<form class="form-inline my-2 my-lg-0" role="search" action="https://ce.engin.umich.edu/" method="get">
+    					<input class="form-control mr-sm-2" type="search" id="mobile-search1" placeholder="Search" name="s">
+    					<input class=" btn btn-maize mobile-search-submit" type="submit" value="">
+    				</form>
+    			</div> <!--row end -->
+    			<div class="row">
+    				<div class="navbar-nav largerfont">
+    					<a class="nav-item nav-link active paddingnav" href="index.html">Home</a>
+    					<a class="nav-item nav-link paddingnav" href="research.html">Research</a>
+    					<a class="nav-item nav-link paddingnav" href="teaching.html">Teaching</a>
+    					<a class="nav-item nav-link paddingnav" href="researchgroup.html">Group</a>
+    					<a class="nav-item nav-link paddingnav" href="publications.html">Publications</a>
+    					<a class="nav-item nav-link paddingnav" href="vita.html">Vita</a>
+    					<a class="nav-item nav-link paddingnav" href="personal.html">Personal</a>
+    					<a class="nav-item nav-link paddingnav" href="contact.html">Contact</a>
+    				</div>
+    			</div><!--row end -->
+    		</div><!--container end -->
+    	</nav>
+
+    <!-- Decoy Nav for Spacing -->
+    <nav class="navbar navbar-expand-lg navbar-light navbar-custom">
+    	<a class="navbar-brand" href="https://ce.engin.umich.edu/"><img class = "maxheight" style = "max-height: 65px; width: auto;" src="images/ce-logo_white.png" alt="CE Lab logo" width="100%"></a>
+    	<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+    		<span class="navbar-toggler-icon"></span>
+    	</button>
+    	<div class="collapse navbar-collapse" id="navbarSupportedContent">
+    		<div class="container">
+    			<div class="row cse" style="background-color: #000;">
+    				<div class="navbar-nav ml-auto mobileshow">
+    					<a class="nav-item nav-link" href="https://eecs.engin.umich.edu/">EECS  |</a>
+    					<a class="nav-item nav-link" href="https://cse.engin.umich.edu/">CSE |</a>
+    					<a class="nav-item nav-link" href="https://ece.engin.umich.edu/">ECE</a>
+    				</div>
+    				<div class="navbar-nav ml-auto mobilehide">
+    					<a class="nav-item nav-link" href="https://eecs.engin.umich.edu/">EECS &nbsp; |</a>
+    					<a class="nav-item nav-link" href="https://cse.engin.umich.edu/">Computer Science and Engineering&nbsp; &nbsp; |</a>
+    					<a class="nav-item nav-link" href="https://ece.engin.umich.edu/">Electrical and Computer Engineering &nbsp; &nbsp;</a>
+    				</div>
+    				<form class="form-inline my-2 my-lg-0" role="search" action="https://ce.engin.umich.edu/" method="get">
+    					<input class="form-control mr-sm-2" type="search" id="mobile-search1" placeholder="Search" name="s">
+    					<input class=" btn btn-maize mobile-search-submit" type="submit" value="">
+    				</form>
+    			</div> <!--row end -->
+    			<div class="row">
+    				<div class="navbar-nav largerfont">
+    					<a class="nav-item nav-link" href="#">Home</a>
+    					<a class="nav-item nav-link" href="#">Research</a>
+    					<a class="nav-item nav-link" href="#">Teaching</a>
+    					<a class="nav-item nav-link" href="#">Group</a>
+    					<a class="nav-item nav-link" href="#">Publications</a>
+    					<a class="nav-item nav-link" href="#">Vita</a>
+    					<a class="nav-item nav-link" href="#">Personal</a>
+    					<a class="nav-item nav-link" href="#">Contact</a>
+    				</div>
+    			</div>
+    		</div>
+    	</nav> 
+    	<!-- decoy nav end -->
+
+
+
+    	
+    	<!-- JUMBOTRON -->
+    	<section class="page-section" id="home">
+    		<div class="jumbotron jumbotron-fluid">
+    			<div class="container">
+    				<h1 style="font-weight:400"class="display-4">Reetuparna Das</h1>
+    				<p style="font-weight:600" class="lead">Associate Professor of Electrical Engineering and Computer Science <br>University of Michigan</p>
+    			</div>
+    		</div>
+    	</section>
+
+    	<!-- BIO SECTION -->
+    	<section class="page-section" id="bio">
+    		<div class="container">
+    			<div class="row">
+    				<div class = "col-md-4">
+    				</div>
+    				<div class="col-md-8">
+    					<h2>Brief Biography</h2>
+    				</div>
+    			</div>
+    			<div class="row">
+    				<div class="col-md-4">
+    					<img src="images/Das.jpg" width="80%">
+    				</div>
+    				<div class="col-md-8">
+    					
+    					<p class="lead">Reetu Das is an Associate Professor at the University of Michigan. Prior to this, she was a research scientist at Intel Labs, and the researcher-in-residence for the Center for Future Architectures Research. She also served as the co-founder of a precision medicine start-up, Sequal Inc. She received her Ph.D. in Computer Science and Engineering from Pennsylvania State University, University Park. 
+    					<br><br>
+    					Reetu has served as the program co-chair for MICRO-52, chair of MICRO’s test-of-time award committee, and is currently serving as the vice-chair of the ACM SIGMICRO Executive Committee. She is an associate editor for the TACO journal and has served on over 40 technical program committees. 
+    					<br><br>
+    					Reetu has received 
+    					<a href="https://ece.engin.umich.edu/stories/sloan-fellowship-for-overcoming-moores-law-in-health-and-ai" target="blank">Sloan Foundation Faculty Fellowship</a>,  
+    					<a href = "https://cra.org/meet-the-2018-beca-winners-yejin-choi-and-reetuparna-das/">CRA-W's Borg Early Career Award</a>, <a href="https://cse.engin.umich.edu/stories/das-recognized-as-outstanding-researcher-for-work-on-computational-caches" target="_blank">Intel Outstanding Researcher Award</a>, NSF CAREER award, and multiple IEEE Top Picks awards. She has been inducted into the MICRO Hall of Fame and ISCA Hall of Fame. She has authored over 50 papers and filed 7 patents.  </p>
+    				</div>
+    			</div>
+    		</div>
+    		<br>
+    		<br>
+    	</section>
+
+    	    	<!-- Research Interests -->
+    	<section class="page-section" id="bio">
+    		<div class="container">
+    			<div class="row">
+    				<div class = "col-md-4">
+    				</div>
+    				<div class="col-md-8">
+    					<h2>Research Interests</h2>
+    				</div>
+    			</div>
+    			<div class="row">
+    				<div class="col-md-4">
+    					<img src="images/chip.jpeg" width="80%">
+    					<br><br>
+    				</div>
+    				<div class="col-md-8">
+    					<p class="lead">Reetu’s recent projects include in-memory architectures, custom computing for precision health and ML, fine-grain heterogeneous processor architectures for mobile systems, and low-power scalable interconnects. </p>
+    				</div>
+    			</div>
+    		</div>
+    		<br>
+    		<br>
+    	</section>
+
+    	<section class="page-section" id="bio">
+    		<div class="container">
+    			<div class="row">
+    				<div class = "col-md-4">
+    				</div>
+    				<div class="col-md-8">
+    					<h2>Book</h2>
+    				</div>
+    			</div>
+    			<div class="row">
+    				<div class="col-md-4">
+
+    					<!-- <h3> Book </h3> -->
+    					<a style = "text-decoration: none; color:black" href = "https://www.amazon.com/Near-Memory-Computing-Synthesis-Lectures-Architecture/dp/1636391869" target="_blank">
+    					<img src="images/book.jpg" width="80%">
+    					</a>
+    					<br><br>
+    				</div>
+    				<div class="col-md-8">
+    					<p class="lead">In-/Near-Memory Computing. Synthesis Lectures on Computer Architecture, Morgan & Claypool Publishers 2021. </p>
+    				</div>
+    			</div>
+    		</div>
+    		<br>
+    		<br>
+    	</section>
+    	    	
+    	    	
+
+    	<div align="center" class="footer">
+    		<!-- <img src="images/footer-logo.png" width="20%"> -->
+    		<br>
+    		<p style="color:white; font-size:10px; padding-top:5px"> &copy 2022 Reetuparna Das</p> 
+    	</div>
+
+
+
+    </body>
+    </html>
+
+0
+

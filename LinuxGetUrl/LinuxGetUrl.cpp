@@ -120,8 +120,21 @@ int main(int argc, char **argv) {
     // stdout.
     char buffer[10240];
     int bytes;
+
+    bool skip_header = false;
+
     while ((bytes = recv(socketFD, buffer, sizeof(buffer), 0)) > 0) {
-        write(1, buffer, bytes);
+        if (!skip_header) {
+            // Find the first <
+            char *afterBracket = strstr(buffer, "\r\n\r\n");
+            if (afterBracket != nullptr) {
+                afterBracket += 4;
+                write(1, afterBracket, bytes - (afterBracket - buffer));
+            }
+            skip_header = true;
+        } else {
+            write(1, buffer, bytes);
+        }
     }
 
     // Close the socket and free the address info structure.
