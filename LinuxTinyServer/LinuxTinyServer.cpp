@@ -20,41 +20,37 @@
 // perf issue, forcing the client browser to reconnect for each
 // request and a candidate for improvement.
 
-
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <pthread.h>
 #include <semaphore.h>
-#include <fcntl.h>
-#include <iostream>
 #include <string.h>
-#include <string>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 #include <cassert>
+#include <iostream>
+#include <string>
 using namespace std;
 
-
- // The constructor for any plugin should set Plugin = this so that
- // LinuxTinyServer knows it exists and can call it.
+// The constructor for any plugin should set Plugin = this so that
+// LinuxTinyServer knows it exists and can call it.
 
 #include "Plugin.h"
 PluginObject *Plugin = nullptr;
-
 
 // Root directory for the website, taken from argv[ 2 ].
 // (Yes, a global variable since it never changes.)
 
 char *RootDirectory;
 
-
 //  Multipurpose Internet Mail Extensions (MIME) types
 
-struct MimetypeMap
-   {
-   const char *Extension, *Mimetype;
-   };
+struct MimetypeMap {
+    const char *Extension, *Mimetype;
+};
 
 const MimetypeMap MimeTable[ ] =
    {
@@ -128,262 +124,261 @@ const MimetypeMap MimeTable[ ] =
    ".zip",     "application/zip"
    };
 
+const char *Mimetype(const string filename) {
+    // TO DO: if a matching a extentsion is found return the corresponding
+    // MIME type.
 
-const char *Mimetype( const string filename )
-   {
-   // TO DO: if a matching a extentsion is found return the corresponding
-   // MIME type.
+    // Anything not matched is an "octet-stream", treated
+    // as an unknown binary, which can be downloaded.
+    size_t lastDotIdx = filename.find_last_of('.');
+    if (lastDotIdx == string::npos) {
+        return "application/octet-stream";
+    }
+    const char *extension = (filename.substr(lastDotIdx)).c_str();
+   //  std::cout << "extension: " << extension << std::endl;
+    int NumberofTags = 66;
+    int left = 0, right = NumberofTags - 1;
+    while (left <= right) {
+        int mid = (left + right) / 2;
 
-   // Anything not matched is an "octet-stream", treated
-   // as an unknown binary, which can be downloaded.
-   return "application/octet-stream";
-   }
+        // Use std::tolower on the fly instead of modifying original string
+        int compare = strcasecmp(MimeTable[mid].Extension, extension);
+        if (compare == 0) {
+            return MimeTable[mid].Mimetype;
+        }
+        if (compare < 0) {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+    return "application/octet-stream";
+}
 
+int HexLiteralCharacter(char c) {
+    // If c contains the Ascii code for a hex character, return the
+    // binary value; otherwise, -1.
 
-int HexLiteralCharacter( char c )
-   {
-   // If c contains the Ascii code for a hex character, return the
-   // binary value; otherwise, -1.
+    int i;
 
-   int i;
+    if ('0' <= c && c <= '9')
+        i = c - '0';
+    else if ('a' <= c && c <= 'f')
+        i = c - 'a' + 10;
+    else if ('A' <= c && c <= 'F')
+        i = c - 'A' + 10;
+    else
+        i = -1;
 
-   if ( '0' <= c && c <= '9' )
-      i = c - '0';
-   else
-      if ( 'a' <= c && c <= 'f' )
-         i = c - 'a' + 10;
-      else
-         if ( 'A' <= c && c <= 'F' )
-            i = c - 'A' + 10;
-         else
-            i = -1;
+    return i;
+}
 
-   return i;
-   }
+string UnencodeUrlEncoding(string &path) {
+    // Unencode any %xx encodings of characters that can't be
+    // passed in a URL.
 
+    // (Unencoding can only shorten a string or leave it unchanged.
+    // It never gets longer.)
 
-string UnencodeUrlEncoding( string &path )
-   {
-   // Unencode any %xx encodings of characters that can't be
-   // passed in a URL.
+    const char *start = path.c_str(), *from = start;
+    string result;
+    char c, d;
 
-   // (Unencoding can only shorten a string or leave it unchanged.
-   // It never gets longer.)
+    while ((c = *from++) != 0)
+        if (c == '%') {
+            c = *from;
+            if (c) {
+                d = *++from;
+                if (d) {
+                    int i, j;
+                    i = HexLiteralCharacter(c);
+                    j = HexLiteralCharacter(d);
+                    if (i >= 0 && j >= 0) {
+                        from++;
+                        result += (char)(i << 4 | j);
+                    } else {
+                        // If the two characters following the %
+                        // aren't both hex digits, treat as
+                        // literal text.
 
-   const char *start = path.c_str( ), *from = start;
-   string result;
-   char c, d;
-
-
-   while ( ( c = *from++ ) != 0 )
-      if ( c == '%' )
-         {
-         c = *from;
-         if ( c )
-            {
-            d = *++from;
-            if ( d )
-               {
-               int i, j;
-               i = HexLiteralCharacter( c );
-               j = HexLiteralCharacter( d );
-               if ( i >= 0 && j >= 0 )
-                  {
-                  from++;
-                  result += ( char )( i << 4 | j );
-                  }
-               else
-                  {
-                  // If the two characters following the %
-                  // aren't both hex digits, treat as
-                  // literal text.
-
-                  result += '%';
-                  from--;
-                  }
-               }
+                        result += '%';
+                        from--;
+                    }
+                }
             }
-         }
-      else
-         result += c;
+        } else
+            result += c;
 
-   return result;
-   }
+    return result;
+}
 
+bool SafePath(const char *path) {
+    // The path must start with a /.
+    if (*path != '/') return false;
 
-bool SafePath( const char *path )
-   {
-   // The path must start with a /.
-   if ( *path != '/' )
-      return false;
+    // TO DO:  Return false for any path containing ..
+    // segments that attempt to go higher than the root
+    // directory for the website.
 
-   // TO DO:  Return false for any path containing ..
-   // segments that attempt to go higher than the root
-   // directory for the website.
+    return true;
+}
 
-   return true;
-   }
+off_t FileSize(int f) {
+    // Return -1 for directories.
 
+    struct stat fileInfo;
+    fstat(f, &fileInfo);
+    if ((fileInfo.st_mode & S_IFMT) == S_IFDIR) return -1;
+    return fileInfo.st_size;
+}
 
+void AccessDenied(int talkSocket) {
+    const char accessDenied[] =
+        "HTTP/1.1 403 Access Denied\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n\r\n";
 
+    cout << accessDenied;
+    send(talkSocket, accessDenied, sizeof(accessDenied) - 1, 0);
+}
 
-off_t FileSize( int f )
-   {
-   // Return -1 for directories.
+void FileNotFound(int talkSocket) {
+    const char fileNotFound[] =
+        "HTTP/1.1 404 Not Found\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n\r\n";
 
-   struct stat fileInfo;
-   fstat( f, &fileInfo );
-   if ( ( fileInfo.st_mode & S_IFMT ) == S_IFDIR )
-      return -1;
-   return fileInfo.st_size;
-   }
+    cout << fileNotFound;
+    send(talkSocket, fileNotFound, sizeof(fileNotFound) - 1, 0);
+}
 
+void *Talk(void *talkSocket) {
+    // TO DO:  Look for a GET message, then reply with the
+    // requested file.
 
-void AccessDenied( int talkSocket )
-   {
-   const char accessDenied[ ] = "HTTP/1.1 403 Access Denied\r\n"
-         "Content-Length: 0\r\n"
-         "Connection: close\r\n\r\n";
+    // Cast from void * to int * to recover the talk socket id
+    // then delete the copy passed on the heap.
 
-   cout << accessDenied;
-   send( talkSocket, accessDenied, sizeof( accessDenied ) - 1, 0 );
-   }
+    // Read the request from the socket and parse it to extract
+    // the action and the path, unencoding any %xx encodings.
 
-   
-void FileNotFound( int talkSocket )
-   {
-   const char fileNotFound[ ] = "HTTP/1.1 404 Not Found\r\n"
-         "Content-Length: 0\r\n"
-         "Connection: close\r\n\r\n";
+    // Check to see if there's a plugin and, if there is,
+    // whether this is a magic path intercepted by the plugin.
 
-   cout << fileNotFound;
-   send( talkSocket, fileNotFound, sizeof( fileNotFound ) - 1, 0 );
-   }
+    //    If it is intercepted, call the plugin's ProcessRequest( )
+    //    and send whatever's returned over the socket.
 
-               
-void *Talk( void *talkSocket )
-   {
-   // TO DO:  Look for a GET message, then reply with the
-   // requested file.
+    // If it isn't intercepted, action must be "GET" and
+    // the path must be safe.
 
-   // Cast from void * to int * to recover the talk socket id
-   // then delete the copy passed on the heap.
+    // If the path refers to a directory, access denied.
+    // If the path refers to a file, write it to the socket.
 
-   // Read the request from the socket and parse it to extract
-   // the action and the path, unencoding any %xx encodings.
+    // Close the socket and return nullptr.
+}
 
-   // Check to see if there's a plugin and, if there is,
-   // whether this is a magic path intercepted by the plugin.
+// ACTUAL MAIN
+int newfunc(int argc, char **argv) {
+    if (argc != 3) {
+        cerr << "Usage:  " << argv[0] << " port rootdirectory" << endl;
+        return 1;
+    }
 
-   //    If it is intercepted, call the plugin's ProcessRequest( )
-   //    and send whatever's returned over the socket.
-   
-   // If it isn't intercepted, action must be "GET" and
-   // the path must be safe.
-       
-   // If the path refers to a directory, access denied.
-   // If the path refers to a file, write it to the socket.
+    int port = atoi(argv[1]);
+    RootDirectory = argv[2];
 
-   // Close the socket and return nullptr.
-   }
+    // Discard any trailing slash.  (Any path specified in
+    // an HTTP header will have to start with /.)
 
+    char *r = RootDirectory;
+    if (*r) {
+        do r++;
+        while (*r);
+        r--;
+        if (*r == '/') *r = 0;
+    }
 
+    // We'll use two sockets, one for listening for new
+    // connection requests, the other for talking to each
+    // new client.
 
-int main( int argc, char **argv )
-   {
-   if ( argc != 3 )
-      {
-      cerr << "Usage:  " << argv[ 0 ] << " port rootdirectory" << endl;
-      return 1;
-      }
+    int listenSocket, talkSocket;
 
-   int port = atoi( argv[ 1 ] );
-   RootDirectory = argv[ 2 ];
+    // Create socket address structures to go with each
+    // socket.
 
-   // Discard any trailing slash.  (Any path specified in
-   // an HTTP header will have to start with /.)
+    struct sockaddr_in listenAddress, talkAddress;
+    socklen_t talkAddressLength = sizeof(talkAddress);
+    memset(&listenAddress, 0, sizeof(listenAddress));
+    memset(&talkAddress, 0, sizeof(talkAddress));
 
-   char *r = RootDirectory;
-   if ( *r )
-      {
-      do
-         r++;
-      while ( *r );
-      r--;
-      if ( *r == '/' )
-         *r = 0;
-      }
+    // Fill in details of where we'll listen.
 
-   // We'll use two sockets, one for listening for new
-   // connection requests, the other for talking to each
-   // new client.
+    // We'll use the standard internet family of protocols.
+    listenAddress.sin_family = AF_INET;
 
-   int listenSocket, talkSocket;
+    // htons( ) transforms the port number from host (our)
+    // byte-ordering into network byte-ordering (which could
+    // be different).
+    listenAddress.sin_port = htons(port);
 
-   // Create socket address structures to go with each
-   // socket.
+    // INADDR_ANY means we'll accept connections to any IP
+    // assigned to this machine.
+    listenAddress.sin_addr.s_addr = htonl(INADDR_ANY);
 
-   struct sockaddr_in listenAddress,  talkAddress;
-   socklen_t talkAddressLength = sizeof( talkAddress );
-   memset( &listenAddress, 0, sizeof( listenAddress ) );
-   memset( &talkAddress, 0, sizeof( talkAddress ) );
-   
-   // Fill in details of where we'll listen.
-   
-   // We'll use the standard internet family of protocols.
-   listenAddress.sin_family = AF_INET;
+    // TO DO:  Create the listenSocket, specifying that we'll r/w
+    // it as a stream of bytes using TCP/IP.
 
-   // htons( ) transforms the port number from host (our)
-   // byte-ordering into network byte-ordering (which could
-   // be different).
-   listenAddress.sin_port = htons( port );
+    // TO DO:  Bind the listen socket to the IP address and protocol
+    // where we'd like to listen for connections.
 
-   // INADDR_ANY means we'll accept connections to any IP
-   // assigned to this machine.
-   listenAddress.sin_addr.s_addr = htonl( INADDR_ANY );
+    // TO DO:  Begin listening for clients to connect to us.
 
-   // TO DO:  Create the listenSocket, specifying that we'll r/w
-   // it as a stream of bytes using TCP/IP.
+    // The second argument to listen( ) specifies the maximum
+    // number of connection requests that can be allowed to
+    // stack up waiting for us to accept them before Linux
+    // starts refusing or ignoring new ones.
+    //
+    // SOMAXCONN is a system-configured default maximum socket
+    // queue length.  (Under WSL Ubuntu, it's defined as 128
+    // in /usr/include/x86_64-linux-gnu/bits/socket.h.)
 
-   // TO DO:  Bind the listen socket to the IP address and protocol
-   // where we'd like to listen for connections.
+    // TO DO;  Accept each new connection and create a thread to talk with
+    // the client over the new talk socket that's created by Linux
+    // when we accept the connection.
 
-   // TO DO:  Begin listening for clients to connect to us.
+    {
+        // TO DO:  Create and detach a child thread to talk to the
+        // client using pthread_create and pthread_detach.
 
-   // The second argument to listen( ) specifies the maximum
-   // number of connection requests that can be allowed to
-   // stack up waiting for us to accept them before Linux
-   // starts refusing or ignoring new ones.
-   //
-   // SOMAXCONN is a system-configured default maximum socket
-   // queue length.  (Under WSL Ubuntu, it's defined as 128
-   // in /usr/include/x86_64-linux-gnu/bits/socket.h.)
+        // When creating a child thread, you get to pass a void *,
+        // usually used as a pointer to an object with whatever
+        // information the child needs.
 
-   // TO DO;  Accept each new connection and create a thread to talk with
-   // the client over the new talk socket that's created by Linux
-   // when we accept the connection.
+        // The talk socket is passed on the heap rather than with a
+        // pointer to the local variable because we're going to quickly
+        // overwrite that local variable with the next accept( ).  Since
+        // this is multithreaded, we can't predict whether the child will
+        // run before we do that.  The child will be responsible for
+        // freeing the resource.  We do not wait for the child thread
+        // to complete.
+        //
+        // (A simpler alternative in this particular case would be to
+        // caste the int talksocket to a void *, knowing that a void *
+        // must be at least as large as the int.  But that would not
+        // demonstrate what to do in the general case.)
+    }
 
-      {
-      // TO DO:  Create and detach a child thread to talk to the
-      // client using pthread_create and pthread_detach.
+    close(listenSocket);
+}
 
-      // When creating a child thread, you get to pass a void *,
-      // usually used as a pointer to an object with whatever
-      // information the child needs.
-      
-      // The talk socket is passed on the heap rather than with a
-      // pointer to the local variable because we're going to quickly
-      // overwrite that local variable with the next accept( ).  Since
-      // this is multithreaded, we can't predict whether the child will
-      // run before we do that.  The child will be responsible for
-      // freeing the resource.  We do not wait for the child thread
-      // to complete.
-      //
-      // (A simpler alternative in this particular case would be to
-      // caste the int talksocket to a void *, knowing that a void *
-      // must be at least as large as the int.  But that would not
-      // demonstrate what to do in the general case.)
-      }
+// TESTER
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        std::cerr << "Usage: ./LinuxTinyServer filename\n";
+        return -1;
+    }
 
-   close( listenSocket );
-   }
+    char *filename = argv[1];
+    std::cout << Mimetype(string(filename)) << std::endl;
+}
