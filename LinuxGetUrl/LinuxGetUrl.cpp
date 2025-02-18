@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
         "GET /" + std::string(url.Path) +
         " HTTP/1.1\r\nHost: " + std::string(url.Host) +
         "\r\nUser-Agent: "
-        "LinuxGetUrl/2.0 ikansal@umich.edu (Linux)\r\nAccept: "
+        "LinuxGetUrl/2.0 404FoundEngine@umich.edu (Linux)\r\nAccept: "
         "*/*\r\nAccept-Encoding: identity\r\nConnection: close\r\n\r\n";
 
     send(socketFD, req.c_str(), req.length(), 0);
@@ -126,6 +126,8 @@ int main(int argc, char **argv) {
     while ((bytes = recv(socketFD, buffer, sizeof(buffer), 0)) > 0) {
         if (!skip_header) {
             // Find the first <
+            // right now, doing first newline bc we need that for assignment
+            // for crawler modify and change to find first instance of "<"
             char *afterBracket = strstr(buffer, "\r\n\r\n");
             if (afterBracket != nullptr) {
                 afterBracket += 4;
