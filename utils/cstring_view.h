@@ -1,0 +1,89 @@
+#pragma once
+
+#include <string>
+#include <cstring>
+
+class cstring_view
+{
+public:
+  const static size_t npos = -1;
+
+  explicit cstring_view() = default;
+  explicit cstring_view(nullptr_t) = delete;
+  explicit cstring_view(const std::string &s) : first{s.data()}, last(s.data() + s.size()) {}
+  explicit cstring_view(const char *c, size_t l) : first{c}, last{c + l} {}
+  explicit cstring_view(const char *c) : first{c}, last{c + strlen(c)} {}
+
+  template <class It, class End>
+  cstring_view(It first, End last) : first{&*first}, last{&*last} {}
+
+  const char *begin() const { return first; }
+  const char *cbegin() const { return first; }
+
+  const char *end() const { return last; }
+  const char *cend() const { return last; }
+
+  const char &operator[](size_t pos) const { return first[pos]; }
+  const char &front() const { return *first; }
+  const char &back() const { return *(last - 1); }
+  const char *data() const { return first; }
+
+  size_t size() const { return last - first; }
+  bool empty() const { return first == last; }
+
+  void remove_prefix(size_t n) { first += n; }
+  void remove_suffix(size_t n) { last -= n; }
+
+  cstring_view substr(size_t pos, size_t count) const
+  {
+    if (count == npos || pos + count > size())
+      return cstring_view{first + pos, last};
+    else
+      return cstring_view{first + pos, first + pos + count};
+  }
+
+  bool operator==(const cstring_view &other) const
+  {
+    if (size() != other.size())
+      return false;
+    for (auto it1 = cbegin(), it2 = other.cbegin();
+         it1 != cend() && it2 != other.cend();
+         ++it1, ++it2)
+    {
+      if (*it1 != *it2)
+        return false;
+    }
+    return true;
+  }
+
+  size_t find(cstring_view sv, size_t pos = 0) const
+  {
+    if (size() < sv.size())
+      return npos; // avoid underflow
+    for (size_t i = 0; i <= size() - sv.size(); ++i)
+    {
+      if (substr(i, sv.size()) == sv)
+        return i;
+    }
+    return npos;
+  }
+
+  size_t find(char c, size_t pos = 0) const
+  {
+    return find(cstring_view{&c, 1});
+  }
+
+  size_t find(const char *s, size_t pos, size_t count)
+  {
+    return find(cstring_view{s, count}, pos);
+  }
+
+  size_t find(const char *s, size_t pos)
+  {
+    return find(cstring_view{s}, pos);
+  }
+
+private:
+  const char *first{};
+  const char *last{};
+};
