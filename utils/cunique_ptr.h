@@ -1,5 +1,3 @@
-#include <type_traits>
-
 template <class T>
 struct Deleter
 {

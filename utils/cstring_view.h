@@ -56,6 +56,16 @@ public:
     return true;
   }
 
+  bool operator==(const char *c) const
+  {
+    return *this == cstring_view{c};
+  }
+
+  bool operator==(const std::string &s) const
+  {
+    return *this == cstring_view{s};
+  }
+
   size_t find(cstring_view sv, size_t pos = 0) const
   {
     if (size() < sv.size())
@@ -73,12 +83,12 @@ public:
     return find(cstring_view{&c, 1});
   }
 
-  size_t find(const char *s, size_t pos, size_t count)
+  size_t find(const char *s, size_t pos, size_t count) const
   {
     return find(cstring_view{s, count}, pos);
   }
 
-  size_t find(const char *s, size_t pos)
+  size_t find(const char *s, size_t pos) const
   {
     return find(cstring_view{s}, pos);
   }
