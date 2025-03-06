@@ -1,5 +1,10 @@
-# searchengine
+# 404 Found Search Engine
 Search Engine for EECS 498-005
 
-# team members
-Anton Petushkov / antonpet / https://umich.zoom.us/j/9934188294 (Passcode: 12345)
+# Team Members
+Alex Radomski / alexrad@umich.edu
+Anton Petushkov / antonpet@umich.edu
+Ishu Kansal / ikansal@umich.edu
+Jason Lin / linjay@umich.edu
+Jason Yen / jasonyen@umich.edu
+Nabeel Zaheer / nabeelsz@umich.edu
