@@ -11,13 +11,15 @@
 #include <queue>
 #include <string>
 
-#include "searchengine/HtmlParser/HtmlParser.h"
+#include "HtmlParser/HtmlParser.h"
+#include "BloomFilterStarterFiles/BloomFilter.h"
 
 const uint32_t MAX_PROCESSED = 5;
 
 std::queue<std::string> explore_queue{};
-// bloom filter
+Bloomfilter bf(100000, .0001); //Temp size and false pos rate
 sem_t *queue_sem{};
+pthread_rwlock_t bf_lock{};
 pthread_mutex_t queue_lock{};
 pthread_mutex_t output_lock{};
 uint32_t num_processed{};
@@ -85,7 +87,17 @@ void *runner(void *) {
       pthread_mutex_lock(&queue_lock);
       ++num_processed;
       for (const auto &link : parser.links) {
-        explore_queue.push(std::move(link.URL));
+        const std::string url = std::move(link.URL);
+        pthread_rwlock_rdlock(&bf_lock);
+        bool urlExists = bf.contains(url);
+        pthread_rwlock_unlock(&bf_lock);
+        if (!urlExists) 
+        {
+          pthread_rwlock_wrlock(&bf_lock);
+          bf.insert(url);
+          pthread_rwlock_unlock(&bf_lock);
+          explore_queue.push(url);
+        }
         sem_post(queue_sem);
       }
       pthread_mutex_unlock(&queue_lock);
