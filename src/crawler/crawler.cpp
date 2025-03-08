@@ -3,6 +3,8 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <iostream>
@@ -34,6 +36,12 @@ void get_and_parse_url(const char *url, int fd) {
   }
 }
 
+int get_file_size(int fd) {
+  struct stat buf;
+  fstat(fd, &buf);
+  return buf.st_size;
+}
+
 void *runner(void *) {
   while (num_processed < MAX_PROCESSED) {
     sem_wait(queue_sem);
@@ -48,10 +56,14 @@ void *runner(void *) {
     int outputFd = open(fileName.data(), O_CREAT | O_TRUNC | O_WRONLY | O_EXCL);
     if (outputFd == -1) {
       std::clog << "URL already processed for url: " << url << '\n';
-      return;
+      continue;
     }
 
     get_and_parse_url(url.data(), outputFd);
+
+    const char *fileData = (char *)mmap(nullptr, get_file_size(outputFd),
+                                        O_RDONLY, PROT_READ, outputFd, 0);
+    // use fileData as input for html parser
   }
   return NULL;
 }
