@@ -18,7 +18,7 @@ pthread_mutex_t queue_lock{};
 uint32_t num_processed{};
 
 void get_and_parse_url(const char *url, int fd) {
-  const static const char *proc = "../../LinuxGetUrl/LinuxGetUrl";
+  static const char *const proc = "../../LinuxGetUrl/LinuxGetUrl";
 
   pid_t pid = fork();
   if (pid == 0) {
@@ -34,7 +34,7 @@ void get_and_parse_url(const char *url, int fd) {
   }
 }
 
-void runner() {
+void *runner(void *) {
   while (num_processed < MAX_PROCESSED) {
     sem_wait(queue_sem);
 
@@ -53,11 +53,18 @@ void runner() {
 
     get_and_parse_url(url.data(), outputFd);
   }
+  return NULL;
 }
 
 int main(int, char **) {
   pthread_mutex_init(&queue_lock, NULL);
   queue_sem = sem_open("/crawler_semaphore", O_CREAT);
+
+  const static int num_threads = 10;  // start small
+  pthread_t threads[num_threads];
+  for (int i = 0; i < num_threads; ++i) {
+    pthread_create(threads + i, NULL, runner, NULL);
+  }
 
   sem_close(queue_sem);
   pthread_mutex_destroy(&queue_lock);
