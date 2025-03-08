@@ -11,28 +11,35 @@
 #include <queue>
 #include <string>
 
+#include "searchengine/HtmlParser/HtmlParser.h"
+
 const uint32_t MAX_PROCESSED = 5;
 
 std::queue<std::string> explore_queue{};
 // bloom filter
 sem_t *queue_sem{};
 pthread_mutex_t queue_lock{};
+pthread_mutex_t output_lock{};
 uint32_t num_processed{};
 
-void get_and_parse_url(const char *url, int fd) {
-  static const char *const proc = "../../LinuxGetUrl/LinuxGetUrl";
+int get_and_parse_url(const char *url, int fd) {
+  static const char *const proc = "searchengine/LinuxGetUrl/LinuxGetUrl";
 
   pid_t pid = fork();
   if (pid == 0) {
     dup2(fd, STDOUT_FILENO);  // redirect STDOUT to output file
-    execl(proc, proc, url, NULL);
+    int t = execl(proc, proc, url, NULL);
+    if (t == -1) {
+      std::clog << "Failed to execute for url: " << url << '\n';
+      return -1;
+    }
   } else {
     int status;
     waitpid(pid, &status, 0);
     if (status != 0) {
       std::clog << "Failed reading for url: " << url << '\n';
-      return;
     }
+    return status;
   }
 }
 
@@ -51,7 +58,7 @@ void *runner(void *) {
     explore_queue.pop();
     pthread_mutex_unlock(&queue_lock);
 
-    const std::string fileName = "/files/" + std::string(url) + ".txt";
+    const std::string fileName = "../files/" + std::string(url) + ".txt";
 
     int outputFd = open(fileName.data(), O_CREAT | O_TRUNC | O_WRONLY | O_EXCL);
     if (outputFd == -1) {
@@ -59,11 +66,34 @@ void *runner(void *) {
       continue;
     }
 
-    get_and_parse_url(url.data(), outputFd);
+    int status = get_and_parse_url(url.data(), outputFd);
+    if (status != 0) {
+      close(outputFd);
+      continue;
+    }
+    const int len = get_file_size(outputFd);
 
-    const char *fileData = (char *)mmap(nullptr, get_file_size(outputFd),
-                                        O_RDONLY, PROT_READ, outputFd, 0);
-    // use fileData as input for html parser
+    const char *fileData =
+        (char *)mmap(nullptr, len, O_RDONLY, PROT_READ, outputFd, 0);
+    if (fileData == MAP_FAILED) {
+      std::clog << "Failed to process url: " << url << '\n';
+      close(outputFd);
+      continue;
+    }
+    try {
+      HtmlParser parser(fileData, len);
+      pthread_mutex_lock(&queue_lock);
+      ++num_processed;
+      for (const auto &link : parser.links) {
+        explore_queue.push(std::move(link.URL));
+        sem_post(queue_sem);
+      }
+      pthread_mutex_unlock(&queue_lock);
+
+      // add to index
+    } catch (...) {
+    }
+    close(outputFd);
   }
   return NULL;
 }
