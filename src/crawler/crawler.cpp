@@ -84,15 +84,17 @@ void *runner(void *) {
       continue;
     }
     try {
-      pthread_lock_guard guard{queue_lock};
       HtmlParser parser(fileData, len);
       ++num_processed;
-      for (const auto &link : parser.links) {
-        const std::string url = std::move(link.URL);
-        if (!bf.contains(url)) {
-          bf.insert(url);
-          explore_queue.push(std::move(url));
-          sem_post(queue_sem);
+      {
+        pthread_lock_guard guard{queue_lock};
+        for (const auto &link : parser.links) {
+          const std::string url = std::move(link.URL);
+          if (!bf.contains(url)) {
+            bf.insert(url);
+            explore_queue.push(std::move(url));
+            sem_post(queue_sem);
+          }
         }
       }
       // add to index
