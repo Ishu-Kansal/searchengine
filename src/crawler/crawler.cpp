@@ -11,13 +11,14 @@
 #include <queue>
 #include <string>
 
-#include "HtmlParser/HtmlParser.h"
 #include "BloomFilterStarterFiles/BloomFilter.h"
+#include "HtmlParser/HtmlParser.h"
+#include "utils/pthread_lock_guard.h"
 
 const uint32_t MAX_PROCESSED = 5;
 
 std::queue<std::string> explore_queue{};
-Bloomfilter bf(100000, .0001); //Temp size and false pos rate
+Bloomfilter bf(100000, .0001);  // Temp size and false pos rate
 sem_t *queue_sem{};
 pthread_rwlock_t bf_lock{};
 pthread_mutex_t queue_lock{};
@@ -83,25 +84,17 @@ void *runner(void *) {
       continue;
     }
     try {
+      pthread_lock_guard guard{queue_lock};
       HtmlParser parser(fileData, len);
-      pthread_mutex_lock(&queue_lock);
       ++num_processed;
       for (const auto &link : parser.links) {
         const std::string url = std::move(link.URL);
-        pthread_rwlock_rdlock(&bf_lock);
-        bool urlExists = bf.contains(url);
-        pthread_rwlock_unlock(&bf_lock);
-        if (!urlExists) 
-        {
-          pthread_rwlock_wrlock(&bf_lock);
+        if (!bf.contains(url)) {
           bf.insert(url);
-          pthread_rwlock_unlock(&bf_lock);
-          explore_queue.push(url);
+          explore_queue.push(std::move(url));
+          sem_post(queue_sem);
         }
-        sem_post(queue_sem);
       }
-      pthread_mutex_unlock(&queue_lock);
-
       // add to index
     } catch (...) {
     }
@@ -111,6 +104,9 @@ void *runner(void *) {
 }
 
 int main(int, char **) {
+  std::ofstream logging_file{"log.txt"};
+  std::clog.rdbuf(logging_file.rdbuf());
+
   pthread_mutex_init(&queue_lock, NULL);
   queue_sem = sem_open("/crawler_semaphore", O_CREAT);
 
