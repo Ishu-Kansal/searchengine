@@ -7,8 +7,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <queue>
 #include <string>
 
@@ -101,6 +101,7 @@ void *runner(void *) {
       // add to index
     } catch (...) {
     }
+    munmap(fileData, len);
     close(outputFd);
   }
   return NULL;
