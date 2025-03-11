@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <queue>
@@ -45,6 +46,7 @@ int get_and_parse_url(const char *url, int fd) {
     }
     return status;
   }
+  return 0;
 }
 
 int get_file_size(int fd) {
@@ -89,8 +91,8 @@ void *runner(void *) {
       ++num_processed;
       {
         pthread_lock_guard guard{queue_lock};
-        for (const auto &link : parser.links) {
-          const std::string url = std::move(link.URL);
+        for (auto &link : parser.links) {
+          std::string url = std::move(link.URL);
           if (!bf.contains(url)) {
             bf.insert(url);
             explore_queue.push(std::move(url));
@@ -113,11 +115,18 @@ int main(int, char **) {
 
   pthread_mutex_init(&queue_lock, NULL);
   queue_sem = sem_open("/crawler_semaphore", O_CREAT);
+  if (queue_sem == SEM_FAILED) {
+    std::clog << "Failed to open semaphore: " << strerror(errno) << std::endl;
+    exit(EXIT_FAILURE);
+  }
 
   const static int num_threads = 10;  // start small
   pthread_t threads[num_threads];
   for (int i = 0; i < num_threads; ++i) {
     pthread_create(threads + i, NULL, runner, NULL);
+  }
+  for (int i = 0; i < num_threads; ++i) {
+    pthread_join(threads + i, NULL);
   }
 
   sem_close(queue_sem);

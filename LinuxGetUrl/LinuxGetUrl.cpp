@@ -98,11 +98,20 @@ int main(int argc, char **argv) {
   //  url.printURL();
 
   // Create a TCP/IP socket.
-  int socketFD = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  int socketFD = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if (socketFD == -1) {
+    perror("Failed to open socket");
+    exit(EXIT_FAILURE);
+  }
 
   // Connect the socket to the host address.
   // printAddrInfo(*address);
   int connectResult = connect(socketFD, address->ai_addr, address->ai_addrlen);
+
+  struct timeval timeout;
+  timeout.tv_sec = 2;
+  timeout.tv_usec = 0;
+  setsockopt(socketFD, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
   //  std::cout << "working" << std::endl;
 
   // Send a GET message.
@@ -122,7 +131,8 @@ int main(int argc, char **argv) {
 
   bool skip_header = false;
 
-  while ((bytes = recv(socketFD, buffer, sizeof(buffer), 0)) > 0) {
+  while ((bytes = recv(socketFD, buffer, sizeof(buffer), 0)) != 0) {
+    if (bytes == -1) return -1;
     if (!skip_header) {
       // Find the first <
       // right now, doing first newline bc we need that for assignment
