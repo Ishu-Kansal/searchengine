@@ -12,7 +12,8 @@ class pthread_lock_guard {
 
   pthread_lock_guard(pthread_mutex_t &lock) : lock{lock} {}
   pthread_lock_guard(const pthread_mutex_t &) = delete;
-
+  pthread_lock_guard &operator=(const pthread_mutex_t &) = delete;
+  
   ~pthread_lock_guard() { pthread_mutex_unlock(&lock); }
 
  private:

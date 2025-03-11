@@ -101,7 +101,7 @@ void *runner(void *) {
       // add to index
     } catch (...) {
     }
-    munmap(fileData, len);
+    munmap((void *)fileData, len);
     close(outputFd);
   }
   return NULL;
