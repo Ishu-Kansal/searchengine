@@ -88,8 +88,8 @@ int partition(int left, int right, int pivot_index)
 
 void quickselect(int left, int right, int k) 
 {
-
-  int pivot_index = left + rand() % (right - left + 1);
+  std::uniform_int_distribution<> gen(left, right);
+  int pivot_index  = gen(mt);
 
   // Find the pivot position in a sorted list
   pivot_index = partition(left, right, pivot_index);
@@ -114,12 +114,12 @@ void fill_queue()
   {
     // Establish range for uniform random num gen
     // Range is from 0 to the last element in the vector
-    std::uniform_int_distribution<> gen_rand{ 0, links_vector_size - 1};
+    std::uniform_int_distribution<> gen{ 0, links_vector_size - 1};
     
     // Generates N random elements and moves them to the end
     for (size_t t = links_vector_size - 1; t > links_vector_size - NUM_RANDOM; t--)
     {
-      std::swap(links_vector[gen_rand(mt)], links_vector[t]);
+      std::swap(links_vector[gen(mt)], links_vector[t]);
     }
 
     // Sorts the last N elements of the vector
