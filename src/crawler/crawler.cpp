@@ -16,6 +16,7 @@
 
 #include "BloomFilterStarterFiles/BloomFilter.h"
 #include "HtmlParser/HtmlParser.h"
+#include "inverted_index/IndexChunk.h"
 #include "utils/pthread_lock_guard.h"
 
 const uint32_t MAX_PROCESSED = 5;
@@ -190,8 +191,17 @@ void *runner(void *) {
           }
         }
       }
-      // add to index
-      
+      // add to index (single threaded so far) 
+      uint64_t pos = 0;
+      IndexChunk chunk;
+      chunk.add_url(std::move(url));
+      for (auto &word : parser.words)
+      {
+        // add_word should get dictionary entry for word (create if necessary)
+        // and append new posting pos to word's postings list
+        chunk.add_word(word);   
+        pos++;
+      }
     } catch (...) {
     }
     munmap((void *)fileData, len);
