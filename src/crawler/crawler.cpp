@@ -113,35 +113,46 @@ void fill_queue()
     }
   }
 }
+#include <string>
+#include <vector>
+#include <queue>
+#include <pthread.h>
+
+std::string get_next_url()
+{
+    pthread_mutex_lock(&queue_lock);
+
+    size_t links_vector_size = links_vector.size();
+    std::string url;
+
+    if (!explore_queue.empty())
+    {
+        url = std::move(explore_queue.front());
+        explore_queue.pop();
+    }
+    else if (links_vector_size > 10000)
+    {
+        fill_queue();
+        url = std::move(explore_queue.front());
+        explore_queue.pop();
+    }
+    else
+    {
+        url = std::move(links_vector[links_vector_size - 1].first);
+        links_vector.pop_back();
+    }
+
+    pthread_mutex_unlock(&queue_lock);
+
+    return url;
+}
 
 void *runner(void *) {
   while (num_processed < MAX_PROCESSED) { 
 
     // sem_wait(queue_sem);
 
-    pthread_mutex_lock(&queue_lock);
-    
-    size_t links_vector_size = links_vector.size();
-    std::string url;
-
-    if (!explore_queue.empty())
-    {
-      url = std::move(explore_queue.front());
-      explore_queue.pop();
-    }
-    else if (links_vector_size > 10000)
-    {
-      fill_queue();
-      url = std::move(explore_queue.front());
-      explore_queue.pop();
-    }
-    else
-    {
-      url = std::move(links_vector[links_vector_size - 1].first);
-      links_vector.pop_back();
-    }
-
-    pthread_mutex_unlock(&queue_lock);
+    std::string url = get_next_url();
 
     const std::string fileName = "../files/" + url + ".txt";
 
