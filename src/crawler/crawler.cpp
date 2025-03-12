@@ -13,14 +13,17 @@
 #include <queue>
 #include <string>
 #include <utility>
+#include <random>
 
 #include "BloomFilterStarterFiles/BloomFilter.h"
 #include "HtmlParser/HtmlParser.h"
 #include "inverted_index/IndexChunk.h"
 #include "utils/pthread_lock_guard.h"
 
-const uint32_t MAX_PROCESSED = 5;
-const uint32_t TOP_K_ELEMENTS = 5000;
+constexpr uint32_t MAX_PROCESSED = 5;
+constexpr uint32_t TOP_K_ELEMENTS = 5000;
+constexpr uint32_t NUM_RANDOM = 10000;
+
 uint32_t STATIC_RANK = 0; //temp global variable
 
 std::queue<std::string> explore_queue{};
@@ -31,6 +34,7 @@ sem_t *queue_sem{};
 pthread_mutex_t queue_lock{};
 pthread_mutex_t output_lock{};
 uint32_t num_processed{};
+std::mt19937 mt{ std::random_device{}() };
 
 int get_and_parse_url(const char *url, int fd) {
   static const char *const proc = "searchengine/LinuxGetUrl/LinuxGetUrl";
@@ -63,6 +67,7 @@ int get_file_size(int fd) {
 int partition(int left, int right, int pivot_index) 
 {
   int pivot_rank = links_vector[pivot_index].second;
+
   // Move the pivot to the end
   std::swap(links_vector[pivot_index], links_vector[right]);
 
@@ -89,7 +94,7 @@ void quickselect(int left, int right, int k)
   // Find the pivot position in a sorted list
   pivot_index = partition(left, right, pivot_index);
 
-  //If the pivot is in its final sorted position
+  // If the pivot is in its final sorted position
   if (k == pivot_index) {
       return;
   } else if (k < pivot_index) {
@@ -104,9 +109,23 @@ void quickselect(int left, int right, int k)
 void fill_queue()
 {
   uint32_t links_vector_size = links_vector.size();
-  if (explore_queue.empty() && links_vector_size >= 10000)
+
+  if (explore_queue.empty() && links_vector_size > 10000)
   {
-    quickselect(0, links_vector_size - 1, TOP_K_ELEMENTS);
+    // Establish range for uniform random num gen
+    // Range is from 0 to the last element in the vector
+    std::uniform_int_distribution<> gen_rand{ 0, links_vector_size - 1};
+    
+    // Generates N random elements and moves them to the end
+    for (size_t t = links_vector_size - 1; t > links_vector_size - NUM_RANDOM; t--)
+    {
+      std::swap(links_vector[gen_rand(mt)], links_vector[t]);
+    }
+
+    // Sorts the last N elements of the vector
+    quickselect(links_vector_size - NUM_RANDOM, links_vector_size - 1, TOP_K_ELEMENTS);
+
+    // Takes last K from vector and adds its to queue
     for (size_t i = links_vector_size - 1; i > links_vector_size - TOP_K_ELEMENTS; --i)
     {
       explore_queue.push(std::move(links_vector[i].first));
