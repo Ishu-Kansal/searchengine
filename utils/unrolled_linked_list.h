@@ -21,7 +21,7 @@ next pointer points to a group of posts
 #include <cassert>
 #include <cstddef>
 #include<utility>
-\
+
 #include "cunique_ptr.h"
 
 constexpr float PRE_ALLOC_FACTOR = 1.2; // TEMP
@@ -168,7 +168,7 @@ class Iterator
                 
                 // Makes new node and init vars
                 last->next = create_new_node(new_size, datum);
-                last = last->next;
+                last = last->next;  // Move the last pointer to the newly added node
                 ++num_groups;
             }
         }

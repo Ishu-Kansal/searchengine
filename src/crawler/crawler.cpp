@@ -180,6 +180,7 @@ void *runner(void *) {
         }
       }
       // add to index
+      
     } catch (...) {
     }
     munmap((void *)fileData, len);
