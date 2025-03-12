@@ -126,23 +126,27 @@ class Iterator
     {
         return num_of_elements;
     }
+
     template <typename T>
     void UnrolledLinkList<T>::push_back(const T &datum)
     {
+        cunique_ptr<Node> create_new_node(uint32_t group_size, T datum) {
+            cunique_ptr<Node> new_node = make_cunique<Node>();
+            new_node->num_group_elements = 1;
+            new_node->max_group_elements = group_size;
+            new_node->group = make_cunique<T[]>(group_size);
+            new_node->group[0] = datum;
+            new_node->next = nullptr;
+            return new_node;
+        }
+        
         if (empty())
         {
             // Makes new node and init vars
-            cunique_ptr<Node> p = make_cunique<Node>Node;
-            p->num_group_elements = 0;
-            p->max_group_elements = START_SIZE;
-            p->group = make_cunique<T[]>(START_SIZE);
+            first = last = create_new_node(START_SIZE, datum);
+            ++num_groups;
+            curr_size += START_SIZE;
 
-            p->group[0] = datum;
-            p->next = nullptr;
-            p->num_group_elements++;
-            first = last = p;
-            ++num_groups;  
-            curr_size + START_SIZE;
         }
         else
         {
@@ -163,17 +167,8 @@ class Iterator
                 curr_size += new_size;
                 
                 // Makes new node and init vars
-                cunique_ptr<Node> p = make_cunique<Node>Node;
-                p->max_group_elements = new_size;
-                p->num_group_elements = 0;
-                p->group = make_cunique<T[]>(new_size);
-                
-                p->group[0] = datum;
-                p->next = nullptr;
-                
-                p->num_group_elements++;
-                last->next = p;
-                last = p;
+                last->next = create_new_node(new_size, datum);
+                last = last->next;
                 ++num_groups;
             }
         }
