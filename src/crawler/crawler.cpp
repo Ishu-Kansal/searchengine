@@ -12,17 +12,21 @@
 #include <iostream>
 #include <queue>
 #include <string>
+#include <utility>
 
 #include "BloomFilterStarterFiles/BloomFilter.h"
 #include "HtmlParser/HtmlParser.h"
 #include "utils/pthread_lock_guard.h"
 
 const uint32_t MAX_PROCESSED = 5;
+const uint32_t TOP_K_ELEMENTS = 5000;
+uint32_t STATIC_RANK = 0; //temp global variable
 
 std::queue<std::string> explore_queue{};
+std::vector<std::pair<std::string, uint32_t>> links_vector;
 Bloomfilter bf(100000, .0001);  // Temp size and false pos rate
 sem_t *queue_sem{};
-pthread_rwlock_t bf_lock{};
+
 pthread_mutex_t queue_lock{};
 pthread_mutex_t output_lock{};
 uint32_t num_processed{};
@@ -55,16 +59,91 @@ int get_file_size(int fd) {
   return buf.st_size;
 }
 
+int partition(int left, int right, int pivot_index) 
+{
+  int pivot_rank = links_vector[pivot_index].second;
+  // Move the pivot to the end
+  std::swap(links_vector[pivot_index], links_vector[right]);
+
+  // Move all less ranked elements to the left
+  int store_index = left;
+  for (int i = left; i <= right; i++) {
+      if (links_vector[i].second < pivot_rank) {
+          std::swap(links_vector[store_index], links_vector[i]);
+          store_index += 1;
+      }
+  }
+
+  // Move the pivot to its final place
+  std::swap(links_vector[right], links_vector[store_index]);
+
+  return store_index;
+}
+
+void quickselect(int left, int right, int k) 
+{
+
+  int pivot_index = left + rand() % (right - left + 1);
+
+  // Find the pivot position in a sorted list
+  pivot_index = partition(left, right, pivot_index);
+
+  //If the pivot is in its final sorted position
+  if (k == pivot_index) {
+      return;
+  } else if (k < pivot_index) {
+      // go left
+      quickselect(left, pivot_index - 1, k);
+  } else {
+      // go right
+      quickselect(pivot_index + 1, right, k);
+    }
+}
+
+void fill_queue()
+{
+  uint32_t links_vector_size = links_vector.size();
+  if (explore_queue.empty() && links_vector_size >= 10000)
+  {
+    quickselect(0, links_vector_size - 1, TOP_K_ELEMENTS);
+    for (size_t i = links_vector_size - 1; i > links_vector_size - TOP_K_ELEMENTS; --i)
+    {
+      explore_queue.push(std::move(links_vector[i].first));
+      links_vector.pop_back();
+    }
+  }
+}
+
 void *runner(void *) {
-  while (num_processed < MAX_PROCESSED) {
-    sem_wait(queue_sem);
+  while (num_processed < MAX_PROCESSED) { 
+
+    // sem_wait(queue_sem);
 
     pthread_mutex_lock(&queue_lock);
-    const std::string url = std::move(explore_queue.front());
-    explore_queue.pop();
+    
+    size_t links_vector_size = links_vector.size();
+    std::string url;
+
+    if (!explore_queue.empty())
+    {
+      url = std::move(explore_queue.front());
+      explore_queue.pop();
+    }
+    else if (links_vector_size > 10000)
+    {
+      fill_queue();
+      url = std::move(explore_queue.front());
+      explore_queue.pop();
+    }
+    else
+    {
+      url = std::move(links_vector[links_vector_size - 1].first);
+      links_vector.pop_back();
+    }
+
     pthread_mutex_unlock(&queue_lock);
 
-    const std::string fileName = "../files/" + std::string(url) + ".txt";
+    const std::string fileName = "../files/" + url + ".txt";
 
     int outputFd = open(fileName.data(), O_CREAT | O_TRUNC | O_WRONLY | O_EXCL);
     if (outputFd == -1) {
@@ -95,8 +174,8 @@ void *runner(void *) {
           std::string url = std::move(link.URL);
           if (!bf.contains(url)) {
             bf.insert(url);
-            explore_queue.push(std::move(url));
-            sem_post(queue_sem);
+            links_vector.push_back({std::move(url), STATIC_RANK++});
+        //    sem_post(queue_sem);
           }
         }
       }
@@ -126,7 +205,7 @@ int main(int, char **) {
     pthread_create(threads + i, NULL, runner, NULL);
   }
   for (int i = 0; i < num_threads; ++i) {
-    pthread_join(threads + i, NULL);
+    pthread_join(threads[i], NULL);
   }
 
   sem_close(queue_sem);
