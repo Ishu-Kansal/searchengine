@@ -6,6 +6,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 #include <cstring>
 #include <fstream>
@@ -229,7 +230,8 @@ void *runner(void *) {
   return NULL;
 }
 
-int main(int, char **) {
+int main(int argc, char ** argv) {
+
   std::ofstream logging_file{"log.txt"};
   std::clog.rdbuf(logging_file.rdbuf());
 
