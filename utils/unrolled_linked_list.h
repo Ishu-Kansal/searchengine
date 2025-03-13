@@ -175,6 +175,8 @@ class Iterator
             }
         }
         ++num_elements;
+        return last;
+
     }
 
     template <typename T>
