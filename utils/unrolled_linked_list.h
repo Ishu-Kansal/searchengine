@@ -32,11 +32,22 @@ template <typename T>
 class UnrolledLinkList
 {
 public:
+    struct Node
+    {
+        Node *next;
+
+        uint32_t num_group_elements;
+        uint32_t max_group_elements;
+        T * group;
+    };
+
     bool empty() const;
 
     int size() const;
 
     void push_back(const T &datum);
+
+    void push_sentinel();
 
     void clear(); // TODO
 
@@ -47,25 +58,16 @@ public:
         clear();
     }
 
-    private:
+private:
 
-        uint32_t num_groups = 0;
-        uint32_t num_elements = 0;
-        uint32_t curr_size = 0;
-        template <typename T>
-        struct Node
-        {
-            Node *next;
+    uint32_t num_groups = 0;
+    uint32_t num_elements = 0;
+    uint32_t curr_size = 0;
 
-            uint32_t num_group_elements;
-            uint32_t max_group_elements;
-            T * group;
-        };
+    Node *first; 
+    Node *last; 
 
-        Node *first; 
-        Node *last; 
-
-    public:
+public:
 
 class Iterator
 {
@@ -175,4 +177,10 @@ class Iterator
         ++num_elements;
     }
 
+    template <typename T>
+    void UnrolledLinkList<T>::push_sentinel()
+    {
+        cunique_ptr<Node> new_node = make_cunique<Node>();
+        new_node->max_group_element = 0;
+    }
 #endif
