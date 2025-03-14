@@ -18,7 +18,7 @@
 
 #include "BloomFilterStarterFiles/BloomFilter.h"
 #include "HtmlParser/HtmlParser.h"
-#include "inverted_index/IndexChunk.h"
+#include "inverted_index/Index.h"
 #include "utils/pthread_lock_guard.h"
 
 constexpr uint32_t MAX_PROCESSED = 5;
@@ -219,7 +219,7 @@ void *runner(void *) {
       {
         // add_word should get dictionary entry for word (create if necessary)
         // and append new posting pos to word's postings list
-        chunk.add_word(word);   
+        chunk.add_word(word, pos);   
         pos++;
       }
     } catch (...) {
