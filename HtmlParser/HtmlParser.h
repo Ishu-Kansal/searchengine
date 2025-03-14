@@ -85,6 +85,7 @@ public:
    std::vector<std::string> words, titleWords;
    std::vector<Link> links;
    std::string base;
+   int img_count;
 
 private:
    // Your code here.
@@ -210,6 +211,10 @@ private:
                }
             }
 
+            else if (strncmp(buffer + index, "<img", 4) == 0)
+            {
+              img_count += 1;
+            }
 
             else if (strncmp(buffer + index, "<base", 5) == 0)
             {
@@ -399,6 +404,9 @@ public:
       words.reserve(160000);
       titleWords.reserve(400);
       links.reserve(16000);
+
+      img_count = 0;
+
 
       base = "";
 
@@ -616,6 +624,10 @@ public:
                   index = extract_embed(buffer, length, index);
                   break;
 
+               case DesiredAction::Image:
+                  img_count += 1;
+                  break;
+
                case DesiredAction::OrdinaryText:
                   if (buffer[index] == ' ')
                   {
@@ -629,7 +641,6 @@ public:
                      index++;
                   }
                   break;
-
             }
 
          }

@@ -28,7 +28,8 @@ enum class DesiredAction
    DiscardSection,
    Anchor,
    Base,
-   Embed
+   Embed,
+   Image
    };
 
 // name points to beginning of the possible HTML tag name.
@@ -127,7 +128,7 @@ const HtmlTag TagsRecognized[ ] =
    { "html",         DesiredAction::Discard },
    { "i",            DesiredAction::Discard },
    { "iframe",       DesiredAction::Discard },
-   { "img",          DesiredAction::Discard },
+   { "img",          DesiredAction::Image },
    { "input",        DesiredAction::Discard },
    { "ins",          DesiredAction::Discard },
    { "isindex",      DesiredAction::Discard },

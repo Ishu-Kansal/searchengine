@@ -45,20 +45,23 @@ int main(int argc, char **argv)
 
     HtmlParser parser(buffer, fileSize);
 
-    cout << parser.base << "\n\n";
+    cout << "base:" << parser.base << "\n\n";
 
+    cout << "title words:\n";
     for (string word : parser.titleWords) {
         cout << word << '\n';
     }
-
     cout << '\n';
 
+    cout << "image count:" << parser.img_count << "\n\n";
+
+    cout << "words:\n";
     for (string word : parser.words) {
         cout << word << '\n';
     }
-
     cout << '\n';
 
+    cout << "links:\n";
     for (Link link : parser.links) {
         cout << link.URL << '\n';
     }
