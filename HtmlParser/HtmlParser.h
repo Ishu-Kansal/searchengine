@@ -213,7 +213,19 @@ private:
 
             else if (strncmp(buffer + index, "<img", 4) == 0)
             {
-              img_count += 1;
+               img_count += 1;
+               while (buffer[index] != '>')
+               {
+                  // This code does not ensure that </tag> is outside of any quotes
+                  // if (buffer[index] == '>')
+                  // {
+                  //    index++;
+                  //    break;
+                  // }
+                  index++;
+               }
+               index++;
+               break;
             }
 
             else if (strncmp(buffer + index, "<base", 5) == 0)
@@ -241,6 +253,45 @@ private:
                // grab tag action based on name
                DesiredAction action = LookupPossibleTag(buffer + index, buffer + index + tag_size - 1);
 
+               if (action == DesiredAction::DiscardSection) {
+                  if (tag_string == "svg") {
+                     while (index < length)
+                     {
+                        // This code does not ensure that </tag> is outside of any quotes
+                        if (strncmp(buffer + index, "</", 2) == 0 && strncmp(buffer + index + 2, "svg", tag_size) == 0)
+                        {
+                           index += tag_size + 3;
+                           break;
+                        }
+                        index++;
+                     }
+                  }
+                  else if (tag_string == "style") {
+                     while (index < length)
+                     {
+                        // This code does not ensure that </tag> is outside of any quotes
+                        if (strncmp(buffer + index, "</", 2) == 0 && strncmp(buffer + index + 2, "style", tag_size) == 0)
+                        {
+                           index += tag_size + 3;
+                           break;
+                        }
+                        index++;
+                     }
+                  }
+                  else {
+                     while (index < length)
+                     {
+                        // This code does not ensure that </tag> is outside of any quotes
+                        if (strncmp(buffer + index, "</", 2) == 0 && strncmp(buffer + index + 2, "script", tag_size) == 0)
+                        {
+                           index += tag_size + 3;
+                           break;
+                        }
+                        index++;
+                     }
+                  }
+               }
+               
                if (action != DesiredAction::OrdinaryText || tag_string == "path" || tag_string == "defs" || tag_string == "g")
                {
                   if (word.size() > 0)
@@ -469,12 +520,21 @@ public:
             }
 
             bool inside_bracket = false;
+            bool in_quotes = false;
 
             //std::cout << "start\n";
             switch (action) {
                case DesiredAction::Discard:
-                  while (buffer[index] != '>')
+                  while (buffer[index] != '>' || in_quotes)
                   {
+                     if (buffer[index] == '"') {
+                        if (!in_quotes) {
+                           in_quotes = true;
+                        }
+                        else {
+                           in_quotes = false;
+                        }
+                     }
                      // This code does not ensure that </tag> is outside of any quotes
                      // if (buffer[index] == '>')
                      // {
@@ -626,6 +686,17 @@ public:
 
                case DesiredAction::Image:
                   img_count += 1;
+                  while (buffer[index] != '>')
+                  {
+                     // This code does not ensure that </tag> is outside of any quotes
+                     // if (buffer[index] == '>')
+                     // {
+                     //    index++;
+                     //    break;
+                     // }
+                     index++;
+                  }
+                  index++;
                   break;
 
                case DesiredAction::OrdinaryText:
