@@ -58,7 +58,7 @@ struct Post
     
     Post() = default;
     Post(cunique_ptr<delta_t[]> d, bool t, bool b) : delta(std::move(d)), title(t), bold(b) {}
-    Post(delta_t* d, bool t, bool b) : delta(d), title(t), bold(b) {}
+    explicit Post(delta_t* d, bool t, bool b) : delta(d), title(t), bold(b) {}
 };
 
 class IndexChunk {
