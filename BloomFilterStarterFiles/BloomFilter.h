@@ -23,8 +23,13 @@ class Bloomfilter {
   }
 
   Bloomfilter(int handle) {
-    read(handle, reinterpret_cast<char *>(&sizeInBits), sizeof(sizeInBits));
-    read(handle, reinterpret_cast<char *>(&numHashFuncs), sizeof(numHashFuncs));
+    char buf[sizeof(sizeInBits) + sizeof(numHashFuncs)];
+    read(handle, buf, sizeof(sizeInBits) + sizeof(numHashFuncs));
+    sizeInBits = reinterpret_cast<uint64_t>(buf[0]);
+    numHashFuncs = reinterpret_cast<uint64_t>(buf[sizeof(sizeInBits)]);
+    /*read(handle, reinterpret_cast<char *>(&sizeInBits), sizeof(sizeInBits));
+    read(handle, reinterpret_cast<char *>(&numHashFuncs),
+    sizeof(numHashFuncs));*/
 
     size_t numBytes = (sizeInBits + 7) / 8;
 
@@ -50,11 +55,16 @@ class Bloomfilter {
           sizeof(numHashFuncs));
     // Pack bits into a byte then add to vector
     size_t numBytes = (sizeInBits + 7) / 8;
-    std::vector<unsigned char> bytes(numBytes, 0);
+    char *ptr = mmap(nullptr, numBytes, PROT_WRITE, MAP_PRIVATE, handle,
+                     sizeof(sizeInBits) + sizeof(numHashFuncs));
     for (size_t i = 0; i < sizeInBits; i++) {
       if (bloomFilter[i]) bytes[i / 8] |= (1 << (i % 8));
     }
-    write(handle, reinterpret_cast<const char *>(bytes.data()), bytes.size());
+    /*std::vector<unsigned char> bytes(numBytes, 0);
+    for (size_t i = 0; i < sizeInBits; i++) {
+      if (bloomFilter[i]) bytes[i / 8] |= (1 << (i % 8));
+    }
+    write(handle, reinterpret_cast<const char *>(bytes.data()), bytes.size());*/
   }
   void insert(const std::string &s) {
     // Hash the string into two unique hashes.
