@@ -1,13 +1,14 @@
 #pragma once
 
-
+#include <stddef.h>
+#include <utility>
 template <class T>
 struct Deleter {
   void operator()(T *ptr) { delete ptr; }
 };
 
-template <class T[]>
-struct Deleter {
+template <class T>
+struct Deleter<T[]> {
   void operator()(T *ptr) { delete[] ptr; }
 };
 
@@ -31,7 +32,7 @@ class cunique_ptr {
   // Allows smart pointer to point to new resource
   void reset(T *next = nullptr) noexcept {
     auto old_ptr = ptr;
-    if (old_ptr) Deleter()(old_ptr);
+    if (old_ptr) Delete()(old_ptr);
     this->ptr = next;
   }
   
@@ -60,7 +61,7 @@ class cunique_ptr<T[]> {
 
   void reset(T *next = nullptr) noexcept {
     auto old_ptr = ptr;
-    if (old_ptr) Delete()(old_ptr);
+    if (old_ptr) Deleter<T[]>(old_ptr);
     this->ptr = next;
   }
 
@@ -85,12 +86,12 @@ cunique_ptr<T> make_cunique_for_overwrite() {
   return cunique_ptr<T>(new T);
 }
 
-template <class T[]>
+template <class T>
 cunique_ptr<T[]> make_cunique(size_t i) {
   return cunique_ptr<T[]>(new T[i]());
 }
 
-template <class T[]>
+template <class T>
 cunique_ptr<T[]> make_cunique_for_overwrite(size_t i) {
   return cunique_ptr<T[]>(new T[i]);
 }
