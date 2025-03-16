@@ -33,8 +33,8 @@ class Bloomfilter {
 
     size_t numBytes = (sizeInBits + 7) / 8;
 
-    const char *bytes = mmap(nullptr, sizeof(header) + numBytes, PROT_READ,
-                             MAP_PRIVATE, handle, 0);
+    const char *bytes = static_cast<const char*>(mmap(nullptr, sizeof(header) + numBytes, PROT_READ,
+   MAP_PRIVATE, handle, 0));
 
     assert(bytes != MAP_FAILED);
     bytes += sizeof(header);
@@ -48,7 +48,7 @@ class Bloomfilter {
     for (size_t i = 0; i < sizeInBits; ++i) {
       bloomFilter[i] = (bytes[i / 8] >> (i % 8)) & 1;
     }
-    munmap(bytes - sizeof(header), sizeof(header) + numBytes);
+    munmap((void*)bytes - sizeof(header), sizeof(header) + numBytes);
   }
 
   void writeBFtoFile(int handle) {
@@ -57,8 +57,8 @@ class Bloomfilter {
 
     // Pack bits into a byte then add to vector
     size_t numBytes = (sizeInBits + 7) / 8;
-    char *bytes = mmap(nullptr, sizeof(header) + numBytes, PROT_WRITE,
-                       MAP_PRIVATE, handle, 0);
+    char *bytes = static_cast<char *>(mmap(nullptr, sizeof(header) + numBytes, PROT_WRITE,
+                       MAP_PRIVATE, handle, 0));
     assert(bytes != MAP_FAILED);
 
     bytes += sizeof(header);
