@@ -1,5 +1,6 @@
 #pragma once
 
+
 template <class T>
 struct Deleter {
   void operator()(T *ptr) { delete ptr; }
@@ -12,22 +13,28 @@ struct Deleter {
 
 template <class T, class Delete = Deleter<T>>
 class cunique_ptr {
+  public:
+  // Default Constructor
   cunique_ptr() : ptr{nullptr} {}
+  // Explicit Constructor
   explicit cunique_ptr(T *ptr) : ptr{ptr} {}
-  ~cunique_ptr() { Deleter()(ptr); }
+  // Destructor - overloaded () operator in Deleter
+  ~cunique_ptr() { Delete()(ptr); } 
 
+  // allows transfer of ownership to raw pointer
   T *release() noexcept {
     T *temp = ptr;
     ptr = nullptr;
     return temp;
   }
 
+  // Allows smart pointer to point to new resource
   void reset(T *next = nullptr) noexcept {
     auto old_ptr = ptr;
     if (old_ptr) Deleter()(old_ptr);
     this->ptr = next;
   }
-
+  
   T *get() const noexcept { return ptr; }
 
   explicit operator bool() const noexcept { return ptr; }
@@ -38,11 +45,12 @@ class cunique_ptr {
   T *ptr{};
 };
 
-template <class T[], class Delete = Deleter<T[]>>
-class cunique_ptr {
+
+template <class T>
+class cunique_ptr<T[]> {
   cunique_ptr() : ptr{nullptr} {}
   explicit cunique_ptr(T *ptr) : ptr{ptr} {}
-  ~cunique_ptr() { Deleter()(ptr); }
+  ~cunique_ptr() { Deleter<T[]>()(ptr); }
 
   T *release() noexcept {
     T *temp = ptr;
@@ -52,7 +60,7 @@ class cunique_ptr {
 
   void reset(T *next = nullptr) noexcept {
     auto old_ptr = ptr;
-    if (old_ptr) Deleter()(old_ptr);
+    if (old_ptr) Delete()(old_ptr);
     this->ptr = next;
   }
 
