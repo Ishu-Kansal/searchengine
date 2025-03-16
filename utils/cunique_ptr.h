@@ -1,3 +1,5 @@
+#pragma once
+
 template <class T>
 struct Deleter {
   void operator()(T *ptr) { delete ptr; }

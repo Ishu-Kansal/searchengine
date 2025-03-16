@@ -23,19 +23,21 @@ class Bloomfilter {
   }
 
   Bloomfilter(int handle) {
-    char buf[sizeof(sizeInBits) + sizeof(numHashFuncs)];
-    read(handle, buf, sizeof(sizeInBits) + sizeof(numHashFuncs));
-    sizeInBits = reinterpret_cast<uint64_t>(buf[0]);
-    numHashFuncs = reinterpret_cast<uint64_t>(buf[sizeof(sizeInBits)]);
+    uint64_t header[2];
+    read(handle, header, sizeof(header));
+    sizeInBits = header[0];
+    numHashFuncs = header[1];
     /*read(handle, reinterpret_cast<char *>(&sizeInBits), sizeof(sizeInBits));
     read(handle, reinterpret_cast<char *>(&numHashFuncs),
     sizeof(numHashFuncs));*/
 
     size_t numBytes = (sizeInBits + 7) / 8;
 
-    const char *bytes = mmap(nullptr, numBytes, PROT_READ, MAP_PRIVATE, handle,
-                             sizeof(sizeInBits) + sizeof(numHashFuncs));
+    const char *bytes = mmap(nullptr, sizeof(header) + numBytes, PROT_READ,
+                             MAP_PRIVATE, handle, 0);
+
     assert(bytes != MAP_FAILED);
+    bytes += sizeof(header);
 
     // no need to memory allocate vector; instead just mmap file for
     // numBytes
@@ -46,20 +48,25 @@ class Bloomfilter {
     for (size_t i = 0; i < sizeInBits; ++i) {
       bloomFilter[i] = (bytes[i / 8] >> (i % 8)) & 1;
     }
+    munmap(bytes - sizeof(header), sizeof(header) + numBytes);
   }
 
   void writeBFtoFile(int handle) {
-    write(handle, reinterpret_cast<const char *>(&sizeInBits),
-          sizeof(sizeInBits));
-    write(handle, reinterpret_cast<const char *>(&numHashFuncs),
-          sizeof(numHashFuncs));
+    const uint64_t header[] = {sizeInBits, numHashFuncs};
+    write(handle, header, sizeof(header));
+
     // Pack bits into a byte then add to vector
     size_t numBytes = (sizeInBits + 7) / 8;
-    char *bytes = mmap(nullptr, numBytes, PROT_WRITE, MAP_PRIVATE, handle,
-                       sizeof(sizeInBits) + sizeof(numHashFuncs));
+    char *bytes = mmap(nullptr, sizeof(header) + numBytes, PROT_WRITE,
+                       MAP_PRIVATE, handle, 0);
+    assert(bytes != MAP_FAILED);
+
+    bytes += sizeof(header);
     for (size_t i = 0; i < sizeInBits; i++) {
       if (bloomFilter[i]) bytes[i / 8] |= (1 << (i % 8));
     }
+
+    munmap(bytes - sizeof(header), sizeof(header) + numBytes);
     /*std::vector<unsigned char> bytes(numBytes, 0);
     for (size_t i = 0; i < sizeInBits; i++) {
       if (bloomFilter[i]) bytes[i / 8] |= (1 << (i % 8));

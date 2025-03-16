@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
   int connectResult = connect(socketFD, address->ai_addr, address->ai_addrlen);
 
   struct timeval timeout;
-  timeout.tv_sec = 2;
+  timeout.tv_sec = 30;
   timeout.tv_usec = 0;
   setsockopt(socketFD, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
   //  std::cout << "working" << std::endl;
