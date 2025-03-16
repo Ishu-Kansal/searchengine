@@ -58,6 +58,7 @@ struct Post
     
     Post() = default;
     Post(cunique_ptr<delta_t[]> d, bool t, bool b) : delta(std::move(d)), title(t), bold(b) {}
+    Post(delta_t* d, bool t, bool b) : delta(d), title(t), bold(b) {}
 };
 
 class IndexChunk {
@@ -77,7 +78,7 @@ class IndexChunk {
         {
             prev_pos = pos;
 
-            inverted_word_index.add_word(word, Post(int_to_delta(pos - prev_pos), in_title, in_bold), new_document);
+            inverted_word_index.add_word(word, Post((int_to_delta(pos - prev_pos)), in_title, in_bold), new_document);
         }
     private:
         std::vector<std::string> url_list;

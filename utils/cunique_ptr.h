@@ -49,6 +49,7 @@ class cunique_ptr {
 
 template <class T>
 class cunique_ptr<T[]> {
+  public:
   cunique_ptr() : ptr{nullptr} {}
   explicit cunique_ptr(T *ptr) : ptr{ptr} {}
   ~cunique_ptr() { Deleter<T[]>()(ptr); }
