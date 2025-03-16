@@ -99,8 +99,45 @@ float get_url_length_weight(int length) {
   ];
 }
 
+std::string get_top_level_domain(const std::string &url) {
+  size_t last_dot = url.rfind('.');
+  if (last_dot != std::string::npos) {
+    return url.substr(last_dot + 1); // Extract and return TLD as a string
+  }
+  return ""; // Return empty string if no dot is found
+}
+
+
+/*
+float get_url_domain_weight(cstring_view url) {
+   // Find the last '.' using cstring_view's find in a loop.
+   size_t last_dot = cstring_view::npos;
+   size_t pos = 0;
+   // Use the find() method repeatedly to update last_dot
+   while (pos < url.size()) {
+      size_t found = url.find(".", pos);
+      if (found == cstring_view::npos)
+         break;
+      last_dot = found;
+      pos = found + 1;
+   }
+   // If we found a dot and there are characters after it:
+   if (last_dot != cstring_view::npos && last_dot + 1 < url.size()) {
+      cstring_view tld = url.substr(last_dot + 1, url.size() - last_dot - 1);
+      // Create a key with a dot in front to match our hashmap keys, e.g., ".com"
+      std::string key = "." + std::string(tld.data(), tld.size());
+      return get_domain_weight(key);
+   }
+   // Return default weight if no TLD is found.
+   return 0.5f;
+}
+*/
+
 // TBD
-double get_static_rank(cstring_view url, const HtmlParser &parser)
+double get_static_rank(std::string url, const HtmlParser &parser)
 {
-  return urlLengthWeight * url.size();
+  return get_numImages_weight(parser.img_count) + 
+    get_numLinks_weight(parser.links.size()) + 
+    get_domain_weight(get_top_level_domain(url)) +
+    get_document_length_weight(parser.words);
 }
