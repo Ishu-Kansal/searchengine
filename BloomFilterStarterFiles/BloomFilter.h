@@ -55,8 +55,8 @@ class Bloomfilter {
           sizeof(numHashFuncs));
     // Pack bits into a byte then add to vector
     size_t numBytes = (sizeInBits + 7) / 8;
-    char *ptr = mmap(nullptr, numBytes, PROT_WRITE, MAP_PRIVATE, handle,
-                     sizeof(sizeInBits) + sizeof(numHashFuncs));
+    char *bytes = mmap(nullptr, numBytes, PROT_WRITE, MAP_PRIVATE, handle,
+                       sizeof(sizeInBits) + sizeof(numHashFuncs));
     for (size_t i = 0; i < sizeInBits; i++) {
       if (bloomFilter[i]) bytes[i / 8] |= (1 << (i % 8));
     }
