@@ -16,10 +16,24 @@ size_t IndicatedLength(const delta_t del[]) {
     if (numSet < 1 || numSet > 6) return 1;
     return numSet;
     }
+    
 size_t SizeOfDelta(int offset) {
-    return (offset < 0x80) + (offset < 0x800) + (offset < 0x10000) +
-        (offset < 0x200000) + (offset < 0x4000000);
-  }
+    if (offset < 0) {
+        return 0;
+    } else if (offset < 0x80U) {
+        return 1;
+    } else if (offset < 0x800) {
+        return 2;
+    } else if (offset < 0x10000) {
+        return 3;
+    } else if (offset < 0x200000) {
+        return 4;
+    } else if (offset < 0x4000000) {
+        return 5;
+    } else {
+        return 0;
+    }
+}
 
 int delta_to_int(const delta_t del[]) {
     static const delta_t block_mask = (1 << 6) - 1;
@@ -50,6 +64,33 @@ delta_t *int_to_delta(int offset) {
         return del;
     }
   }
+
+inline void encodeVarint(uint64_t val, uint8_t* buf, size_t num_bytes) {
+    uint8_t* p = buf;
+
+    for (size_t i = 0; i < num_bytes - 1; ++i) {
+        *p++ = 0x80 | (val & 0x7F);
+        val >>= 7;
+    }
+    *p = uint8_t(val);
+
+}
+
+inline void decodeVarint(const uint8_t* buf, uint64_t& val) {
+    uint64_t result = 0;
+    unsigned shift = 0;
+    const uint8_t* p = buf;
+    while (true) {
+        uint8_t byte = *p++;
+        result |= (uint64_t(byte & 0x7F) << shift);
+        if ((byte & 0x80) == 0)
+            break;
+        shift += 7;
+    }
+    val = result;
+}   
+
+
 struct Post
 {
     cunique_ptr<delta_t[]> delta{};
@@ -76,9 +117,12 @@ class IndexChunk {
             bool in_bold = false, 
             bool new_document = true)
         {
+            size_t delta = pos - prev_pos;
+            size_t num_bytes = SizeOfDelta(delta);
+            cunique_ptr<uint8_t[]> buf(new uint8_t[num_bytes]);
+            encodeVarint(delta, buf.get(), num_bytes);
+            inverted_word_index.add_word(word, Post(buf, in_title, in_bold), new_document);
             prev_pos = pos;
-
-            inverted_word_index.add_word(word, Post((int_to_delta(pos - prev_pos)), in_title, in_bold), new_document);
         }
     private:
         std::vector<std::string> url_list;
@@ -130,8 +174,8 @@ class PostingList {
 
     public:
 
-        void add_post(const Post& post) {
-            posting_list.push_back(post);
+        void add_post(const Post & post) {
+            posting_list.push_back(std::move(Post(post)));
             index_freq++;
         }
 
