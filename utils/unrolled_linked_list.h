@@ -38,14 +38,14 @@ public:
 
         uint32_t num_group_elements;
         uint32_t max_group_elements;
-        T * group;
+        cunique_ptr<T[]> group;
     };
 
     bool empty() const;
 
     int size() const;
 
-    void push_back(const T &datum);
+    void push_back(T &&datum);
 
     void push_sentinel();
 
@@ -130,14 +130,14 @@ class Iterator
     }
 
     template <typename T>
-    void UnrolledLinkList<T>::push_back(const T &datum)
+    void UnrolledLinkList<T>::push_back(T &&datum)
     {
         cunique_ptr<Node> create_new_node(uint32_t group_size, T datum) {
-            cunique_ptr<Node> new_node = make_cunique<Node>();
+            auto new_node = make_cunique<Node>();
             new_node->num_group_elements = 1;
             new_node->max_group_elements = group_size;
             new_node->group = make_cunique<T[]>(group_size);
-            new_node->group[0] = datum;
+            new_node->group[0] = std::move(datum);
             new_node->next = nullptr;
             return new_node;
         }
@@ -155,7 +155,7 @@ class Iterator
             // Node isn't filled yet, so add to current node
             if (last->num_group_elements < last->max_group_elements)
             {
-                last->group[last->num_group_elements++] = datum;
+                last->group[last->num_group_elements++] = std::move(datum);
             }
             // Node is filled
             else
@@ -182,7 +182,11 @@ class Iterator
     template <typename T>
     void UnrolledLinkList<T>::push_sentinel()
     {
-        cunique_ptr<Node> new_node = make_cunique<Node>();
-        new_node->max_group_element = 0;
+        assert(!empty());
+        auto new_node = make_cunique<Node>();
+        new_node->max_group_elements = 0;
+        new_node->num_group_elements = 0;
+        new_node->group = nullptr; 
+        
     }
 #endif
