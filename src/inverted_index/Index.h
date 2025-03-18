@@ -4,66 +4,29 @@
 #include "utils/cunique_ptr.h"
 #include "HashTable/HashTableStarterFiles/HashTable.h"
 
-using delta_t = unsigned char;
-
-size_t IndicatedLength(const delta_t del[]) {
-    uint16_t mask = 1 << 7;
-    size_t numSet = 0;
-    while (*del & mask) {
-        ++numSet;
-        mask >>= 1;
-    }
-    if (numSet < 1 || numSet > 6) return 1;
-    return numSet;
-    }
-    
-size_t SizeOfDelta(int offset) {
-    if (offset < 0) {
-        return 0;
-    } else if (offset < 0x80U) {
+size_t SizeOfDelta(size_t offset) {
+    if (offset < (1ULL << 7)) {
         return 1;
-    } else if (offset < 0x800) {
+    } else if (offset < (1ULL << 14)) {
         return 2;
-    } else if (offset < 0x10000) {
+    } else if (offset < (1ULL << 21)) {
         return 3;
-    } else if (offset < 0x200000) {
+    } else if (offset < (1ULL << 28)) {
         return 4;
-    } else if (offset < 0x4000000) {
+    } else if (offset < (1ULL << 35)) {
         return 5;
+    } else if (offset < (1ULL << 42)) {
+        return 6;
+    } else if (offset < (1ULL << 49)) {
+        return 7;
+    } else if (offset < (1ULL << 56)) {
+        return 8;
+    } else if (offset < (1ULL << 63)) {
+        return 9;
     } else {
-        return 0;
+        return 10;
     }
 }
-
-int delta_to_int(const delta_t del[]) {
-    static const delta_t block_mask = (1 << 6) - 1;
-    const size_t num_bytes = IndicatedLength(del);
-    if (num_bytes == 1) return del[0];
-    int cur = [&](const delta_t first) {
-      return first & ((1 << (7 - num_bytes)) - 1);
-    }(del[0]);
-    for (int i = 1; i < num_bytes; ++i) {
-      cur <<= 6;
-      cur |= (del[i] & block_mask);
-    }
-    return cur;
-  }
-
-delta_t *int_to_delta(int offset) {
-    static const delta_t block_mask = (1 << 6) - 1;
-    const size_t num_bytes = SizeOfDelta(offset);
-    switch (num_bytes) {
-      case 1:
-        return new delta_t(offset);
-      default:
-        delta_t *del = new delta_t[num_bytes];
-        for (int cur = num_bytes - 1; cur >= 0; --cur) {
-          del[cur] = num_bytes & block_mask;
-        }
-        del[0] |= ((1 << num_bytes) - 1) << (8 - num_bytes);
-        return del;
-    }
-  }
 
 inline void encodeVarint(uint64_t val, uint8_t* buf, size_t num_bytes) {
     uint8_t* p = buf;
@@ -93,13 +56,12 @@ inline void decodeVarint(const uint8_t* buf, uint64_t& val) {
 
 struct Post
 {
-    cunique_ptr<delta_t[]> delta{};
+    cunique_ptr<uint8_t[]> delta{};
     bool title = false;
     bool bold = false;
     
     Post() = default;
-    Post(cunique_ptr<delta_t[]> d, bool t, bool b) : delta(std::move(d)), title(t), bold(b) {}
-    explicit Post(delta_t* d, bool t, bool b) : delta(d), title(t), bold(b) {}
+    Post(cunique_ptr<uint8_t[]> d, bool t, bool b) : delta(std::move(d)), title(t), bold(b) {}
 };
 
 class IndexChunk {

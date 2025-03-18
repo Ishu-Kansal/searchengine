@@ -26,14 +26,12 @@ return (length + oneless) & mask;
 
 struct SerialPost {
 
-    size_t pos;
     bool title;
     bool bold;
 
-    static size_t BytesRequired(const Post post)
+    static size_t BytesRequired(const Post &post)
     {
-        // Need to change after Anton finishes the delta encoding.
-        size_t total = sizeof(title) + sizeof(bold) + sizeof(pos);
+        size_t total = sizeof(title) + sizeof(bold) + sizeof(post.delta);
         return RoundUp(total, sizeof(size_t));
     }
     static char *Write(char *buffer, char *bufferEnd,
