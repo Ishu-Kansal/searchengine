@@ -52,16 +52,15 @@ inline void decodeVarint(const uint8_t* buf, uint64_t& val) {
     }
     val = result;
 }   
-
-
 struct Post
 {
     cunique_ptr<uint8_t[]> delta{};
+    uint8_t array_size = 0;
     bool title = false;
     bool bold = false;
     
     Post() = default;
-    Post(cunique_ptr<uint8_t[]> d, bool t, bool b) : delta(std::move(d)), title(t), bold(b) {}
+    Post(cunique_ptr<uint8_t[]> d, uint8_t numBytes, bool t, bool b) : delta(std::move(d)), array_size(numBytes), title(t), bold(b) {}
 };
 
 class IndexChunk {
@@ -83,7 +82,7 @@ class IndexChunk {
             size_t num_bytes = SizeOfDelta(delta);
             cunique_ptr<uint8_t[]> buf(new uint8_t[num_bytes]);
             encodeVarint(delta, buf.get(), num_bytes);
-            inverted_word_index.add_word(word, Post(buf, in_title, in_bold), new_document);
+            inverted_word_index.add_word(word, Post(buf, num_bytes, in_title, in_bold), new_document);
             prev_pos = pos;
         }
     private:
@@ -143,6 +142,15 @@ class PostingList {
 
         void increment_document_freq() {
             document_freq++;
+        }
+
+        const size_t header_size() {
+            return sizeof(type) + sizeof (index_freq) + sizeof (document_freq) + sizeof(size) + sizeof(doc_length) + sizeof(url_length) + sizeof(title_length) + sizeof(anchor_text_amount) + sizeof(unique_anchor_words);        
+        }
+
+        auto begin()
+        {
+            return posting_list.begin();
         }
     private:
 

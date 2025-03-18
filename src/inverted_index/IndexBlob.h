@@ -31,7 +31,7 @@ struct SerialPost {
 
     static size_t BytesRequired(const Post &post)
     {
-        size_t total = sizeof(title) + sizeof(bold) + sizeof(post.delta);
+        size_t total = sizeof(title) + sizeof(bold) + sizeof(post.array_size);
         return RoundUp(total, sizeof(size_t));
     }
     static char *Write(char *buffer, char *bufferEnd,
@@ -53,8 +53,8 @@ struct SerialPost {
         buffer += sizeof(post.bold);
 
         // Will change to delta
-        std::memcpy(buffer, &post.pos, sizeof(post.pos));
-        buffer += sizeof(post.pos);
+        std::memcpy(buffer, &post.delta, sizeof(post.array_size));
+        buffer += sizeof(post.array_size);
 
         return buffer;
     }
@@ -62,9 +62,9 @@ struct SerialPost {
 
 class SerialPostingList {
 
-    static size_t BytesRequired(const PostingList postingList)
+    static size_t BytesRequired(PostingList &postingList)
     {
+        size_t total = postingList.header_size();
         return RoundUp(total, sizeof(size_t));
-        // Your code here.
     }
 }

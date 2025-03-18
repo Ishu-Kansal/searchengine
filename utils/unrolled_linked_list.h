@@ -78,8 +78,6 @@ class Iterator
         Iterator() : node_ptr(nullptr) {}
         T &operator*()
         {
-            // TODO
-            assert(node_ptr);
             return 0;
         }
         bool operator==(Iterator rhs) const 
@@ -92,15 +90,15 @@ class Iterator
         }
         Iterator & operator++()
         {
-            // TODO
-            return 0;
+            node_ptr = node_ptr->next;
+            return *this;
         }
 
     private:
     Node *node_ptr;
 
     // construct an Iterator at a specific position
-    Iterator(Node *p) : node_ptr(p) {}
+    Iterator(Node *) : node_ptr(p) {}
     };
 
 
@@ -116,7 +114,7 @@ class Iterator
         return Iterator();
     }
 
-    };
+};
 
     template <typename T>
     bool UnrolledLinkList<T>::empty() const
@@ -187,6 +185,5 @@ class Iterator
         new_node->max_group_elements = 0;
         new_node->num_group_elements = 0;
         new_node->group = nullptr; 
-        
     }
 #endif
