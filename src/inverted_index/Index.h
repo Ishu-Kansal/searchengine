@@ -63,6 +63,14 @@ struct Post
     Post(cunique_ptr<uint8_t[]> d, uint8_t numBytes, bool t, bool b) : delta(std::move(d)), array_size(numBytes), title(t), bold(b) {}
 };
 
+struct EndDocData 
+    {
+        uint64_t doc_length;   
+        uint64_t url_length;
+        uint64_t title_length;
+        uint64_t anchor_text_amount;
+        uint64_t unique_anchor_words;
+    };
 class IndexChunk {
 
     public:
@@ -70,7 +78,16 @@ class IndexChunk {
         {
             url_list.push_back(std::move(url)); 
         }
-
+        void add_enddoc(
+            uint64_t doc_length,
+            uint64_t url_length,
+            uint64_t title_length,
+            uint64_t anchor_text_amount,
+            uint64_t unique_anchor_words
+        )
+        {
+            
+        }
         void add_word(
             std::string word,
             uint64_t pos, 
@@ -175,10 +192,13 @@ class PostingList {
 
 class EndOfDocList {
 
-    uint64_t doc_length;   
-    uint64_t url_length;
-    uint64_t title_length;
-    uint64_t anchor_text_amount;
-    uint64_t unique_anchor_words;
+public:
 
+    void add_enddoc(const EndDocData &endDoc) 
+    {
+        enddoc_list.push_back(std::move(EndDocData(endDoc)));
+    }
+
+private:
+    UnrolledLinkList<EndDocData> enddoc_list;
 };
