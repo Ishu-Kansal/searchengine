@@ -12,7 +12,7 @@
 
 #include "HashTable.h"
 #include "Index.h"
-
+#include <cmath>
 static const size_t Unknown = 0;
 
 size_t RoundUp(size_t length, size_t boundary)
@@ -61,7 +61,12 @@ struct SerialPost {
 };
 
 class SerialPostingList {
+    static void CreateSeekTable(PostingList &postingList)
+    {   
+        size_t num_posts = postingList.size();
+        size_t ceil(sqrt(num_posts));
 
+    }
     static size_t BytesRequired(PostingList &postingList)
     {
         size_t total = postingList.header_size();

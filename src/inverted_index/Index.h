@@ -145,7 +145,7 @@ class PostingList {
         }
 
         const size_t header_size() {
-            return sizeof(type) + sizeof (index_freq) + sizeof (document_freq) + sizeof(size) + sizeof(doc_length) + sizeof(url_length) + sizeof(title_length) + sizeof(anchor_text_amount) + sizeof(unique_anchor_words);        
+            return sizeof(type) + sizeof (index_freq) + sizeof (document_freq) + sizeof(size); //sizeof(doc_length) + sizeof(url_length) + sizeof(title_length) + sizeof(anchor_text_amount) + sizeof(unique_anchor_words);        
         }
 
         auto begin()
@@ -156,22 +156,29 @@ class PostingList {
         {
             return posting_list.end();
         }
+        size_t size()
+        {
+            return posting_list.size();
+        }
     private:
 
         // Common Header
         char type;              // Type: end-of-doc, word in anchor, URL, title, body.
         uint64_t index_freq;    // Number of occurrences of this token in the index
         uint64_t document_freq; // Number of documents in which this token occurs.
-        uint64_t size;          // Size of the list for skipping over collisions.
-
-        // Type Specific Data
-        uint64_t doc_length;   
-        uint64_t url_length;
-        uint64_t title_length;
-        uint64_t anchor_text_amount;
-        uint64_t unique_anchor_words;
+        uint64_t size;          // Size of the list for skipping over collisions. (Don't think we need)
 
         // Linked list of posts
         UnrolledLinkList<Post> posting_list;
+
+};
+
+class EndOfDocList {
+
+    uint64_t doc_length;   
+    uint64_t url_length;
+    uint64_t title_length;
+    uint64_t anchor_text_amount;
+    uint64_t unique_anchor_words;
 
 };
