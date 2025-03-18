@@ -78,7 +78,9 @@ class Iterator
         Iterator() : node_ptr(nullptr) {}
         T &operator*()
         {
-            return 0;
+            assert(node_ptr);
+
+            return node_ptr->group[curr_index];
         }
         bool operator==(Iterator rhs) const 
         {
@@ -89,23 +91,30 @@ class Iterator
             return !(node_ptr == rhs.node_ptr);
         }
         Iterator & operator++()
-        {
-            node_ptr = node_ptr->next;
+        {  
+            if (!node_ptr) return *this;
+
+
+            if (++curr_index >= node_ptr->num_group_elements)
+            {
+                node_ptr = node_ptr->next;
+                curr_index = 0;
+            }
             return *this;
         }
 
     private:
     Node *node_ptr;
-
+    size_t curr_index = 0;
     // construct an Iterator at a specific position
-    Iterator(Node *) : node_ptr(p) {}
+    Iterator(Node *, i) : node_ptr(p) , curr_index(i) {}
     };
 
 
     // return an Iterator pointing to the first element
     Iterator begin() const
     {
-        return Iterator(first);
+        return Iterator(first, 0);
     }
 
     // return an Iterator pointing to "past the end"
@@ -144,6 +153,7 @@ class Iterator
         {
             // Makes new node and init vars
             first = last = create_new_node(START_SIZE, datum);
+            last->next = nullptr;
             ++num_groups;
             curr_size += START_SIZE;
 
@@ -169,6 +179,7 @@ class Iterator
                 // Makes new node and init vars
                 last->next = create_new_node(new_size, datum);
                 last = last->next;  // Move the last pointer to the newly added node
+                last->next = nullptr;
                 ++num_groups;
             }
         }

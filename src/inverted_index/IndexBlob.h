@@ -65,6 +65,14 @@ class SerialPostingList {
     static size_t BytesRequired(PostingList &postingList)
     {
         size_t total = postingList.header_size();
+        auto it = postingList.begin();
+        auto end = postingList.end();
+        while(it != end)
+        {   
+            total += SerialPost::BytesRequired(*it);
+            ++it;
+        }
         return RoundUp(total, sizeof(size_t));
     }
-}
+
+};

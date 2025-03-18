@@ -152,6 +152,10 @@ class PostingList {
         {
             return posting_list.begin();
         }
+        auto end()
+        {
+            return posting_list.end();
+        }
     private:
 
         // Common Header
