@@ -43,7 +43,7 @@ public:
 
     bool empty() const;
 
-    int size() const;
+    size_t size() const;
 
     void push_back(T &&datum);
 
@@ -131,7 +131,7 @@ class Iterator
         return (num_groups == 0);
     }
     template <typename T>
-    int UnrolledLinkList<T>::size() const
+    size_t UnrolledLinkList<T>::size() const
     {
         return num_of_elements;
     }
