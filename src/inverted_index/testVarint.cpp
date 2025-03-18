@@ -14,12 +14,13 @@ int main() {
     
     for (auto value : testValues) {
         original = value;
-        encodeVarint(original, buffer, SizeOfDelta(value));
+        size_t num_bytes = SizeOfDelta(value);
+        encodeVarint(original, buffer, num_bytes);
         decodeVarint(buffer, decoded);
 
         std::cout << "Value: " << original 
-                  << ", Encoded length: " << len_encoded 
-                  << ", Decoded: " << decoded << "\n";
+                << ", Num Bytes: " << num_bytes 
+                << ", Decoded: " << decoded << "\n";
 
         assert(original == decoded);
     }

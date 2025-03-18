@@ -4,7 +4,7 @@
 #include "utils/cunique_ptr.h"
 #include "HashTable/HashTableStarterFiles/HashTable.h"
 
-size_t SizeOfDelta(size_t offset) {
+inline size_t SizeOfDelta(size_t offset) {
     if (offset < (1ULL << 7)) {
         return 1;
     } else if (offset < (1ULL << 14)) {
