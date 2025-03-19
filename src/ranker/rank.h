@@ -8,6 +8,7 @@
 template <class T>
 using vector = std::vector<T>;
 
+// hardcode everything in enums so that we can switch numbers out easily for testing the static ranker's effectiveness
 enum DocumentLengthRank : uint8_t
 {
   VERYSHORT = 0,
@@ -17,6 +18,61 @@ enum DocumentLengthRank : uint8_t
   VERYLONG = 4
 };
 
+enum DocumentLengths : int
+{
+  VERYSHORTLENGTH = 64,
+  SHORTLENGTH = 256,
+  MEDIUMLENGTH = 1024,
+  LONGLENGTH = 2048
+};
+
+enum ImagesWeights : int 
+{
+  NO_IMG_WEIGHT = 0, 
+  FEW_IMG_WEIGHT = 2,
+  MODERATE_IMG_WEIGHT = 3,
+  MANY_IMG_WEIGHT = 2,
+  EXCESSIVE_IMG_WEIGHT = -1 
+};
+
+enum NumImages: int {
+  NOIMAGES= 0, 
+  FEWIMAGES = 5,
+  MODERATEIMAGES = 15,
+  MANYIMAGES = 25
+};
+
+enum NumLinks: int {
+  NOLINKS = 0, 
+  MODERATELINKS = 250
+};
+
+enum NumLinksWeights: int {
+  NOLINKSWEIGHT = 0, 
+  MODERATELINKSWEIGHT = 2, 
+  EXCESSIVELINKSWEIGHT = -1
+};
+
+enum DomainWeights: int {
+  NONRECOGNIZED = -1, 
+  LESSRELEVANT = 1, 
+  RELEVANT = 2, 
+  ORG = 3, 
+  IMPORTANT = 4
+};
+
+enum UrlLengths: int {
+  MODERATE_URL_LENGTH = 50, 
+  LONG_URL_LENGTH = 75,
+  EXCESSIVELYLONG_URL_LENGTH = 100
+};
+
+enum UrlLengthWeights: int {
+  SHORTURLWEIGHT = 3,
+  MODERATEURLWEIGHT = 2,
+  LONGURLWEIGHT = 1, 
+  EXCESSIVELYLONGURLWEIGHT = 0
+};
 
 namespace
 {
@@ -35,13 +91,13 @@ namespace
 {
   DocumentLengthRank get_document_length(size_t n)
   {
-    if (n < 64)
+    if (n < VERYSHORTLENGTH)
       return VERYSHORT;
-    else if (n < 256)
+    else if (n < SHORTLENGTH)
       return SHORT;
-    else if (n < 1024)
+    else if (n < MEDIUMLENGTH)
       return MEDIUM;
-    else if (n < 2048)
+    else if (n < LONGLENGTH)
       return LONG;
     else
       return VERYLONG;
@@ -49,36 +105,36 @@ namespace
 }
 
 // Number of images in website multiplier, I don't know how to make this branchless
-float get_numImages_weight(int occurences) {
+int get_numImages_weight(int occurences) {
   // if occurences less than 5 check 0, return 1 if 0, otherwise return 1.2
-  if (occurences <= 5) return (occurences == 0) ? 1.0f : 1.2f;
+  if (occurences <= FEWIMAGES) return (occurences == NOIMAGES) ? NO_IMG_WEIGHT : FEW_IMG_WEIGHT;
   // if 6-15 images return 1.25
-  else if (occurences <= 15) return 1.25f;
+  else if (occurences <= MODERATEIMAGES) return MODERATE_IMG_WEIGHT;
   // if 16-25 return 1.2
-  else if (occurences <= 25) return 1.2f; 
+  else if (occurences <= MANYIMAGES) return MANY_IMG_WEIGHT; 
   // if more than 25 then slightly punish with a 0.75 multiplier
-  return 0.75f; 
+  return EXCESSIVE_IMG_WEIGHT; 
 }
 
 // optimized for branch prediction
-float get_numLinks_weight(int occurences) {
-  if (occurences <= 250) return (occurences == 0) ? 1.0f : 1.1f; 
+int get_numLinks_weight(int occurences) {
+  if (occurences <= MODERATELINKS) return (occurences == NOLINKS) ? NOLINKSWEIGHT : MODERATELINKSWEIGHT; 
   // if more than 250 outgoing links probably a spam site so punish with a 0.8(might be a bibliography so dont punish too much)
-  else return 0.8f; 
+  else return EXCESSIVELINKSWEIGHT; 
 }
 
 // branchless
-float get_domain_weight(std::string domain) {
+int get_domain_weight(std::string domain) {
   // make a static hashmap for branchless and give it a weight 
   static const std::unordered_map<std::string, float> domainWeights = {
-    {".gov", 1.5f}, {".edu", 1.5f}, 
-    {".org", 1.2f}, {".ai", 1.2f},  
-    {".com", 1.0f}, {".net", 1.0f}, 
-    {".info", 0.75f}, {".biz", 0.75f}, 
+    {".gov", IMPORTANT}, {".edu", IMPORTANT}, 
+    {".org", ORG},  
+    {".com", RELEVANT}, {".net", RELEVANT}, 
+    {".info", LESSRELEVANT}, {".biz", LESSRELEVANT}, 
   };
   auto it = domainWeights.find(domain);
   // if iterator not found return 0.5 otherwise return its respective weight
-  return (it != domainWeights.end()) ? it->second : 0.5f;
+  return (it != domainWeights.end()) ? it->second : NONRECOGNIZED;
 }
 
 double get_document_length_weight(const decltype(HtmlParser::words) &words)
@@ -88,13 +144,13 @@ double get_document_length_weight(const decltype(HtmlParser::words) &words)
 }
 
 // branchless
-float get_url_length_weight(int length) {
-  static const float weightsarr[] = {0.8f, 1.0f, 1.1f, 1.2f};
+int get_url_length_weight(int length) {
+  static const float weightsarr[] = {EXCESSIVELYLONGURLWEIGHT, LONGURLWEIGHT, MODERATEURLWEIGHT, SHORTURLWEIGHT};
   // reward shorter urls
   return weightsarr[
-    (length >= 100) ? 0:
-    (length >= 75) ? 1:
-    (length >= 50) ? 2:
+    (length >= EXCESSIVELYLONG_URL_LENGTH) ? 0:
+    (length >= LONG_URL_LENGTH) ? 1:
+    (length >= MODERATE_URL_LENGTH) ? 2:
     3
   ];
 }
@@ -133,11 +189,12 @@ float get_url_domain_weight(cstring_view url) {
 }
 */
 
-// TBD
+// computes the static rank of an individual page given the URl and the parser object
 double get_static_rank(std::string url, const HtmlParser &parser)
 {
   return get_numImages_weight(parser.img_count) + 
     get_numLinks_weight(parser.links.size()) + 
     get_domain_weight(get_top_level_domain(url)) +
-    get_document_length_weight(parser.words);
+    get_document_length_weight(parser.words) +
+    get_url_length_weight(url.size());
 }
