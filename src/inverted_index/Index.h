@@ -57,9 +57,9 @@ inline void decodeVarint(const uint8_t* buf, uint64_t& val) {
 }   
 struct Post
 {
+    unsigned char flags = 0; 
     cunique_ptr<uint8_t[]> delta{};
     uint8_t numBytes = 0;
-    unsigned char flags = 0; 
 
     Post() = default;
     Post(cunique_ptr<uint8_t[]> d, uint8_t numBytes, bool t, bool b)
@@ -173,7 +173,7 @@ class PostingList {
         }
 
         const size_t header_size() {
-            return sizeof(type) + sizeof (index_freq) + sizeof (document_freq) + sizeof(size); //sizeof(doc_length) + sizeof(url_length) + sizeof(title_length) + sizeof(anchor_text_amount) + sizeof(unique_anchor_words);        
+            return sizeof(type) + sizeof (index_freq) + sizeof (document_freq) + sizeof(size);  
         }
 
         auto begin()
@@ -208,6 +208,18 @@ public:
     void add_enddoc(const EndDocData &endDoc) 
     {
         enddoc_list.push_back(std::move(EndDocData(endDoc)));
+    }
+    auto begin()
+    {
+        return enddoc_list.begin();
+    }
+    auto end()
+    {
+        return enddoc_list.end();
+    }
+    size_t size()
+    {
+        return enddoc_list.size();
     }
 
 private:

@@ -64,6 +64,9 @@ struct SeekObject {
     SeekObject(size_t postOffset, size_t location) : postOffset(postOffset), location(location) {}
 };
 class PostingListBlob {
+    public:
+        size_t BlobSize;
+
     static size_t CalcSyncPointsPerXPosts(PostingList &postingList)
     {   
         // Finds close to optimal numSyncPoints to min disk reads
@@ -110,7 +113,7 @@ class PostingListBlob {
         size_t syncInterval = CalcSyncPointsPerXPosts(postingList);
         size_t seekTableSize = floor(postingList.size() / syncInterval);
         char * bufferPostStart = buffer;
-        
+
         if (syncInterval > 1)
         {
             bufferPostStart = buffer + RoundUp(seekTableSize * sizeof(SeekObject), sizeof(size_t));
@@ -145,9 +148,15 @@ class PostingListBlob {
         void *mem = operator new(bytes);
         std::memset(mem, 0, bytes);
         PostingListBlob * plb = new(mem) PostingListBlob();
+        plb->BlobSize = bytes;
         plb = Write(plb, bytes, postingList);
 
         return plb;
+    }
+    
+    static void Discard(PostingListBlob * plb)
+    {
+        operator delete(plb);
     }
 };
 
