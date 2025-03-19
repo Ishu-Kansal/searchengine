@@ -4,6 +4,9 @@
 #include "utils/cunique_ptr.h"
 #include "HashTable/HashTableStarterFiles/HashTable.h"
 
+constexpr unsigned char TITLE_FLAG = 0x01;
+constexpr unsigned char BOLD_FLAG  = 0x02;
+
 inline size_t SizeOfDelta(size_t offset) {
     if (offset < (1ULL << 7)) {
         return 1;
@@ -55,12 +58,16 @@ inline void decodeVarint(const uint8_t* buf, uint64_t& val) {
 struct Post
 {
     cunique_ptr<uint8_t[]> delta{};
-    uint8_t array_size = 0;
-    bool title = false;
-    bool bold = false;
-    
+    uint8_t numBytes = 0;
+    unsigned char flags = 0; 
+
     Post() = default;
-    Post(cunique_ptr<uint8_t[]> d, uint8_t numBytes, bool t, bool b) : delta(std::move(d)), array_size(numBytes), title(t), bold(b) {}
+    Post(cunique_ptr<uint8_t[]> d, uint8_t numBytes, bool t, bool b)
+      : delta(std::move(d)), numBytes(numBytes)
+    {
+        if (t) flags |= TITLE_FLAG;
+        if (b) flags |= BOLD_FLAG;
+    }
 };
 
 struct EndDocData 

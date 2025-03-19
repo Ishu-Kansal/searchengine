@@ -31,7 +31,7 @@ struct SerialPost {
 
     static size_t BytesRequired(const Post &post)
     {
-        size_t total = sizeof(title) + sizeof(bold) + sizeof(post.array_size);
+        size_t total = sizeof(title) + sizeof(bold) + sizeof(post.numBytes);
         return RoundUp(total, sizeof(size_t));
     }
     static char *Write(char *buffer, char *bufferEnd,
@@ -46,32 +46,41 @@ struct SerialPost {
         std::memcpy(buffer, &len, sizeof(len));
         buffer += sizeof(len);
 
-        std::memcpy(buffer, &post.title, sizeof(post.title));
-        buffer += sizeof(post.title);
+        // Writes flags to buffer
+        std::memcpy(buffer, &post.flags, sizeof(post.flags));
+        buffer += sizeof(post.flags);
 
-        std::memcpy(buffer, &post.bold, sizeof(post.bold));
-        buffer += sizeof(post.bold);
-
-        // Will change to delta
-        std::memcpy(buffer, &post.delta, sizeof(post.array_size));
-        buffer += sizeof(post.array_size);
+        // Writes delta to buffer
+        std::memcpy(buffer, &post.delta, post.numBytes);
+        buffer += post.numBytes;
 
         return buffer;
     }
 };
 
-class SerialPostingList {
-    static void CreateSeekTable(PostingList &postingList)
+struct SeekObject {
+    size_t postOffset;
+    size_t location;
+};
+class PostingListBlob {
+    static size_t CalcNumSyncPoints(PostingList &postingList)
     {   
-        size_t num_posts = postingList.size();
-        size_t ceil(sqrt(num_posts));
-
+        // Finds close to optimal numSyncPoints to min disk reads
+        size_t numPosts = postingList.size();
+        size_t numSyncPoints = ceil(sqrt(numPosts));
+        return numSyncPoints;
     }
     static size_t BytesRequired(PostingList &postingList)
     {
+        // Calculates the num of bytes required for PostingListBlob
         size_t total = postingList.header_size();
+        // Adds seekTable bytes to total
+        // TODO align?
+        total += CalcNumSyncPoints(postingList) * sizeof(SeekObject);
+
         auto it = postingList.begin();
         auto end = postingList.end();
+        
         while(it != end)
         {   
             total += SerialPost::BytesRequired(*it);
@@ -79,5 +88,28 @@ class SerialPostingList {
         }
         return RoundUp(total, sizeof(size_t));
     }
+
+    static PostingListBlob* Write(PostingListBlob * plb, size_t bytes, PostingList &postingList)
+    {
+
+    }
+
+    static PostingListBlob *Create(PostingList &postingList) {
+        size_t bytes = BytesRequired(postingList);
+        void *mem = operator new(bytes);
+        std::memset(mem, 0, bytes);
+        PostingListBlob * plb = new(mem) PostingListBlob();
+        size_t numSyncPoints = CalcNumSyncPoints(postingList);
+        plb->seekTable = new SeekObject[numSyncPoints];
+        plb->Write(plb, bytes, postingList);
+
+        return plb;
+    }
+    private:
+    SeekObject * seekTable = nullptr;
+};
+
+class PostingListFile {
+
 
 };
