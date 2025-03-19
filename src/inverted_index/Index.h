@@ -86,7 +86,8 @@ class IndexChunk {
             uint64_t unique_anchor_words
         )
         {
-            
+          EndDocData data{doc_length, url_length, title_length, anchor_text_amount, unique_anchor_words};
+          inverted_word_index.add_enddoc(data);
         }
         void add_word(
             std::string word,
@@ -112,7 +113,9 @@ class IndexChunk {
 class InvertedIndex {
 
     public:
-
+        void add_enddoc(const EndDocData &endDoc) {
+          end_of_doc_list.add_enddoc(endDoc);
+        }
         void add_word(const std::string& word, const Post& post, bool new_document = true) 
         {
             // Check if the word exists in the dictionary
@@ -145,6 +148,7 @@ class InvertedIndex {
     private:
         HashTable<std::string, size_t> dictionary;
         std::vector<PostingList> lists_of_posting_lists;
+        EndOfDocList end_of_doc_list;
 
 };
 
