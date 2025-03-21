@@ -122,7 +122,8 @@ int main(int argc, char **argv) {
       "LinuxGetUrl/2.0 404FoundEngine@umich.edu (Linux)\r\nAccept: "
       "*/*\r\nAccept-Encoding: identity\r\nConnection: close\r\n\r\n";
 
-  send(socketFD, req.c_str(), req.length(), 0);
+  ssize_t sent = send(socketFD, req.c_str(), req.length(), 0);
+  if (sent == -1) return -1;
 
   // Read from the socket until there's no more data, copying it to
   // stdout.

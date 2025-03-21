@@ -1,0 +1,8 @@
+HTTP/1.1 301 Moved Permanently
+content-length: 0
+location: https://www.wikipedia.org/
+server: HAProxy
+x-cache: cp1104 int
+x-cache-status: int-tls
+connection: close
+
