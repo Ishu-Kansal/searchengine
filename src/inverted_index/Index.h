@@ -1,8 +1,8 @@
 #include<vector>
 
-#include "utils/unrolled_linked_list.h"
-#include "utils/cunique_ptr.h"
-#include "HashTable/HashTableStarterFiles/HashTable.h"
+#include "../../utils/unrolled_linked_list.h"
+#include "../../utils/cunique_ptr.h"
+#include "../../HashTable/HashTableStarterFiles/HashTable.h"
 
 constexpr unsigned char TITLE_FLAG = 0x01;
 constexpr unsigned char BOLD_FLAG  = 0x02;
