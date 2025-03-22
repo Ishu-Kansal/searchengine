@@ -22,7 +22,7 @@
 #include "../../utils/pthread_lock_guard.h"
 // #include "../inverted_index/Index.h"
 
-constexpr uint32_t MAX_PROCESSED = 5;
+constexpr uint32_t MAX_PROCESSED = 10;
 constexpr uint32_t TOP_K_ELEMENTS = 5000;
 constexpr uint32_t NUM_RANDOM = 10000;
 
@@ -39,9 +39,10 @@ uint32_t num_processed{};
 std::mt19937 mt{std::random_device{}()};
 
 int get_and_parse_url(const char *url, int fd) {
-    static const char *const proc = "../../LinuxGetUrl/LinuxGetSSL";
-    std::cout << "running get and parse URL" << " fd: " << fd << " url " << url
-              << std::endl;
+    static const char *const proc = "../../LinuxGetUrl/LinuxGetSsl";
+    // std::cout << "running get and parse URL" << " fd: " << fd << " url " <<
+    // url
+    //           << std::endl;
     pid_t pid = fork();
     if (pid == 0) {
         dup2(fd, STDOUT_FILENO);  // redirect STDOUT to output file
@@ -60,9 +61,9 @@ int get_and_parse_url(const char *url, int fd) {
     }
 
     // dup2(fd, STDOUT_FILENO);  // redirect STDOUT to output file
-    // std::cout << "Ran DUP" << std::endl;
+    // // std::cout << "Ran DUP" << std::endl;
     // int t = execlp(proc, "LinuxGetSSL", url, NULL);
-    // std::cout << "Ran exec" << std::endl;
+    // // std::cout << "Ran exec" << std::endl;
     // if (t == -1) {
     //     std::clog << "Failed to execute for url: " << url << '\n';
     //     return -1;
@@ -146,6 +147,7 @@ void fill_queue() {
 #include <pthread.h>
 
 #include <queue>
+#include <regex>
 #include <string>
 #include <vector>
 
@@ -154,6 +156,9 @@ std::string get_next_url() {
 
     size_t links_vector_size = links_vector.size();
     std::string url;
+
+    // std::cout << "Link vector size " << links_vector_size << std::endl;
+    // std::cout << "Explore queue size " << explore_queue.size() << std::endl;
 
     if (!explore_queue.empty()) {
         url = std::move(explore_queue.front());
@@ -174,13 +179,20 @@ std::string get_next_url() {
 
 int count = 0;
 
+std::string getHostFromUrl(const std::string &url) {
+    std::regex urlRe("^.*://([^/?:]+)/?.*$");
+
+    return std::regex_replace(url, urlRe, "$1");
+}
+
 void *runner(void *) {
     while (num_processed < MAX_PROCESSED) {
         // sem_wait(queue_sem);
 
         std::string url = get_next_url();
 
-        std::cout << "Running URL " << url << std::endl;
+        // std::cout << "Running URL " << url << std::endl;
+        std::cout << url << std::endl;
 
         const std::string fileName =
             "../files/file" + std::to_string(count) + ".txt";
@@ -188,57 +200,68 @@ void *runner(void *) {
 
         // this isn't working rn bc if u open a file that already exists, u can
         // do that
-        int outputFd =
-            open(fileName.data(), O_CREAT | O_TRUNC | O_WRONLY | O_EXCL, 0777);
+        int outputFd = open(fileName.data(), O_RDWR | O_CREAT | O_TRUNC, 0777);
         if (outputFd == -1) {
             std::clog << "URL already processed for url: " << url << '\n';
             continue;
         }
 
-        std::cout << "Here" << std::endl;
+        // std::cout << "Here" << std::endl;
 
         int status = get_and_parse_url(url.data(), outputFd);
 
         if (status != 0) {
-            std::cout << "here " << status << '\n';
+            // std::cout << "here " << status << '\n';
             close(outputFd);
             continue;
         }
 
-        std::cout << "Here2" << std::endl;
+        // std::cout << "Here2" << std::endl;
 
         const int len = get_file_size(outputFd);
 
-        std::cout << "Here3" << std::endl;
+        // std::cout << "Here3 " << len << std::endl;
 
-        const char *fileData =
-            (char *)mmap(nullptr, len, O_RDONLY, PROT_READ, outputFd, 0);
+        const char *fileData = (const char *)mmap(
+            0, len, PROT_READ | PROT_WRITE, MAP_SHARED, outputFd, 0);
+        // std::cout << "Here3.5" << std::endl;
         if (fileData == MAP_FAILED) {
+            perror("map failed");
             std::clog << "Failed to process url: " << url << '\n';
             close(outputFd);
             continue;
         }
-        std::cout << "Here4" << std::endl;
+        // std::cout << "Here4" << std::endl;
         try {
             HtmlParser parser(fileData, len);
 
-            std::cout << "Here5" << std::endl;
+            // std::cout << "Here5" << std::endl;
             ++num_processed;
             {
                 pthread_lock_guard guard{queue_lock};
                 for (auto &link : parser.links) {
                     std::string nextURL = std::move(link.URL);
-                    if (nextURL[0] == '/') {
-                        if (url.back() == '/') {
-                            nextURL = url.substr(0, url.size() - 1) + nextURL;
-                        } else {
-                            nextURL = url + nextURL;
-                        }
-                    } else if (nextURL[0] == '?') {
-                        nextURL = url + nextURL;
+                    if (nextURL[0] == '#' || nextURL[0] == '?') {
+                        continue;
                     }
+                    if (nextURL[0] == '/') {
+                        std::string domain = getHostFromUrl(url);
+                        // std::cout << "domain: " << domain << std::endl;
+                        nextURL = url.substr(0, 8) + domain + nextURL;
+                        if (url.back() == '/') {
+                            // nextURL = url.substr(0, url.size() - 1) +
+                            // nextURL;
+                        }
+                        // else {
+                        //     nextURL = url + nextURL;
+                        // }
+                    }
+                    // else if (nextURL[0] == '?') {
+                    //     nextURL = url + nextURL;
+                    // }
                     if (!bf.contains(nextURL)) {
                         bf.insert(nextURL);
+                        // std::cout << nextURL << std::endl;
                         links_vector.push_back(
                             {std::move(nextURL), STATIC_RANK++});
                         //    sem_post(queue_sem);
@@ -246,8 +269,8 @@ void *runner(void *) {
                 }
             }
             // add to index (single threaded so far)
-            std::cout << "Found " << parser.words.size() << " words"
-                      << std::endl;
+            // // std::cout << "Found " << parser.words.size() << " words and "
+            //           << parser.links.size() << "links" << std::endl;
             // uint64_t pos = 0;
             // IndexChunk chunk;
             // chunk.add_url(std::move(url));
@@ -275,7 +298,7 @@ int main(int argc, char **argv) {
         {"https://en.wikipedia.org/wiki/University_of_Michigan", 0});
 
     pthread_mutex_init(&queue_lock, NULL);
-    queue_sem = sem_open("/crawler_semaphore", O_CREAT);
+    queue_sem = sem_open("/crawler_semaphore", O_CREAT, 0777, 0);
     if (queue_sem == SEM_FAILED) {
         std::clog << "Failed to open semaphore: " << strerror(errno)
                   << std::endl;

@@ -16,7 +16,7 @@
 CXX = g++
 CXXFLAGS = -Wall -Wextra -std=c++17 -MMD -MP
 
-SRC = crawler.cpp ../../HtmlParser/HtmlTags.cpp
+SRC = crawler2.cpp ../../HtmlParser/HtmlTags.cpp
 OBJ = $(SRC:.cpp=.o)
 DEP = $(SRC:.cpp=.d)
 
@@ -25,10 +25,13 @@ all: crawler
 crawler: $(OBJ)
 	$(CXX) -o crawler $(OBJ) -lssl -lcrypto -lz 
 
+crawler2: $(OBJ)
+	$(CXX) -o crawler2 $(OBJ) -lssl -lcrypto -lz 
+
 -include $(DEP)
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f *.o *.d crawler
+	rm -f *.o *.d crawler crawler2
