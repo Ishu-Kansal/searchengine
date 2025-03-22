@@ -1,16 +1,16 @@
 #pragma once
 
-#include <string>
 #include <cstring>
+#include <string>
 
-class cstring_view
-{
-public:
+class cstring_view {
+ public:
   const static size_t npos = -1;
 
   explicit cstring_view() = default;
   explicit cstring_view(nullptr_t) = delete;
-  explicit cstring_view(const std::string &s) : first{s.data()}, last(s.data() + s.size()) {}
+  explicit cstring_view(const std::string &s)
+      : first{s.data()}, last(s.data() + s.size()) {}
   explicit cstring_view(const char *c, size_t l) : first{c}, last{c + l} {}
   explicit cstring_view(const char *c) : first{c}, last{c + strlen(c)} {}
 
@@ -34,66 +34,49 @@ public:
   void remove_prefix(size_t n) { first += n; }
   void remove_suffix(size_t n) { last -= n; }
 
-  cstring_view substr(size_t pos, size_t count) const
-  {
+  cstring_view substr(size_t pos, size_t count) const {
     if (count == npos || pos + count > size())
       return cstring_view{first + pos, last};
     else
       return cstring_view{first + pos, first + pos + count};
   }
 
-  bool operator==(const cstring_view &other) const
-  {
-    if (size() != other.size())
-      return false;
+  bool operator==(const cstring_view &other) const {
+    if (size() != other.size()) return false;
     for (auto it1 = cbegin(), it2 = other.cbegin();
-         it1 != cend() && it2 != other.cend();
-         ++it1, ++it2)
-    {
-      if (*it1 != *it2)
-        return false;
+         it1 != cend() && it2 != other.cend(); ++it1, ++it2) {
+      if (*it1 != *it2) return false;
     }
     return true;
   }
 
-  bool operator==(const char *c) const
-  {
-    return *this == cstring_view{c};
-  }
+  bool operator==(const char *c) const { return *this == cstring_view{c}; }
 
-  bool operator==(const std::string &s) const
-  {
+  bool operator==(const std::string &s) const {
     return *this == cstring_view{s};
   }
 
-  size_t find(cstring_view sv, size_t pos = 0) const
-  {
-    if (size() < sv.size())
-      return npos; // avoid underflow
-    for (size_t i = 0; i <= size() - sv.size(); ++i)
-    {
-      if (substr(i, sv.size()) == sv)
-        return i;
+  size_t find(cstring_view sv, size_t pos = 0) const {
+    if (size() < sv.size()) return npos;  // avoid underflow
+    for (size_t i = 0; i <= size() - sv.size(); ++i) {
+      if (substr(i, sv.size()) == sv) return i;
     }
     return npos;
   }
 
-  size_t find(char c, size_t pos = 0) const
-  {
-    return find(cstring_view{&c, 1});
+  size_t find(char c, size_t pos = 0) const {
+    return find(cstring_view{static_cast<const char *>(&c), size_t{1}});
   }
 
-  size_t find(const char *s, size_t pos, size_t count) const
-  {
+  size_t find(const char *s, size_t pos, size_t count) const {
     return find(cstring_view{s, count}, pos);
   }
 
-  size_t find(const char *s, size_t pos) const
-  {
+  size_t find(const char *s, size_t pos) const {
     return find(cstring_view{s}, pos);
   }
 
-private:
+ private:
   const char *first{};
   const char *last{};
 };
