@@ -11,7 +11,7 @@
 #include <cassert>
 #include <cstring>
 #include <cstdint>
-
+#include <algorithm>
 #include "HashTable.h"
 #include "Index.h"
 
@@ -25,7 +25,10 @@ static const size_t oneless = boundary - 1,
                     mask = ~(oneless);
 return (length + oneless) & mask;
 }
-
+size_t highBitsIndex(uint64_t seek, size_t seekTableCount) {
+    size_t k = __builtin_ctzll(seekTableCount);
+    return seek >> (64 - k);
+}
 struct SerialPost {
 
     uint8_t totalLen;
@@ -63,9 +66,9 @@ struct SerialPost {
 };
 
 struct SeekEntry {
-    uint8_t* postOffset;
-    uint8_t* location;
-    SeekEntry(uint8_t* postOffset, uint8_t* location) : postOffset(postOffset), location(location) {}
+    size_t postOffset;
+    size_t location;
+    SeekEntry(size_t postOffset, size_t location) : postOffset(postOffset), location(location) {}
 };
 
 
@@ -81,8 +84,69 @@ class PostingListBlob {
             BlobHeader(size_t blobSize, size_t seekTableSize, size_t seekTableCount) : BlobSize(blobSize), SeekTableSize(seekTableSize), SeekTableCount(seekTableCount) {}
         };
         BlobHeader blobHeader;
+
     [[nodiscard]] const SerialPost *Find(size_t seek) const
-    {}
+    {
+        const char *seekTable = reinterpret_cast<const char *>(this) + sizeof(this->blobHeader);
+        
+        size_t numElems = this->blobHeader.SeekTableCount;
+        if (numElems != 0) [[likely]]
+        {
+            size_t i = 0;
+            size_t j = 1;
+            const SeekEntry * entry = reinterpret_cast<const SeekEntry *>(seekTable) + sizeof(SeekEntry); 
+            while(j < numElems && entry->location < seek)
+            {
+                i = j;
+                j *= 2;
+                entry = reinterpret_cast<const SeekEntry *>(seekTable) + j * sizeof(SeekEntry); 
+            }
+            size_t left = i;
+            size_t right = min(j, numElems);
+            const SeekEntry * candidate = nullptr;
+
+            while (left <= right)
+            {
+                size_t mid = left + (right - left) / 2;
+                entry = reinterpret_cast<const SeekEntry *>(seekTable) + mid * sizeof(SeekEntry); 
+                if (entry->location <= seek)
+                {
+                    candidate = entry;
+                    left = mid + 1;
+                }
+                else
+                {
+                    if (mid == 0) break;
+                    right = mid - 1;
+                }
+            }
+    
+            size_t postOffset = candidate->postOffset;
+            const char *postsStart = reinterpret_cast<const char *>(this) + sizeof(this->blobHeader) + this->blobHeader.SeekTableSize;
+
+            return reinterpret_cast<const SerialPost *>(postsStart + postOffset);
+        }
+        else 
+        {
+            const char * start = reinterpret_cast<const char *>(this) + sizeof(this->blobHeader);
+            const char * end = reinterpret_cast<const char *>(this) + this->blobHeader.BlobSize;
+            uint64_t pos = 0;
+            while (start < end)
+            {
+                const SerialPost * post = reinterpret_cast<const SerialPost *>(start);
+                uint64_t delta = 0;
+                decodeVarint(post->delta, delta);
+                pos += delta;
+                if (pos > seek)
+                {
+                    return post;
+                }
+                start += post->totalLen;
+            }
+        }
+        return nullptr;
+
+    }
     [[nodiscard]] static size_t CalcSyncPointsPerXPosts(const PostingList &postingList)
     {   
         // Finds close to optimal numSyncPoints to min disk reads
@@ -94,12 +158,11 @@ class PostingListBlob {
     [[nodiscard]] static BlobHeader BytesRequired(const PostingList &postingList)
     {
         // Calculates the num of bytes required for PostingListBlob
-        // Last size_t is for size of seekTable and num of elems in it
-        size_t total = postingList.header_size() + sizeof(size_t);
-        size_t seekTableTotal = sizeof(size_t) + sizeof(size_t);
+        size_t total = postingList.header_size();
 
         size_t syncInterval = CalcSyncPointsPerXPosts(postingList);
-        size_t seekTableCount = 0;
+        size_t seekTableCount = floor(postingList.size() / syncInterval); 
+
         auto it = postingList.begin();
         auto end = postingList.end();
 
@@ -107,30 +170,18 @@ class PostingListBlob {
         uint64_t offset = 0;
         // Actual position
         uint64_t pos = 0;
-        uint64_t index=  0;
         while(it != end)
         {   
             auto post = *it;
             uint64_t delta;
             decodeVarint(post.delta.get(), delta);
             pos += delta;
-            if (syncInterval > 1 && index % syncInterval == 0) [[unlikely]]
-            {
-                // Adds the num of bytes of an aligned encoded offset and encoded pos
-                size_t seekTableEntry = RoundUp(SizeOfDelta(offset) + SizeOfDelta(pos), sizeof(size_t));
-                total += seekTableEntry;
-                seekTableTotal += seekTableEntry;
-                ++seekTableCount;
-            
-            }
             size_t postSize =  SerialPost::BytesRequired(post);
             total += postSize;
-            offset += postSize;
             ++it;
-            ++index;
 
         }
-        return BlobHeader(RoundUp(total, sizeof(size_t)), RoundUp(seekTableTotal, sizeof(size_t)), seekTableCount);
+        return BlobHeader(RoundUp(total, sizeof(size_t)), RoundUp(sizeof(SeekEntry) * seekTableCount, sizeof(size_t)), seekTableCount);
     }
 
     static PostingListBlob* Write(PostingListBlob * plb, size_t bytes, const PostingList &postingList)
@@ -151,6 +202,7 @@ class PostingListBlob {
         // Reserves buffer space at start for seekTable   
         size_t syncInterval = CalcSyncPointsPerXPosts(postingList);
         // size_t seekTableCount = floor(postingList.size() / syncInterval); 
+
         char * bufferPostStart = buffer;
         size_t seekTableCount = plb->blobHeader.SeekTableCount;
         if (seekTableCount > 0) [[likely]]
@@ -164,6 +216,7 @@ class PostingListBlob {
         uint64_t offset = 0;
         uint64_t pos = 0;
         uint64_t index = 0;
+
         while(it != end)
         {
             auto post = *it;
@@ -173,15 +226,7 @@ class PostingListBlob {
             
             if (seekTableCount > 0 && index % syncInterval == 0) [[unlikely]]
             {
-                size_t offsetSize = SizeOfDelta(offset);
-                size_t posSize = SizeOfDelta(pos);
-                uint8_t varOffset[offsetSize];
-                uint8_t varPos[posSize];
-
-                encodeVarint(offset, varOffset, offsetSize);
-                encodeVarint(pos, varPos, posSize);
-                
-                std::memcpy(buffer, &SeekEntry(varOffset, varPos), sizeof(SeekEntry));
+                std::memcpy(buffer, &SeekEntry(offset, pos), sizeof(SeekEntry));
                 buffer += sizeof(SeekEntry);
             }
             size_t postSize = SerialPost::BytesRequired(post);
