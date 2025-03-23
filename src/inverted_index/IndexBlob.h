@@ -211,6 +211,49 @@ class PostingListBlob {
 };
 
 class PostingListFile {
+    private:
+    PostingListBlob* blob;
+    int fileDescrip;
 
+    size_t FileSize(int f)
+    {
+        struct stat fileInfo;
+        fstat(f, &fileInfo);
+        return fileInfo.st_size;
+    }
+    public:
+    const PostingListBlob* Blob() const
+    {
+        return blob;
+    }
+    PostingListFile(const char* filename) : blob(nullptr)
+    {
+        fileDescrip = open(filename, O_RDONLY);
+        size_t fileSize = FileSize(fileDescrip);
+        void* map = mmap(nullptr, fileSize, PROT_READ, MAP_PRIVATE, fileDescrip, 0);
+        blob = reinterpret_cast<PostingListBlob*>(map);
+    }
+    PostingListFile(const char* filename, const PostingList &postingList) : blob(nullptr)
+    {
+        blob = PostingListBlob::Create(postingList);
+        size_t requiredSize = blob->blobHeader.BlobSize;
+        
+        fileDescrip = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0666);
 
+        ftruncate(fileDescrip, requiredSize);
+        
+        void* map = mmap(nullptr, requiredSize, PROT_WRITE, MAP_PRIVATE, fileDescrip, 0);
+        std::memcpy(map, blob, requiredSize);
+    }
+    ~PostingListFile()
+    {
+        if (blob)
+        {
+            munmap(blob, blob->blobHeader.BlobSize);
+        }
+        if (fileDescrip >= 0)
+        {
+            close(fileDescrip);
+        }
+    }
 };
