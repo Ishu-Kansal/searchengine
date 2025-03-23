@@ -28,6 +28,10 @@ return (length + oneless) & mask;
 
 struct SerialPost {
 
+    uint8_t totalLen;
+    unsigned char flags; 
+    uint8_t delta[];
+
     [[nodiscard]] static uint8_t BytesRequired(const Post &post)
     {
         size_t total = sizeof(post.flags) + post.numBytes + sizeof(uint8_t);
@@ -58,15 +62,27 @@ struct SerialPost {
     }
 };
 
-struct SeekObject {
-    size_t postOffset;
-    size_t location;
-    SeekObject(size_t postOffset, size_t location) : postOffset(postOffset), location(location) {}
+struct SeekEntry {
+    uint8_t* postOffset;
+    uint8_t* location;
+    SeekEntry(uint8_t* postOffset, uint8_t* location) : postOffset(postOffset), location(location) {}
 };
+
+
 class PostingListBlob {
     public:
-        size_t BlobSize;
+        struct BlobHeader 
+        {
+            size_t BlobSize;
+            size_t SeekTableSize;
+            size_t SeekTableCount;
 
+            BlobHeader() = default;
+            BlobHeader(size_t blobSize, size_t seekTableSize, size_t seekTableCount) : BlobSize(blobSize), SeekTableSize(seekTableSize), SeekTableCount(seekTableCount) {}
+        };
+        BlobHeader blobHeader;
+    [[nodiscard]] const SerialPost *Find(size_t seek) const
+    {}
     [[nodiscard]] static size_t CalcSyncPointsPerXPosts(const PostingList &postingList)
     {   
         // Finds close to optimal numSyncPoints to min disk reads
@@ -75,31 +91,52 @@ class PostingListBlob {
         // Need to change
         return ceil(sqrt(numPosts));
     }
-    [[nodiscard]] static size_t BytesRequired(const PostingList &postingList)
+    [[nodiscard]] static BlobHeader BytesRequired(const PostingList &postingList)
     {
         // Calculates the num of bytes required for PostingListBlob
-        size_t total = postingList.header_size();
-        // Adds seekTable bytes to total
-        // TODO align?
-        size_t syncInterval = CalcSyncPointsPerXPosts(postingList);
-        size_t seekTableSize = ceil(postingList.size() / syncInterval); 
-        total += RoundUp(seekTableSize * sizeof(SeekObject), sizeof(size_t));
+        // Last size_t is for size of seekTable and num of elems in it
+        size_t total = postingList.header_size() + sizeof(size_t);
+        size_t seekTableTotal = sizeof(size_t) + sizeof(size_t);
 
+        size_t syncInterval = CalcSyncPointsPerXPosts(postingList);
+        size_t seekTableCount = 0;
         auto it = postingList.begin();
         auto end = postingList.end();
-        
+
+        // Offset of post
+        uint64_t offset = 0;
+        // Actual position
+        uint64_t pos = 0;
+        uint64_t index=  0;
         while(it != end)
         {   
-            total += SerialPost::BytesRequired(*it);
+            auto post = *it;
+            uint64_t delta;
+            decodeVarint(post.delta.get(), delta);
+            pos += delta;
+            if (syncInterval > 1 && index % syncInterval == 0) [[unlikely]]
+            {
+                // Adds the num of bytes of an aligned encoded offset and encoded pos
+                size_t seekTableEntry = RoundUp(SizeOfDelta(offset) + SizeOfDelta(pos), sizeof(size_t));
+                total += seekTableEntry;
+                seekTableTotal += seekTableEntry;
+                ++seekTableCount;
+            
+            }
+            size_t postSize =  SerialPost::BytesRequired(post);
+            total += postSize;
+            offset += postSize;
             ++it;
+            ++index;
+
         }
-        return RoundUp(total, sizeof(size_t));
+        return BlobHeader(RoundUp(total, sizeof(size_t)), RoundUp(seekTableTotal, sizeof(size_t)), seekTableCount);
     }
 
     static PostingListBlob* Write(PostingListBlob * plb, size_t bytes, const PostingList &postingList)
     {
-        size_t size = BytesRequired(postingList);
-        if (size > bytes) [[unlikely]]
+        BlobHeader blobHeader = BytesRequired(postingList);
+        if (blobHeader.BlobSize > bytes) [[unlikely]]
         {
             return nullptr;
         }
@@ -107,24 +144,26 @@ class PostingListBlob {
         char *buffer = reinterpret_cast<char *>(plb);
         char *bufferEnd = buffer + bytes;
 
-        // TODO need to write header information to buffer
+        // writes header information to buffer
+        std::memcpy(buffer, &plb->blobHeader, sizeof(plb->blobHeader));
+        buffer += sizeof(plb->blobHeader);
 
         // Reserves buffer space at start for seekTable   
         size_t syncInterval = CalcSyncPointsPerXPosts(postingList);
-        size_t seekTableSize = floor(postingList.size() / syncInterval);
+        // size_t seekTableCount = floor(postingList.size() / syncInterval); 
         char * bufferPostStart = buffer;
-
-        if (syncInterval > 1) [[likely]]
+        size_t seekTableCount = plb->blobHeader.SeekTableCount;
+        if (seekTableCount > 0) [[likely]]
         {
-            bufferPostStart = buffer + RoundUp(seekTableSize * sizeof(SeekObject), sizeof(size_t));
+            bufferPostStart = buffer + blobHeader.SeekTableSize;
         }
         
         auto it = postingList.begin();
         auto end = postingList.end();
         
-        uint64_t index = 0;
+        uint64_t offset = 0;
         uint64_t pos = 0;
-
+        uint64_t index = 0;
         while(it != end)
         {
             auto post = *it;
@@ -132,24 +171,35 @@ class PostingListBlob {
             decodeVarint(post.delta.get(), delta);
             pos += delta;
             
-            if (syncInterval > 1 && index % syncInterval == 0) [[unlikely]]
+            if (seekTableCount > 0 && index % syncInterval == 0) [[unlikely]]
             {
-                std::memcpy(buffer, &SeekObject(index, pos), sizeof(SeekObject));
-                buffer += sizeof(SeekObject);
+                size_t offsetSize = SizeOfDelta(offset);
+                size_t posSize = SizeOfDelta(pos);
+                uint8_t varOffset[offsetSize];
+                uint8_t varPos[posSize];
+
+                encodeVarint(offset, varOffset, offsetSize);
+                encodeVarint(pos, varPos, posSize);
+                
+                std::memcpy(buffer, &SeekEntry(varOffset, varPos), sizeof(SeekEntry));
+                buffer += sizeof(SeekEntry);
             }
+            size_t postSize = SerialPost::BytesRequired(post);
             SerialPost::Write(bufferPostStart, bufferEnd, post);
-            index++;
+            offset += postSize;
+            ++it;
+            ++index;
         }
         return plb;
     }
 
     [[nodiscard]] static PostingListBlob *Create(const PostingList &postingList) {
-        size_t bytes = BytesRequired(postingList);
-        void *mem = operator new(bytes);
-        std::memset(mem, 0, bytes);
+        BlobHeader blobHeader = BytesRequired(postingList);
+        void *mem = operator new(blobHeader.BlobSize);
+        std::memset(mem, 0, blobHeader.BlobSize);
         PostingListBlob * plb = new(mem) PostingListBlob();
-        plb->BlobSize = bytes;
-        plb = Write(plb, bytes, postingList);
+        plb->blobHeader = blobHeader;
+        plb = Write(plb, blobHeader.BlobSize, postingList);
 
         return plb;
     }

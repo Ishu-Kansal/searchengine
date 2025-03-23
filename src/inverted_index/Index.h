@@ -58,8 +58,9 @@ inline void decodeVarint(const uint8_t* buf, uint64_t& val) {
 struct Post
 {
     unsigned char flags = 0; 
-    cunique_ptr<uint8_t[]> delta{};
     uint8_t numBytes = 0;
+    cunique_ptr<uint8_t[]> delta{};
+    
 
     Post() = default;
     Post(cunique_ptr<uint8_t[]> d, uint8_t numBytes, bool t, bool b)
