@@ -7,7 +7,7 @@
 constexpr unsigned char TITLE_FLAG = 0x01;
 constexpr unsigned char BOLD_FLAG  = 0x02;
 
-inline size_t SizeOfDelta(size_t offset) {
+[[nodiscard]] inline size_t SizeOfDelta(size_t offset) {
     if (offset < (1ULL << 7)) {
         return 1;
     } else if (offset < (1ULL << 14)) {
@@ -128,7 +128,7 @@ class InvertedIndex {
             // Check if the word exists in the dictionary
             auto* tuple = dictionary.Find(word);
             // Word doesn't exist yet
-            if (!tuple) {
+            if (!tuple) [[unlikely]] {
                 // create a new posting list
                 lists_of_posting_lists.emplace_back();
                 PostingList& list = lists_of_posting_lists.back();
@@ -172,22 +172,19 @@ class PostingList {
             document_freq++;
         }
 
-        const size_t header_size() {
+        [[nodiscard]] size_t header_size() const {
             return sizeof(type) + sizeof (index_freq) + sizeof (document_freq) + sizeof(size);  
         }
 
-        auto begin()
-        {
-            return posting_list.begin();
-        }
-        auto end()
-        {
-            return posting_list.end();
-        }
-        size_t size()
-        {
-            return posting_list.size();
-        }
+        auto begin() { return posting_list.begin(); }
+
+        auto end() { return posting_list.end(); }
+
+        auto begin() const { return posting_list.begin(); }
+
+        auto end() const { return posting_list.end(); }
+
+        [[nodiscard]] size_t size() const { return posting_list.size(); }
     private:
 
         // Common Header
@@ -209,19 +206,17 @@ public:
     {
         enddoc_list.push_back(std::move(EndDocData(endDoc)));
     }
-    auto begin()
-    {
-        return enddoc_list.begin();
-    }
-    auto end()
-    {
-        return enddoc_list.end();
-    }
-    size_t size()
-    {
-        return enddoc_list.size();
-    }
 
+    auto begin() { return enddoc_list.begin(); }
+
+    auto end() { return enddoc_list.end(); }
+
+    auto begin() const { return enddoc_list.begin(); }
+
+    auto end() const { return enddoc_list.end(); }
+
+    [[nodiscard]] size_t size() const { return enddoc_list.size(); }
+    
 private:
     UnrolledLinkList<EndDocData> enddoc_list;
 };

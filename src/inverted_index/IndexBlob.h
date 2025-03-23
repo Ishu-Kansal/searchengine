@@ -17,7 +17,7 @@
 
 static const size_t Unknown = 0;
 
-size_t RoundUp(size_t length, size_t boundary)
+[[nodiscard]] size_t RoundUp(size_t length, size_t boundary)
 {
    // Round up to the next multiple of the boundary, which
    // must be a power of 2.
@@ -28,7 +28,7 @@ return (length + oneless) & mask;
 
 struct SerialPost {
 
-    static uint8_t BytesRequired(const Post &post)
+    [[nodiscard]] static uint8_t BytesRequired(const Post &post)
     {
         size_t total = sizeof(post.flags) + post.numBytes + sizeof(uint8_t);
         return RoundUp(total, sizeof(size_t));
@@ -38,7 +38,7 @@ struct SerialPost {
     {
 
         uint8_t totalLen = BytesRequired(post);
-        if (buffer + totalLen > bufferEnd)
+        if (buffer + totalLen > bufferEnd) [[unlikely]]
         {
             return buffer;
         }
@@ -67,7 +67,7 @@ class PostingListBlob {
     public:
         size_t BlobSize;
 
-    static size_t CalcSyncPointsPerXPosts(PostingList &postingList)
+    [[nodiscard]] static size_t CalcSyncPointsPerXPosts(const PostingList &postingList)
     {   
         // Finds close to optimal numSyncPoints to min disk reads
         size_t numPosts = postingList.size();
@@ -75,7 +75,7 @@ class PostingListBlob {
         // Need to change
         return ceil(sqrt(numPosts));
     }
-    static size_t BytesRequired(PostingList &postingList)
+    [[nodiscard]] static size_t BytesRequired(const PostingList &postingList)
     {
         // Calculates the num of bytes required for PostingListBlob
         size_t total = postingList.header_size();
@@ -96,10 +96,10 @@ class PostingListBlob {
         return RoundUp(total, sizeof(size_t));
     }
 
-    static PostingListBlob* Write(PostingListBlob * plb, size_t bytes, PostingList &postingList)
+    static PostingListBlob* Write(PostingListBlob * plb, size_t bytes, const PostingList &postingList)
     {
         size_t size = BytesRequired(postingList);
-        if (size > bytes)
+        if (size > bytes) [[unlikely]]
         {
             return nullptr;
         }
@@ -114,7 +114,7 @@ class PostingListBlob {
         size_t seekTableSize = floor(postingList.size() / syncInterval);
         char * bufferPostStart = buffer;
 
-        if (syncInterval > 1)
+        if (syncInterval > 1) [[likely]]
         {
             bufferPostStart = buffer + RoundUp(seekTableSize * sizeof(SeekObject), sizeof(size_t));
         }
@@ -132,7 +132,7 @@ class PostingListBlob {
             decodeVarint(post.delta.get(), delta);
             pos += delta;
             
-            if (syncInterval > 1 && index % syncInterval == 0)
+            if (syncInterval > 1 && index % syncInterval == 0) [[unlikely]]
             {
                 std::memcpy(buffer, &SeekObject(index, pos), sizeof(SeekObject));
                 buffer += sizeof(SeekObject);
@@ -143,7 +143,7 @@ class PostingListBlob {
         return plb;
     }
 
-    static PostingListBlob *Create(PostingList &postingList) {
+    [[nodiscard]] static PostingListBlob *Create(const PostingList &postingList) {
         size_t bytes = BytesRequired(postingList);
         void *mem = operator new(bytes);
         std::memset(mem, 0, bytes);
@@ -153,7 +153,7 @@ class PostingListBlob {
 
         return plb;
     }
-    
+
     static void Discard(PostingListBlob * plb)
     {
         operator delete(plb);
