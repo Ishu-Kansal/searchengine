@@ -189,10 +189,9 @@ class PostingList {
     private:
 
         // Common Header
-        char type;              // Type: end-of-doc, word in anchor, URL, title, body.
+        char type;              // Type: word in anchor, URL, title, body.
         uint64_t index_freq;    // Number of occurrences of this token in the index
         uint64_t document_freq; // Number of documents in which this token occurs.
-        uint64_t size;          // Size of the list for skipping over collisions. (Don't think we need)
 
         // Linked list of posts
         UnrolledLinkList<Post> posting_list;

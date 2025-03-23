@@ -15,6 +15,10 @@
 #include "HashTable.h"
 #include "Index.h"
 
+using PostOffset = uint64_t;
+using PostPosition = uint64_t;
+using PostIndex = uint64_t;
+
 static const size_t Unknown = 0;
 
 [[nodiscard]] size_t RoundUp(size_t length, size_t boundary)
@@ -26,6 +30,7 @@ static const size_t oneless = boundary - 1,
 return (length + oneless) & mask;
 }
 size_t highBitsIndex(uint64_t seek, size_t seekTableCount) {
+    // Maybe use this to index into seek table? don't know how to 
     size_t k = __builtin_ctzll(seekTableCount);
     return seek >> (64 - k);
 }
@@ -66,9 +71,9 @@ struct SerialPost {
 };
 
 struct SeekEntry {
-    size_t postOffset;
-    size_t location;
-    SeekEntry(size_t postOffset, size_t location) : postOffset(postOffset), location(location) {}
+    PostOffset postOffset;
+    PostPosition location;
+    SeekEntry(PostOffset postOffset, PostPosition location) : postOffset(postOffset), location(location) {}
 };
 
 
@@ -76,6 +81,7 @@ class PostingListBlob {
     public:
         struct BlobHeader 
         {
+            // Need to add the Posting List headers
             size_t BlobSize;
             size_t SeekTableSize;
             size_t SeekTableCount;
@@ -87,20 +93,30 @@ class PostingListBlob {
 
     [[nodiscard]] const SerialPost *Find(size_t seek) const
     {
+        // Seek table is the first thing after the headers
         const char *seekTable = reinterpret_cast<const char *>(this) + sizeof(this->blobHeader);
         
         size_t numElems = this->blobHeader.SeekTableCount;
+        // If there is a seek table
         if (numElems != 0) [[likely]]
         {
+            
+            
+
+            // Gets second seek table entry
+            const SeekEntry * entry = reinterpret_cast<const SeekEntry *>(seekTable) + sizeof(SeekEntry); 
+
+            // Galloping search
             size_t i = 0;
             size_t j = 1;
-            const SeekEntry * entry = reinterpret_cast<const SeekEntry *>(seekTable) + sizeof(SeekEntry); 
             while(j < numElems && entry->location < seek)
             {
                 i = j;
                 j *= 2;
                 entry = reinterpret_cast<const SeekEntry *>(seekTable) + j * sizeof(SeekEntry); 
             }
+
+            // Binary search
             size_t left = i;
             size_t right = min(j, numElems);
             const SeekEntry * candidate = nullptr;
@@ -120,17 +136,21 @@ class PostingListBlob {
                     right = mid - 1;
                 }
             }
-    
-            size_t postOffset = candidate->postOffset;
+            
+            size_t postOffset = candidate->postOffset; // How far from start of posting list
+            // Posting list starts after header and seek table
             const char *postsStart = reinterpret_cast<const char *>(this) + sizeof(this->blobHeader) + this->blobHeader.SeekTableSize;
 
             return reinterpret_cast<const SerialPost *>(postsStart + postOffset);
         }
         else 
         {
+            // No seektable
             const char * start = reinterpret_cast<const char *>(this) + sizeof(this->blobHeader);
             const char * end = reinterpret_cast<const char *>(this) + this->blobHeader.BlobSize;
             uint64_t pos = 0;
+
+            // Linear search
             while (start < end)
             {
                 const SerialPost * post = reinterpret_cast<const SerialPost *>(start);
@@ -167,9 +187,9 @@ class PostingListBlob {
         auto end = postingList.end();
 
         // Offset of post
-        uint64_t offset = 0;
+        PostOffset offset = 0;
         // Actual position
-        uint64_t pos = 0;
+        PostPosition pos = 0;
         while(it != end)
         {   
             auto post = *it;
@@ -191,7 +211,7 @@ class PostingListBlob {
         {
             return nullptr;
         }
-
+        // cast plb to buffer
         char *buffer = reinterpret_cast<char *>(plb);
         char *bufferEnd = buffer + bytes;
 
@@ -205,6 +225,8 @@ class PostingListBlob {
 
         char * bufferPostStart = buffer;
         size_t seekTableCount = plb->blobHeader.SeekTableCount;
+
+        // Moves post start to after seek table if there is one
         if (seekTableCount > 0) [[likely]]
         {
             bufferPostStart = buffer + blobHeader.SeekTableSize;
@@ -213,9 +235,9 @@ class PostingListBlob {
         auto it = postingList.begin();
         auto end = postingList.end();
         
-        uint64_t offset = 0;
-        uint64_t pos = 0;
-        uint64_t index = 0;
+        PostOffset offset = 0; // offset from posting list
+        PostPosition pos = 0; // Actual location
+        PostIndex index = 0; // what post we are on
 
         while(it != end)
         {
