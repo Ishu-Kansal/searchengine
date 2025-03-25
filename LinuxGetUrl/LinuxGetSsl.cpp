@@ -1,6 +1,7 @@
 #include <netdb.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
+#include <openssl/tls1.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -118,6 +119,7 @@ int main(int argc, char **argv) {
     if (ssl == nullptr) {
         std::cerr << "could not create ssl object" << std::endl;
     }
+    SSL_set_tlsext_host_name(ssl, url.Host);
 
     SSL_set_fd(ssl, socketFD);
 

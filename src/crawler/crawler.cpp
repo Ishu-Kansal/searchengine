@@ -295,7 +295,8 @@ int main(int argc, char **argv) {
     std::clog.rdbuf(logging_file.rdbuf());
 
     links_vector.push_back(
-        {"https://en.wikipedia.org/wiki/University_of_Michigan", 0});
+        // {"https://en.wikipedia.org/wiki/University_of_Michigan", 0});
+        {"https://www.cnn.com/", 0});
 
     pthread_mutex_init(&queue_lock, NULL);
     queue_sem = sem_open("/crawler_semaphore", O_CREAT, 0777, 0);

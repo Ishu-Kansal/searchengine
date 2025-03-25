@@ -9,6 +9,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <chrono>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -25,11 +26,11 @@
 #include "sockets.cpp"
 // #include "../inverted_index/Index.h"
 
-constexpr uint32_t MAX_PROCESSED = 500;
-constexpr uint32_t TOP_K_ELEMENTS = 5000;
-constexpr uint32_t NUM_RANDOM = 10000;
+constexpr uint32_t MAX_PROCESSED = 1000;
+constexpr uint32_t TOP_K_ELEMENTS = 50;
+constexpr uint32_t NUM_RANDOM = 100;
 
-const static int NUM_THREADS = 1;  // start small
+const static int NUM_THREADS = 15;  // start small
 
 uint32_t STATIC_RANK = 0;  // temp global variable
 
@@ -49,7 +50,7 @@ int partition(int left, int right, int pivot_index) {
 
     // Move all less ranked elements to the left
     int store_index = left;
-    for (int i = left; i <= right; i++) {
+    for (int i = left; i < right; i++) {
         if (links_vector[i].second < pivot_rank) {
             std::swap(links_vector[store_index], links_vector[i]);
             store_index += 1;
@@ -63,6 +64,10 @@ int partition(int left, int right, int pivot_index) {
 }
 
 void quickselect(int left, int right, int k) {
+    if (left >= right) {
+        return;
+    }
+
     std::uniform_int_distribution<> gen(left, right);
     int pivot_index = gen(mt);
 
@@ -82,22 +87,28 @@ void quickselect(int left, int right, int k) {
 }
 
 void fill_queue() {
+    std::cout << "Enter fill_queue()" << std::endl;
     uint32_t links_vector_size = links_vector.size();
 
-    if (explore_queue.empty() && links_vector_size > 10000) {
+    if (explore_queue.empty() && links_vector_size > NUM_RANDOM) {
+        std::cout << "Here1" << std::endl;
         // Establish range for uniform random num gen
         // Range is from 0 to the last element in the vector
         std::uniform_int_distribution<> gen{0, links_vector_size - 1};
+        std::cout << "Here2" << std::endl;
 
         // Generates N random elements and moves them to the end
         for (size_t t = links_vector_size - 1;
              t > links_vector_size - NUM_RANDOM; t--) {
             std::swap(links_vector[gen(mt)], links_vector[t]);
         }
+        std::cout << "Here3" << std::endl;
 
         // Sorts the last N elements of the vector
         quickselect(links_vector_size - NUM_RANDOM, links_vector_size - 1,
                     TOP_K_ELEMENTS);
+
+        std::cout << "Here4" << std::endl;
 
         // Takes last K from vector and adds its to queue
         for (size_t i = links_vector_size - 1;
@@ -106,6 +117,7 @@ void fill_queue() {
             links_vector.pop_back();
         }
     }
+    std::cout << "Exit fill_queue()" << std::endl;
 }
 
 std::string get_next_url() {
@@ -115,13 +127,18 @@ std::string get_next_url() {
     std::string url;
 
     if (!explore_queue.empty()) {
+        std::cout << "Pull url from explore queue" << std::endl;
         url = std::move(explore_queue.front());
         explore_queue.pop();
-    } else if (links_vector_size > 10000) {
+    } else if (links_vector_size > NUM_RANDOM) {
+        std::cout << "Explore queue empty, fill queue with links from vector"
+                  << std::endl;
         fill_queue();
         url = std::move(explore_queue.front());
         explore_queue.pop();
     } else {
+        std::cout << "Explore queue empty, use last link from vector"
+                  << std::endl;
         url = std::move(links_vector[links_vector_size - 1].first);
         links_vector.pop_back();
     }
@@ -134,6 +151,33 @@ std::string getHostFromUrl(const std::string& url) {
     return std::regex_replace(url, urlRe, "$1");
 }
 
+struct ThreadArgs {
+    std::string url;
+    std::string html;
+    int status;
+};
+
+void* getHTML_wrapper(void* arg) {
+    ThreadArgs* args = (ThreadArgs*)arg;
+
+    args->status = getHTML(args->url, args->html);
+
+    return nullptr;
+}
+
+bool check_url(std::string& url) {
+    // If link does not begin with 'http', ignore it
+    if (url.size() < 4 || url.substr(0, 4) != "http") {
+        return false;
+    }
+
+    if (url.size() > 250) {
+        return false;
+    }
+
+    return true;
+}
+
 void* runner(void*) {
     while (num_processed < MAX_PROCESSED) {
         // Get the next url to be processed
@@ -142,18 +186,38 @@ void* runner(void*) {
         // Print the url that is being processed
         std::cout << url << std::endl;
 
-        // Get the html code for the url
-        std::string html;
-        int status = getHTML(url, html);
+        std::cout << "URL length: " << url.size() << std::endl;
+        std::cout << "Size of link vector: " << links_vector.size()
+                  << std::endl;
+
+        pthread_t thread;
+
+        ThreadArgs args = {url, "", -1};
+
+        // Start getHTML in a new thread
+        pthread_create(&thread, nullptr, getHTML_wrapper, &args);
+
+        // Wait up to 3 seconds
+        int wait_time = 3;
+        for (int i = 0; i < wait_time; i++) {
+            // If the thread finished
+            if (args.status != -1) {
+                pthread_join(thread, nullptr);
+                break;
+            }
+            // Sleep for 1 second
+            sleep(1);
+        }
 
         // Continue if html code was not retrieved
-        if (status != 0) {
-            std::cout << "Status " << status << std::endl;
+        if (args.status != 0) {
+            std::cout << "Status " << args.status << std::endl;
             std::cout << "Could not retrieve HTML\n" << std::endl;
             continue;
         }
 
         // Parse the html code
+        std::string html = args.html;
         HtmlParser parser(html.data(), html.size());
         num_processed++;
 
@@ -178,6 +242,10 @@ void* runner(void*) {
                 if (next_url[0] == '/') {
                     next_url =
                         url.substr(0, 8) + getHostFromUrl(url) + next_url;
+                }
+
+                if (!check_url(next_url)) {
+                    continue;
                 }
 
                 // If link has not been seen before, add it to the bf and links
@@ -216,12 +284,34 @@ void* runner(void*) {
 }
 
 int main(int argc, char** argv) {
-    links_vector.push_back(
-        //{"https://en.wikipedia.org/wiki/University_of_Michigan", 0}
-        {"https://www.yahoo.com", 0});
+    std::vector<std::string> seed_urls = {
+        "https://en.wikipedia.org/wiki/University_of_Michigan",
+        "https://www.cnn.com",
+        "https://www.reddit.com/",
+        "https://cse.engin.umich.edu/",
+        "https://stackoverflow.com/questions",
+        "https://www.usa.gov/",
+        "https://www.investopedia.com/",
+        "https://www.nationalgeographic.com/",
+        "https://www.nytimes.com/",
+        "https://www.espn.com/",
+        "https://weather.com/",
+        "https://www.npr.org/",
+        "https://www.apnews.com/",
+        "https://www.tripadvisor.com/",
+        "https://www.dictionary.com/",
+        "https://www.urbandictionary.com/",
+        "https://umich.edu/",
+        "https://www.fandom.com/",
+        "https://www.bing.com/"};
+
+    for (const auto& url : seed_urls) {
+        explore_queue.push(url);
+    }
+
+    auto start = std::chrono::high_resolution_clock::now();
 
     pthread_mutex_init(&queue_lock, NULL);
-
     pthread_t threads[NUM_THREADS];
     for (int i = 0; i < NUM_THREADS; i++) {
         pthread_create(threads + i, NULL, runner, NULL);
@@ -231,4 +321,15 @@ int main(int argc, char** argv) {
     }
 
     pthread_mutex_destroy(&queue_lock);
+
+    // Stop measuring time
+    auto stop = std::chrono::high_resolution_clock::now();
+
+    // Calculate duration in milliseconds
+    auto duration =
+        std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+    std::cout << "Time taken: " << duration.count() << " ms" << std::endl;
+
+    return 0;
 }
