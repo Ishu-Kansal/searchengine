@@ -64,7 +64,7 @@ public:
       }
       size_t base = sizeof(Length) + sizeof(Value) + sizeof(size_t);
       size_t keyLen = strlen(b->tuple.key) + 1;
-
+      
       size_t total = base + keyLen;
       return RoundUp(total, sizeof(size_t));
    }

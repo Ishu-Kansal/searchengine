@@ -30,3 +30,8 @@
 *.exe
 *.out
 *.app
+
+# VSCode Config
+settings.json
+.gitignore
+src/files/*

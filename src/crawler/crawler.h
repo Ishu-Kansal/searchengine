@@ -10,23 +10,15 @@ crawl, log data into file structure, store data in global mem, etc
 #include "../../StringVector/string.h"
 #include "../../StringVector/vector.h"
 
-std::queue<url_struct> to_explore;
-std::set<url_struct> explored;
+int get_and_parse_url(const char *url, int fd);
+int get_file_size(int fd);
+int partition(int left, int right, int pivot_index);
+void quickselect(int left, int right, int k);
+void fill_queue();
+std::string get_next_url();
+void *runner(void *);
 
-struct url_struct {
-    string url;
-};
-
-class Crawler {
-   public:
-    Crawler();
-    void exploreURL();
-    void shutdown();
-
-   private:
-    ~Crawler();
-};
 
 /* Loads seed list into memory, reads and loads state from logger files
    arg: filename of either seed list or checkpoint file */
-void startup(string &filename);
+void startup(std::string &filename);

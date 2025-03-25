@@ -8,8 +8,11 @@ test:  HtmlParserDemo NYTimes.html
 	./HtmlParserDemo b NYTimes.html > Base.txt
 	diff -Z Base.correct.txt Base.txt 
 
-HtmlParserDemo:  HtmlTags.h HtmlTags.cpp HtmlParser.h HtmlParser.cpp HtmlParserDemo.cpp
+HtmlParserDemo: HtmlTags.h HtmlTags.cpp HtmlParser.h HtmlParser.cpp HtmlParserDemo.cpp
 	g++ -std=c++17 HtmlParserDemo.cpp HtmlTags.cpp HtmlParser.cpp -DLinux -o HtmlParserDemo
+
+RunHtmlParser: HtmlTags.h HtmlTags.cpp HtmlParser.h HtmlParser.cpp RunHtmlParser.cpp
+	g++ -std=c++17 RunHtmlParser.cpp HtmlTags.cpp HtmlParser.cpp -DLinux -o RunHtmlParser
 
 clean:
 	rm -f HtmlParserDemo TitleWords.txt Words.txt Links.txt Base.txt

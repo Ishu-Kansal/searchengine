@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "../utils/cstring_view.h"
 #include "HtmlTags.h"
 
 // This is a simple HTML parser class.  Given a text buffer containing
@@ -84,6 +85,7 @@ class HtmlParser {
   std::vector<std::string> words, titleWords;
   std::vector<Link> links;
   std::string base;
+  int img_count;
 
  private:
   // Your code here.
@@ -193,6 +195,21 @@ class HtmlParser {
           }
         }
 
+        else if (strncmp(buffer + index, "<img", 4) == 0) {
+          img_count += 1;
+          while (buffer[index] != '>') {
+            // This code does not ensure that </tag> is outside of any quotes
+            // if (buffer[index] == '>')
+            // {
+            //    index++;
+            //    break;
+            // }
+            index++;
+          }
+          index++;
+          break;
+        }
+
         else if (strncmp(buffer + index, "<base", 5) == 0) {
           return extract_base(buffer, length, index + 5);
         } else {
@@ -215,6 +232,43 @@ class HtmlParser {
           // grab tag action based on name
           DesiredAction action =
               LookupPossibleTag(buffer + index, buffer + index + tag_size - 1);
+
+          if (action == DesiredAction::DiscardSection) {
+            if (tag_string == "svg") {
+              while (index < length) {
+                // This code does not ensure that </tag> is outside of any
+                // quotes
+                if (strncmp(buffer + index, "</", 2) == 0 &&
+                    strncmp(buffer + index + 2, "svg", tag_size) == 0) {
+                  index += tag_size + 3;
+                  break;
+                }
+                index++;
+              }
+            } else if (tag_string == "style") {
+              while (index < length) {
+                // This code does not ensure that </tag> is outside of any
+                // quotes
+                if (strncmp(buffer + index, "</", 2) == 0 &&
+                    strncmp(buffer + index + 2, "style", tag_size) == 0) {
+                  index += tag_size + 3;
+                  break;
+                }
+                index++;
+              }
+            } else {
+              while (index < length) {
+                // This code does not ensure that </tag> is outside of any
+                // quotes
+                if (strncmp(buffer + index, "</", 2) == 0 &&
+                    strncmp(buffer + index + 2, "script", tag_size) == 0) {
+                  index += tag_size + 3;
+                  break;
+                }
+                index++;
+              }
+            }
+          }
 
           if (action != DesiredAction::OrdinaryText || tag_string == "path" ||
               tag_string == "defs" || tag_string == "g") {
@@ -361,6 +415,8 @@ class HtmlParser {
     titleWords.reserve(400);
     links.reserve(16000);
 
+    img_count = 0;
+
     base = "";
 
     std::string word = "";
@@ -390,8 +446,10 @@ class HtmlParser {
         // store tag in a c string
 
         // TODO: Maybe make this a c string
-        std::string tag_string =
-            std::string(buffer + index, buffer + index + tag_size);
+        // TODO: Make this a string view
+        cstring_view tag_string{buffer + index, buffer + index + tag_size};
+        /*std::string tag_string =
+            std::string(buffer + index, buffer + index + tag_size);*/
 
         // grab tag action based on name
         // std::cout << tag_size << std::endl;
@@ -416,11 +474,19 @@ class HtmlParser {
         }
 
         bool inside_bracket = false;
+        bool in_quotes = false;
 
         // std::cout << "start\n";
         switch (action) {
           case DesiredAction::Discard:
-            while (buffer[index] != '>') {
+            while (buffer[index] != '>' || in_quotes) {
+              if (buffer[index] == '"') {
+                if (!in_quotes) {
+                  in_quotes = true;
+                } else {
+                  in_quotes = false;
+                }
+              }
               // This code does not ensure that </tag> is outside of any quotes
               // if (buffer[index] == '>')
               // {
@@ -556,13 +622,31 @@ class HtmlParser {
             index = extract_embed(buffer, length, index);
             break;
 
+          case DesiredAction::Image:
+            img_count += 1;
+            while (buffer[index] != '>') {
+              // This code does not ensure that </tag> is outside of any quotes
+              // if (buffer[index] == '>')
+              // {
+              //    index++;
+              //    break;
+              // }
+              index++;
+            }
+            index++;
+            break;
+
           case DesiredAction::OrdinaryText:
             if (buffer[index] == ' ') {
-              words.push_back(word + '<' + tag_string);
+              words.push_back(
+                  word + '<' +
+                  std::string{buffer + index, buffer + index + tag_size});
               word = "";
               index++;
             } else {
-              word += '<' + tag_string + buffer[index];
+              word += '<' +
+                      std::string{buffer + index, buffer + index + tag_size} +
+                      buffer[index];
               index++;
             }
             break;
