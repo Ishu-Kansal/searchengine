@@ -7,7 +7,7 @@
 constexpr unsigned char TITLE_FLAG = 0x01;
 constexpr unsigned char BOLD_FLAG  = 0x02;
 
-inline size_t SizeOfDelta(size_t offset) {
+[[nodiscard]] inline size_t SizeOfDelta(size_t offset) {
     if (offset < (1ULL << 7)) {
         return 1;
     } else if (offset < (1ULL << 14)) {
@@ -58,8 +58,9 @@ inline void decodeVarint(const uint8_t* buf, uint64_t& val) {
 struct Post
 {
     unsigned char flags = 0; 
-    cunique_ptr<uint8_t[]> delta{};
     uint8_t numBytes = 0;
+    cunique_ptr<uint8_t[]> delta{};
+    
 
     Post() = default;
     Post(cunique_ptr<uint8_t[]> d, uint8_t numBytes, bool t, bool b)
@@ -128,7 +129,7 @@ class InvertedIndex {
             // Check if the word exists in the dictionary
             auto* tuple = dictionary.Find(word);
             // Word doesn't exist yet
-            if (!tuple) {
+            if (!tuple) [[unlikely]] {
                 // create a new posting list
                 lists_of_posting_lists.emplace_back();
                 PostingList& list = lists_of_posting_lists.back();
@@ -172,29 +173,25 @@ class PostingList {
             document_freq++;
         }
 
-        const size_t header_size() {
+        [[nodiscard]] size_t header_size() const {
             return sizeof(type) + sizeof (index_freq) + sizeof (document_freq) + sizeof(size);  
         }
 
-        auto begin()
-        {
-            return posting_list.begin();
-        }
-        auto end()
-        {
-            return posting_list.end();
-        }
-        size_t size()
-        {
-            return posting_list.size();
-        }
+        auto begin() { return posting_list.begin(); }
+
+        auto end() { return posting_list.end(); }
+
+        auto begin() const { return posting_list.begin(); }
+
+        auto end() const { return posting_list.end(); }
+
+        [[nodiscard]] size_t size() const { return posting_list.size(); }
     private:
 
         // Common Header
-        char type;              // Type: end-of-doc, word in anchor, URL, title, body.
+        char type;              // Type: word in anchor, URL, title, body.
         uint64_t index_freq;    // Number of occurrences of this token in the index
         uint64_t document_freq; // Number of documents in which this token occurs.
-        uint64_t size;          // Size of the list for skipping over collisions. (Don't think we need)
 
         // Linked list of posts
         UnrolledLinkList<Post> posting_list;
@@ -209,19 +206,17 @@ public:
     {
         enddoc_list.push_back(std::move(EndDocData(endDoc)));
     }
-    auto begin()
-    {
-        return enddoc_list.begin();
-    }
-    auto end()
-    {
-        return enddoc_list.end();
-    }
-    size_t size()
-    {
-        return enddoc_list.size();
-    }
 
+    auto begin() { return enddoc_list.begin(); }
+
+    auto end() { return enddoc_list.end(); }
+
+    auto begin() const { return enddoc_list.begin(); }
+
+    auto end() const { return enddoc_list.end(); }
+
+    [[nodiscard]] size_t size() const { return enddoc_list.size(); }
+    
 private:
     UnrolledLinkList<EndDocData> enddoc_list;
 };
