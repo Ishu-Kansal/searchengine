@@ -77,21 +77,21 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
 
     if (getaddrinfo(url.Host, (*url.Port ? url.Port : "443"), &hints,
                     &address) != 0) {
-        std::cout << "Failed to resolve host" << std::endl;
+        // std::cout << "Failed to resolve host" << std::endl;
         return 1;
     }
 
     // Create a socket
     int socketFD = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (socketFD < 0) {
-        std::cout << "Failed to create socket" << std::endl;
+        // std::cout << "Failed to create socket" << std::endl;
         freeaddrinfo(address);
         return 1;
     }
 
     // Connect the socket
     if (connect(socketFD, address->ai_addr, address->ai_addrlen) < 0) {
-        std::cout << "Failed to connect to host" << std::endl;
+        // std::cout << "Failed to connect to host" << std::endl;
         close(socketFD);
         freeaddrinfo(address);
         return 1;
@@ -103,21 +103,21 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
     SSL_CTX *ctx = SSL_CTX_new(SSLv23_method());
     // SSL_CTX *ctx = SSL_CTX_new(TLS_client_method());
     if (!ctx) {
-        std::cout << "Failed to create SSL context" << std::endl;
+        // std::cout << "Failed to create SSL context" << std::endl;
         close(socketFD);
         return 1;
     }
 
     SSL *ssl = SSL_new(ctx);
     if (ssl == nullptr) {
-        std::cout << "could not create ssl object" << std::endl;
+        // std::cout << "could not create ssl object" << std::endl;
     }
     SSL_set_tlsext_host_name(ssl, url.Host);
 
     SSL_set_fd(ssl, socketFD);
 
     if (SSL_connect(ssl) <= 0) {
-        std::cout << "Failed to establish SSL connection" << std::endl;
+        // std::cout << "Failed to establish SSL connection" << std::endl;
         ERR_print_errors_fp(stderr);
         SSL_free(ssl);
         SSL_CTX_free(ctx);
@@ -126,7 +126,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
     }
 
     if (SSL_write(ssl, req.c_str(), req.length()) <= 0) {
-        std::cout << "Failed to send request" << std::endl;
+        // std::cout << "Failed to send request" << std::endl;
         SSL_shutdown(ssl);
         SSL_free(ssl);
         SSL_CTX_free(ctx);
@@ -152,9 +152,9 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
             size_t header_end = response.find("\r\n\r\n");
 
             header = response;
-            // std::cout << "print header " << header << std::endl;
+            // // std::cout << "print header " << header << std::endl;
             if (header.substr(0, 4) != "HTTP") {
-                std::cout << "header invalid\n";
+                // std::cout << "header invalid\n";
                 return 1;
             }
             code = stoi(header.substr(9, 3));
@@ -172,7 +172,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
                     response;  // Save the partial response for the next read
             }
         } else {
-            // std::cout << "outputting\n";
+            // // std::cout << "outputting\n";
             // write(1, buffer, bytes);
             output += std::string(buffer, buffer + bytes);
         }
@@ -182,13 +182,13 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
         int locPos = header.find("location");
         int endPos = header.find("\r\n", locPos);
         std::string newURL = header.substr(locPos + 10, endPos - locPos - 10);
-        // std::cout << "redirecting to " << newURL << std::endl;
+        // // std::cout << "redirecting to " << newURL << std::endl;
         output = newURL;
         return code;
     }
 
     if (bytes < 0) {
-        std::cout << "Error reading from SSL socket" << std::endl;
+        // std::cout << "Error reading from SSL socket" << std::endl;
         return 1;
     }
 
@@ -217,9 +217,9 @@ int getHTML(std::string url_in, std::string &output) {
         "Connection: close\r\n\r\n";
 
     int status = runSocket(req, url_in, output);
-    // std::cout << status << std::endl;
+    // // std::cout << status << std::endl;
 
-    // std::cout << "output:\n" << output << std::endl;
+    // // std::cout << "output:\n" << output << std::endl;
 
     if (status == 301) {
         ParsedUrl newURL(output.data());
@@ -237,7 +237,7 @@ int getHTML(std::string url_in, std::string &output) {
         output = "";
         status = runSocket(req2, newishURL, output);
 
-        // std::cout << "redirected output:\n" << output << std::endl;
+        // // std::cout << "redirected output:\n" << output << std::endl;
     }
 
     return status;

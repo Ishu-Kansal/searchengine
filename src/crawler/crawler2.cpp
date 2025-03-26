@@ -87,28 +87,28 @@ void quickselect(int left, int right, int k) {
 }
 
 void fill_queue() {
-    std::cout << "Enter fill_queue()" << std::endl;
+    // std::cout << "Enter fill_queue()" << std::endl;
     uint32_t links_vector_size = links_vector.size();
 
     if (explore_queue.empty() && links_vector_size > NUM_RANDOM) {
-        std::cout << "Here1" << std::endl;
+        // std::cout << "Here1" << std::endl;
         // Establish range for uniform random num gen
         // Range is from 0 to the last element in the vector
         std::uniform_int_distribution<> gen{0, links_vector_size - 1};
-        std::cout << "Here2" << std::endl;
+        // std::cout << "Here2" << std::endl;
 
         // Generates N random elements and moves them to the end
         for (size_t t = links_vector_size - 1;
              t > links_vector_size - NUM_RANDOM; t--) {
             std::swap(links_vector[gen(mt)], links_vector[t]);
         }
-        std::cout << "Here3" << std::endl;
+        // std::cout << "Here3" << std::endl;
 
         // Sorts the last N elements of the vector
         quickselect(links_vector_size - NUM_RANDOM, links_vector_size - 1,
                     TOP_K_ELEMENTS);
 
-        std::cout << "Here4" << std::endl;
+        // std::cout << "Here4" << std::endl;
 
         // Takes last K from vector and adds its to queue
         for (size_t i = links_vector_size - 1;
@@ -117,7 +117,7 @@ void fill_queue() {
             links_vector.pop_back();
         }
     }
-    std::cout << "Exit fill_queue()" << std::endl;
+    // std::cout << "Exit fill_queue()" << std::endl;
 }
 
 std::string get_next_url() {
@@ -127,18 +127,18 @@ std::string get_next_url() {
     std::string url;
 
     if (!explore_queue.empty()) {
-        std::cout << "Pull url from explore queue" << std::endl;
+        // std::cout << "Pull url from explore queue" << std::endl;
         url = std::move(explore_queue.front());
         explore_queue.pop();
     } else if (links_vector_size > NUM_RANDOM) {
-        std::cout << "Explore queue empty, fill queue with links from vector"
-                  << std::endl;
+        // std::cout << "Explore queue empty, fill queue with links from vector"
+        // << std::endl;
         fill_queue();
         url = std::move(explore_queue.front());
         explore_queue.pop();
     } else {
-        std::cout << "Explore queue empty, use last link from vector"
-                  << std::endl;
+        // std::cout << "Explore queue empty, use last link from vector"
+        // << std::endl;
         url = std::move(links_vector[links_vector_size - 1].first);
         links_vector.pop_back();
     }
@@ -184,11 +184,11 @@ void* runner(void*) {
         std::string url = get_next_url();
 
         // Print the url that is being processed
-        std::cout << url << std::endl;
+        // std::cout << url << std::endl;
 
-        std::cout << "URL length: " << url.size() << std::endl;
-        std::cout << "Size of link vector: " << links_vector.size()
-                  << std::endl;
+        // std::cout << "URL length: " << url.size() << std::endl;
+        // std::cout << "Size of link vector: " << links_vector.size()
+        // << std::endl;
 
         pthread_t thread;
 
@@ -211,8 +211,8 @@ void* runner(void*) {
 
         // Continue if html code was not retrieved
         if (args.status != 0) {
-            std::cout << "Status " << args.status << std::endl;
-            std::cout << "Could not retrieve HTML\n" << std::endl;
+            // std::cout << "Status " << args.status << std::endl;
+            // std::cout << "Could not retrieve HTML\n" << std::endl;
             continue;
         }
 
@@ -260,24 +260,24 @@ void* runner(void*) {
 
         // --------------------------------------------------
         // For debugging (not needed for crawler to function)
-        std::string filename =
-            "../files/file" + std::to_string(num_processed) + ".txt";
-        std::ofstream output_file(filename);
+        // std::string filename =
+        //     "../files/file" + std::to_string(num_processed) + ".txt";
+        // std::ofstream output_file(filename);
 
-        if (!output_file) {
-            std::cerr << "Error opening file!\n" << std::endl;
-            continue;
-        }
+        // if (!output_file) {
+        //     std::cerr << "Error opening file!\n" << std::endl;
+        //     continue;
+        // }
 
-        output_file << url << "\n\n";
-        output_file << parser.words.size() << " words\n";
-        output_file << parser.links.size() << " links\n\n";
-        output_file << html;
+        // output_file << url << "\n\n";
+        // output_file << parser.words.size() << " words\n";
+        // output_file << parser.links.size() << " links\n\n";
+        // output_file << html;
 
-        output_file.close();
+        // output_file.close();
         // --------------------------------------------------
 
-        std::cout << '\n';
+        // std::cout << '\n';
     }
 
     return NULL;
@@ -329,7 +329,7 @@ int main(int argc, char** argv) {
     auto duration =
         std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 
-    std::cout << "Time taken: " << duration.count() << " ms" << std::endl;
+    // std::cout << "Time taken: " << duration.count() << " ms" << std::endl;
 
     return 0;
 }
