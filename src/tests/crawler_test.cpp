@@ -157,7 +157,6 @@ int write_to_socket(const char *input_url, int fd) {
   bool skip_header = false;
 
   while ((bytes = recv(socketFD, buffer, sizeof(buffer), 0)) != 0) {
-    std::cout << "HERE\n" << bytes << std::endl;
     if (bytes == -1) {
       perror("");
       return -1;
@@ -228,7 +227,6 @@ void runner() {
   }
   const int len = get_file_size(outputFd);
   if (len == 0) exit(EXIT_FAILURE);
-
   const char *fileData =
       (char *)mmap(nullptr, len, O_RDWR, PROT_READ | PROT_WRITE, outputFd, 0);
   if (fileData == MAP_FAILED) {

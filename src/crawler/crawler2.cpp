@@ -23,7 +23,7 @@
 #include "../../BloomFilterStarterFiles/BloomFilter.h"
 #include "../../HtmlParser/HtmlParser.h"
 #include "../../utils/pthread_lock_guard.h"
-#include "sockets.cpp"
+#include "sockets.h"
 // #include "../inverted_index/Index.h"
 
 constexpr uint32_t MAX_PROCESSED = 1000;
@@ -39,297 +39,300 @@ std::vector<std::pair<std::string, uint32_t>> links_vector;
 Bloomfilter bf(100000, 0.0001);  // Temp size and false pos rate
 
 pthread_mutex_t queue_lock{};
+sem_t* queue_sem;
 uint32_t num_processed{};
 std::mt19937 mt{std::random_device{}()};
 
 int partition(int left, int right, int pivot_index) {
-    int pivot_rank = links_vector[pivot_index].second;
+  int pivot_rank = links_vector[pivot_index].second;
 
-    // Move the pivot to the end
-    std::swap(links_vector[pivot_index], links_vector[right]);
+  // Move the pivot to the end
+  std::swap(links_vector[pivot_index], links_vector[right]);
 
-    // Move all less ranked elements to the left
-    int store_index = left;
-    for (int i = left; i < right; i++) {
-        if (links_vector[i].second < pivot_rank) {
-            std::swap(links_vector[store_index], links_vector[i]);
-            store_index += 1;
-        }
+  // Move all less ranked elements to the left
+  int store_index = left;
+  for (int i = left; i < right; i++) {
+    if (links_vector[i].second < pivot_rank) {
+      std::swap(links_vector[store_index], links_vector[i]);
+      store_index += 1;
     }
+  }
 
-    // Move the pivot to its final place
-    std::swap(links_vector[right], links_vector[store_index]);
+  // Move the pivot to its final place
+  std::swap(links_vector[right], links_vector[store_index]);
 
-    return store_index;
+  return store_index;
 }
 
 void quickselect(int left, int right, int k) {
-    if (left >= right) {
-        return;
-    }
+  if (left >= right) {
+    return;
+  }
 
-    std::uniform_int_distribution<> gen(left, right);
-    int pivot_index = gen(mt);
+  std::uniform_int_distribution<> gen(left, right);
+  int pivot_index = gen(mt);
 
-    // Find the pivot position in a sorted list
-    pivot_index = partition(left, right, pivot_index);
+  // Find the pivot position in a sorted list
+  pivot_index = partition(left, right, pivot_index);
 
-    // If the pivot is in its final sorted position
-    if (k == pivot_index) {
-        return;
-    } else if (k < pivot_index) {
-        // go left
-        quickselect(left, pivot_index - 1, k);
-    } else {
-        // go right
-        quickselect(pivot_index + 1, right, k);
-    }
+  // If the pivot is in its final sorted position
+  if (k == pivot_index) {
+    return;
+  } else if (k < pivot_index) {
+    // go left
+    quickselect(left, pivot_index - 1, k);
+  } else {
+    // go right
+    quickselect(pivot_index + 1, right, k);
+  }
 }
 
 void fill_queue() {
-    // std::cout << "Enter fill_queue()" << std::endl;
-    uint32_t links_vector_size = links_vector.size();
+  // std::cout << "Enter fill_queue()" << std::endl;
+  uint32_t links_vector_size = links_vector.size();
 
-    if (explore_queue.empty() && links_vector_size > NUM_RANDOM) {
-        // std::cout << "Here1" << std::endl;
-        // Establish range for uniform random num gen
-        // Range is from 0 to the last element in the vector
-        std::uniform_int_distribution<> gen{0, links_vector_size - 1};
-        // std::cout << "Here2" << std::endl;
+  if (explore_queue.empty() && links_vector_size > NUM_RANDOM) {
+    // std::cout << "Here1" << std::endl;
+    // Establish range for uniform random num gen
+    // Range is from 0 to the last element in the vector
+    std::uniform_int_distribution<> gen{0, int(links_vector_size - 1)};
+    // std::cout << "Here2" << std::endl;
 
-        // Generates N random elements and moves them to the end
-        for (size_t t = links_vector_size - 1;
-             t > links_vector_size - NUM_RANDOM; t--) {
-            std::swap(links_vector[gen(mt)], links_vector[t]);
-        }
-        // std::cout << "Here3" << std::endl;
-
-        // Sorts the last N elements of the vector
-        quickselect(links_vector_size - NUM_RANDOM, links_vector_size - 1,
-                    TOP_K_ELEMENTS);
-
-        // std::cout << "Here4" << std::endl;
-
-        // Takes last K from vector and adds its to queue
-        for (size_t i = links_vector_size - 1;
-             i > links_vector_size - TOP_K_ELEMENTS; --i) {
-            explore_queue.push(std::move(links_vector[i].first));
-            links_vector.pop_back();
-        }
+    // Generates N random elements and moves them to the end
+    for (size_t t = links_vector_size - 1; t > links_vector_size - NUM_RANDOM;
+         t--) {
+      std::swap(links_vector[gen(mt)], links_vector[t]);
     }
-    // std::cout << "Exit fill_queue()" << std::endl;
+    // std::cout << "Here3" << std::endl;
+
+    // Sorts the last N elements of the vector
+    quickselect(links_vector_size - NUM_RANDOM, links_vector_size - 1,
+                TOP_K_ELEMENTS);
+
+    // std::cout << "Here4" << std::endl;
+
+    // Takes last K from vector and adds its to queue
+    for (size_t i = links_vector_size - 1;
+         i > links_vector_size - TOP_K_ELEMENTS; --i) {
+      explore_queue.push(std::move(links_vector[i].first));
+      links_vector.pop_back();
+    }
+  }
+  // std::cout << "Exit fill_queue()" << std::endl;
 }
 
 std::string get_next_url() {
-    pthread_lock_guard guard{queue_lock};
+  sem_wait(queue_sem);
+  pthread_lock_guard guard{queue_lock};
 
-    size_t links_vector_size = links_vector.size();
-    std::string url;
+  size_t links_vector_size = links_vector.size();
+  std::string url;
 
-    if (!explore_queue.empty()) {
-        // std::cout << "Pull url from explore queue" << std::endl;
-        url = std::move(explore_queue.front());
-        explore_queue.pop();
-    } else if (links_vector_size > NUM_RANDOM) {
-        // std::cout << "Explore queue empty, fill queue with links from vector"
-        // << std::endl;
-        fill_queue();
-        url = std::move(explore_queue.front());
-        explore_queue.pop();
-    } else {
-        // std::cout << "Explore queue empty, use last link from vector"
-        // << std::endl;
-        url = std::move(links_vector[links_vector_size - 1].first);
-        links_vector.pop_back();
-    }
+  if (!explore_queue.empty()) {
+    // std::cout << "Pull url from explore queue" << std::endl;
+    url = std::move(explore_queue.front());
+    explore_queue.pop();
+  } else if (links_vector_size > NUM_RANDOM) {
+    // std::cout << "Explore queue empty, fill queue with links from vector"
+    // << std::endl;
+    fill_queue();
+    url = std::move(explore_queue.front());
+    explore_queue.pop();
+  } else {
+    // std::cout << "Explore queue empty, use last link from vector"
+    // << std::endl;
+    url = std::move(links_vector[links_vector_size - 1].first);
+    links_vector.pop_back();
+  }
 
-    return url;
+  return url;
 }
 
 std::string getHostFromUrl(const std::string& url) {
-    std::regex urlRe("^.*://([^/?:]+)/?.*$");
-    return std::regex_replace(url, urlRe, "$1");
+  std::regex urlRe("^.*://([^/?:]+)/?.*$");
+  return std::regex_replace(url, urlRe, "$1");
 }
 
 struct ThreadArgs {
-    std::string url;
-    std::string html;
-    int status;
+  std::string url;
+  std::string html;
+  int status;
 };
 
 void* getHTML_wrapper(void* arg) {
-    ThreadArgs* args = (ThreadArgs*)arg;
+  ThreadArgs* args = (ThreadArgs*)arg;
 
-    args->status = getHTML(args->url, args->html);
+  args->status = getHTML(args->url, args->html);
 
-    return nullptr;
+  return nullptr;
 }
 
 bool check_url(std::string& url) {
-    // If link does not begin with 'http', ignore it
-    if (url.size() < 4 || url.substr(0, 4) != "http") {
-        return false;
-    }
+  // If link does not begin with 'http', ignore it
+  if (url.size() < 4 || url.substr(0, 4) != "http") {
+    return false;
+  }
 
-    if (url.size() > 250) {
-        return false;
-    }
+  if (url.size() > 250) {
+    return false;
+  }
 
-    return true;
+  return true;
 }
 
 void* runner(void*) {
-    while (num_processed < MAX_PROCESSED) {
-        // Get the next url to be processed
-        std::string url = get_next_url();
+  while (num_processed < MAX_PROCESSED) {
+    // Get the next url to be processed
+    std::string url = get_next_url();
 
-        // Print the url that is being processed
-        // std::cout << url << std::endl;
+    // Print the url that is being processed
+    // std::cout << url << std::endl;
 
-        // std::cout << "URL length: " << url.size() << std::endl;
-        // std::cout << "Size of link vector: " << links_vector.size()
-        // << std::endl;
+    // std::cout << "URL length: " << url.size() << std::endl;
+    // std::cout << "Size of link vector: " << links_vector.size()
+    // << std::endl;
 
-        pthread_t thread;
+    pthread_t thread;
 
-        ThreadArgs args = {url, "", -1};
+    ThreadArgs args = {url, "", -1};
 
-        // Start getHTML in a new thread
-        pthread_create(&thread, nullptr, getHTML_wrapper, &args);
+    // Start getHTML in a new thread
+    pthread_create(&thread, nullptr, getHTML_wrapper, &args);
 
-        // Wait up to 3 seconds
-        int wait_time = 3;
-        for (int i = 0; i < wait_time; i++) {
-            // If the thread finished
-            if (args.status != -1) {
-                pthread_join(thread, nullptr);
-                break;
-            }
-            // Sleep for 1 second
-            sleep(1);
-        }
-
-        // Continue if html code was not retrieved
-        if (args.status != 0) {
-            // std::cout << "Status " << args.status << std::endl;
-            // std::cout << "Could not retrieve HTML\n" << std::endl;
-            continue;
-        }
-
-        // Parse the html code
-        std::string html = args.html;
-        HtmlParser parser(html.data(), html.size());
-        num_processed++;
-
-        // ------------------------------------------------------------------
-        // TODO: The code to add the words from parser to the index goes here
-
-        // ------------------------------------------------------------------
-
-        // Process links found by the parser
-        {
-            pthread_lock_guard guard{queue_lock};
-            for (auto& link : parser.links) {
-                std::string next_url = std::move(link.URL);
-
-                // Ignore links that begin with '#' or '?'
-                if (next_url[0] == '#' || next_url[0] == '?') {
-                    continue;
-                }
-
-                // If link starts with '/', add the domain to the beginning of
-                // it
-                if (next_url[0] == '/') {
-                    next_url =
-                        url.substr(0, 8) + getHostFromUrl(url) + next_url;
-                }
-
-                if (!check_url(next_url)) {
-                    continue;
-                }
-
-                // If link has not been seen before, add it to the bf and links
-                // vector
-                if (!bf.contains(next_url)) {
-                    bf.insert(next_url);
-                    links_vector.push_back(
-                        {std::move(next_url), STATIC_RANK++});
-                }
-            }
-        }
-
-        // --------------------------------------------------
-        // For debugging (not needed for crawler to function)
-        // std::string filename =
-        //     "../files/file" + std::to_string(num_processed) + ".txt";
-        // std::ofstream output_file(filename);
-
-        // if (!output_file) {
-        //     std::cerr << "Error opening file!\n" << std::endl;
-        //     continue;
-        // }
-
-        // output_file << url << "\n\n";
-        // output_file << parser.words.size() << " words\n";
-        // output_file << parser.links.size() << " links\n\n";
-        // output_file << html;
-
-        // output_file.close();
-        // --------------------------------------------------
-
-        // std::cout << '\n';
+    // Wait up to 3 seconds
+    int wait_time = 3;
+    for (int i = 0; i < wait_time; i++) {
+      // If the thread finished
+      if (args.status != -1) {
+        pthread_join(thread, nullptr);
+        break;
+      }
+      // Sleep for 1 second
+      sleep(1);
     }
 
-    return NULL;
+    // Continue if html code was not retrieved
+    if (args.status != 0) {
+      // std::cout << "Status " << args.status << std::endl;
+      // std::cout << "Could not retrieve HTML\n" << std::endl;
+      continue;
+    }
+
+    // Parse the html code
+    std::string html = args.html;
+    HtmlParser parser(html.data(), html.size());
+    num_processed++;
+
+    // ------------------------------------------------------------------
+    // TODO: The code to add the words from parser to the index goes here
+
+    // ------------------------------------------------------------------
+
+    // Process links found by the parser
+    {
+      pthread_lock_guard guard{queue_lock};
+      for (auto& link : parser.links) {
+        std::string next_url = std::move(link.URL);
+
+        // Ignore links that begin with '#' or '?'
+        if (next_url[0] == '#' || next_url[0] == '?') {
+          continue;
+        }
+
+        // If link starts with '/', add the domain to the beginning of
+        // it
+        if (next_url[0] == '/') {
+          next_url = url.substr(0, 8) + getHostFromUrl(url) + next_url;
+        }
+
+        if (!check_url(next_url)) {
+          continue;
+        }
+
+        // If link has not been seen before, add it to the bf and links
+        // vector
+        if (!bf.contains(next_url)) {
+          bf.insert(next_url);
+          links_vector.push_back({std::move(next_url), STATIC_RANK++});
+          sem_post(queue_sem);
+        }
+      }
+    }
+
+    // --------------------------------------------------
+    // For debugging (not needed for crawler to function)
+    // std::string filename =
+    //     "../files/file" + std::to_string(num_processed) + ".txt";
+    // std::ofstream output_file(filename);
+
+    // if (!output_file) {
+    //     std::cerr << "Error opening file!\n" << std::endl;
+    //     continue;
+    // }
+
+    // output_file << url << "\n\n";
+    // output_file << parser.words.size() << " words\n";
+    // output_file << parser.links.size() << " links\n\n";
+    // output_file << html;
+
+    // output_file.close();
+    // --------------------------------------------------
+
+    // std::cout << '\n';
+  }
+
+  return NULL;
 }
 
 int main(int argc, char** argv) {
-    std::vector<std::string> seed_urls = {
-        "https://en.wikipedia.org/wiki/University_of_Michigan",
-        "https://www.cnn.com",
-        "https://www.reddit.com/",
-        "https://cse.engin.umich.edu/",
-        "https://stackoverflow.com/questions",
-        "https://www.usa.gov/",
-        "https://www.investopedia.com/",
-        "https://www.nationalgeographic.com/",
-        "https://www.nytimes.com/",
-        "https://www.espn.com/",
-        "https://weather.com/",
-        "https://www.npr.org/",
-        "https://www.apnews.com/",
-        "https://www.tripadvisor.com/",
-        "https://www.dictionary.com/",
-        "https://www.urbandictionary.com/",
-        "https://umich.edu/",
-        "https://www.fandom.com/",
-        "https://www.bing.com/"};
+  std::vector<std::string> seed_urls = {
+      "https://en.wikipedia.org/wiki/University_of_Michigan",
+      "https://www.cnn.com",
+      "https://www.reddit.com/",
+      "https://cse.engin.umich.edu/",
+      "https://stackoverflow.com/questions",
+      "https://www.usa.gov/",
+      "https://www.investopedia.com/",
+      "https://www.nationalgeographic.com/",
+      "https://www.nytimes.com/",
+      "https://www.espn.com/",
+      "https://weather.com/",
+      "https://www.npr.org/",
+      "https://www.apnews.com/",
+      "https://www.tripadvisor.com/",
+      "https://www.dictionary.com/",
+      "https://www.urbandictionary.com/",
+      "https://umich.edu/",
+      "https://www.fandom.com/",
+      "https://www.bing.com/"};
 
-    for (const auto& url : seed_urls) {
-        explore_queue.push(url);
-    }
+  for (const auto& url : seed_urls) {
+    explore_queue.push(url);
+  }
 
-    auto start = std::chrono::high_resolution_clock::now();
+  sem_open("./crawler_sem", O_CREAT, 0666, explore_queue.size());
 
-    pthread_mutex_init(&queue_lock, NULL);
-    pthread_t threads[NUM_THREADS];
-    for (int i = 0; i < NUM_THREADS; i++) {
-        pthread_create(threads + i, NULL, runner, NULL);
-    }
-    for (int i = 0; i < NUM_THREADS; i++) {
-        pthread_join(threads[i], NULL);
-    }
+  auto start = std::chrono::high_resolution_clock::now();
 
-    pthread_mutex_destroy(&queue_lock);
+  pthread_mutex_init(&queue_lock, NULL);
+  pthread_t threads[NUM_THREADS];
+  for (int i = 0; i < NUM_THREADS; i++) {
+    pthread_create(threads + i, NULL, runner, NULL);
+  }
+  for (int i = 0; i < NUM_THREADS; i++) {
+    pthread_join(threads[i], NULL);
+  }
 
-    // Stop measuring time
-    auto stop = std::chrono::high_resolution_clock::now();
+  pthread_mutex_destroy(&queue_lock);
 
-    // Calculate duration in milliseconds
-    auto duration =
-        std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+  // Stop measuring time
+  auto stop = std::chrono::high_resolution_clock::now();
 
-    // std::cout << "Time taken: " << duration.count() << " ms" << std::endl;
+  // Calculate duration in milliseconds
+  auto duration =
+      std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 
-    return 0;
+  // std::cout << "Time taken: " << duration.count() << " ms" << std::endl;
+
+  return 0;
 }
