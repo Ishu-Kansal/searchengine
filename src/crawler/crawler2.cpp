@@ -26,7 +26,7 @@
 #include "sockets.h"
 // #include "../inverted_index/Index.h"
 
-constexpr uint32_t MAX_PROCESSED = 1000;
+constexpr uint32_t MAX_PROCESSED = 50;
 constexpr uint32_t TOP_K_ELEMENTS = 50;
 constexpr uint32_t NUM_RANDOM = 100;
 
@@ -122,7 +122,7 @@ void fill_queue() {
 }
 
 std::string get_next_url() {
-  sem_wait(queue_sem);
+  int ret = sem_wait(queue_sem);
   pthread_lock_guard guard{queue_lock};
 
   size_t links_vector_size = links_vector.size();
@@ -261,21 +261,23 @@ void* runner(void*) {
 
     // --------------------------------------------------
     // For debugging (not needed for crawler to function)
-    // std::string filename =
-    //     "../files/file" + std::to_string(num_processed) + ".txt";
-    // std::ofstream output_file(filename);
+    /*     std::string filename =
+            "../files/file" + std::to_string(num_processed) + ".txt";
+        std::ofstream output_file(filename);
 
-    // if (!output_file) {
-    //     std::cerr << "Error opening file!\n" << std::endl;
-    //     continue;
-    // }
+        if (!output_file) {
+          std::cerr << "Error opening file!\n" << std::endl;
+          continue;
+        }
 
-    // output_file << url << "\n\n";
-    // output_file << parser.words.size() << " words\n";
-    // output_file << parser.links.size() << " links\n\n";
-    // output_file << html;
+        output_file << url << "\n\n";
+        output_file << "Number of links in queue: "
+                    << explore_queue.size() + links_vector.size() << "\n\n";
+        output_file << parser.words.size() << " words\n";
+        output_file << parser.links.size() << " links\n\n";
+        output_file << html;
 
-    // output_file.close();
+        output_file.close(); */
     // --------------------------------------------------
 
     // std::cout << '\n';
@@ -309,8 +311,9 @@ int main(int argc, char** argv) {
   for (const auto& url : seed_urls) {
     explore_queue.push(url);
   }
-
-  sem_open("./crawler_sem", O_CREAT, 0666, explore_queue.size());
+  sem_unlink("./crawler_sem");
+  queue_sem = sem_open("./crawler_sem", O_CREAT, 0666, explore_queue.size());
+  if (queue_sem == SEM_FAILED) exit(EXIT_FAILURE);
 
   auto start = std::chrono::high_resolution_clock::now();
 
@@ -333,6 +336,6 @@ int main(int argc, char** argv) {
       std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 
   // std::cout << "Time taken: " << duration.count() << " ms" << std::endl;
-
+  sem_close(queue_sem);
   return 0;
 }

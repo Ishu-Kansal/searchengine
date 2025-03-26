@@ -116,8 +116,8 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   SSL_set_fd(ssl, socketFD);
 
   if (SSL_connect(ssl) <= 0) {
-    std::cerr << "Failed to establish SSL connection" << std::endl;
-    ERR_print_errors_fp(stderr);
+    // std::cerr << "Failed to establish SSL connection" << std::endl;
+    // ERR_print_errors_fp(stderr);
     SSL_free(ssl);
     SSL_CTX_free(ctx);
     close(socketFD);
@@ -125,8 +125,8 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   }
 
   if (SSL_write(ssl, req.c_str(), req.length()) <= 0) {
-    std::cerr << "Failed to send request" << std::endl;
-    SSL_shutdown(ssl);
+    // std::cerr << "Failed to send request" << std::endl;
+    // SSL_shutdown(ssl);
     SSL_free(ssl);
     SSL_CTX_free(ctx);
     close(socketFD);
