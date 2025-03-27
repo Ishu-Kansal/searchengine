@@ -10,7 +10,7 @@ class cstring_view {
   explicit cstring_view() = default;
   explicit cstring_view(nullptr_t) = delete;
   explicit cstring_view(const std::string &s)
-      : first{s.data()}, last(s.data() + s.size()) {}
+      : first{s.data()}, last{s.data() + s.size()} {}
   explicit cstring_view(const char *c, size_t l) : first{c}, last{c + l} {}
   explicit cstring_view(const char *c) : first{c}, last{c + strlen(c)} {}
 
@@ -34,7 +34,7 @@ class cstring_view {
   void remove_prefix(size_t n) { first += n; }
   void remove_suffix(size_t n) { last -= n; }
 
-  cstring_view substr(size_t pos, size_t count) const {
+  cstring_view substr(size_t pos, size_t count = npos) const {
     if (count == npos || pos + count > size())
       return cstring_view{first + pos, last};
     else
@@ -74,6 +74,30 @@ class cstring_view {
 
   size_t find(const char *s, size_t pos) const {
     return find(cstring_view{s}, pos);
+  }
+
+  size_t rfind(cstring_view sv, size_t pos = npos) const {
+    if (empty() || size() < sv.size()) return npos;  // avoid underflow
+    for (size_t i = std::min(pos, size()); i >= 1; --i) {
+      if (substr(i - 1, sv.size()) == sv) return i - 1;
+    }
+    return npos;
+  }
+
+  size_t rfind(char c, size_t pos = npos) const {
+    return rfind(cstring_view{static_cast<const char *>(&c), size_t{1}});
+  }
+
+  size_t rfind(const char *s, size_t pos, size_t count) const {
+    return rfind(cstring_view{s, count}, pos);
+  }
+
+  size_t rfind(const char *s, size_t pos = npos) const {
+    return rfind(cstring_view{s}, pos);
+  }
+
+  friend std::ostream &operator<<(std::ostream &os, const cstring_view &sv) {
+    return os.write(sv.begin(), sv.size());
   }
 
  private:

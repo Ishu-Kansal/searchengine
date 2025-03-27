@@ -22,6 +22,7 @@
 
 #include "../../BloomFilterStarterFiles/BloomFilter.h"
 #include "../../HtmlParser/HtmlParser.h"
+#include "../../utils/cstring_view.h"
 #include "../../utils/pthread_lock_guard.h"
 #include "../ranker/rank.h"
 #include "sockets.h"
@@ -227,7 +228,7 @@ void* runner(void*) {
     // Process links found by the parser
     {
       pthread_lock_guard guard{queue_lock};
-      auto static_rank = get_static_rank(std::move(url), parser);
+      auto static_rank = get_static_rank(cstring_view{url}, parser);
 
       if (links_vector.size() < MAX_QUEUE_SIZE) {
         for (auto& link : parser.links) {

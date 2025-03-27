@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 
+#include <climits>
 #include <string>
 #include <unordered_map>
 
@@ -124,17 +125,44 @@ int get_numLinks_weight(int occurences) {
     return EXCESSIVELINKSWEIGHT;
 }
 
+struct DomainWeight {
+  std::string domain;
+  int weight;
+};
+
+std::array<DomainWeight, CHAR_MAX> get_domain_weights() {
+  std::array<DomainWeight, CHAR_MAX> arr{};
+  arr['g'] = {".gov", IMPORTANT};
+  arr['c'] = {".com", RELEVANT};
+  arr['b'] = {".biz", LESSRELEVANT};
+  arr['e'] = {".edu", IMPORTANT};
+  arr['n'] = {".net", RELEVANT};
+  arr['o'] = {".org", ORG};
+  arr['i'] = {".info", LESSRELEVANT};
+  return arr;
+}
+
 // branchless
-int get_domain_weight(std::string domain) {
-  // make a static hashmap for branchless and give it a weight
-  static const std::unordered_map<std::string, float> domainWeights = {
-      {".gov", IMPORTANT},    {".edu", IMPORTANT}, {".org", ORG},
-      {".com", RELEVANT},     {".net", RELEVANT},  {".info", LESSRELEVANT},
-      {".biz", LESSRELEVANT},
-  };
-  auto it = domainWeights.find(domain);
-  // if iterator not found return 0.5 otherwise return its respective weight
-  return (it != domainWeights.end()) ? it->second : NONRECOGNIZED;
+int get_domain_weight(cstring_view domain) {
+  if (domain.size() < 2) return NONRECOGNIZED;
+  switch (domain[1]) {
+    case 'g':
+      return domain == ".gov" ? IMPORTANT : NONRECOGNIZED;
+    case 'c':
+      return domain == ".com" ? RELEVANT : NONRECOGNIZED;
+    case 'b':
+      return domain == ".biz" ? LESSRELEVANT : NONRECOGNIZED;
+    case 'e':
+      return domain == ".edu" ? IMPORTANT : NONRECOGNIZED;
+    case 'n':
+      return domain == ".net" ? RELEVANT : NONRECOGNIZED;
+    case 'o':
+      return domain == ".org" ? ORG : NONRECOGNIZED;
+    case 'i':
+      return domain == ".info" ? LESSRELEVANT : NONRECOGNIZED;
+    default:
+      return NONRECOGNIZED;
+  }
 }
 
 double get_document_length_weight(const decltype(HtmlParser::words) &words) {
@@ -153,12 +181,13 @@ int get_url_length_weight(int length) {
                                                            : 3];
 }
 
-std::string get_top_level_domain(const std::string &url) {
+cstring_view get_top_level_domain(cstring_view url) {
   size_t last_dot = url.rfind('.');
   if (last_dot != std::string::npos) {
-    return url.substr(last_dot + 1);  // Extract and return TLD as a string
+    cstring_view cur = url.substr(last_dot);
+    return cur.substr(0, cur.find('/'));
   }
-  return "";  // Return empty string if no dot is found
+  return cstring_view{};  // Return empty string if no dot is found
 }
 
 /*
@@ -188,7 +217,7 @@ get_domain_weight(key);
 
 // computes the static rank of an individual page given the URl and the parser
 // object
-double get_static_rank(std::string &&url, const HtmlParser &parser) {
+double get_static_rank(cstring_view url, const HtmlParser &parser) {
   return get_numImages_weight(parser.img_count) +
          get_numLinks_weight(parser.links.size()) +
          get_domain_weight(get_top_level_domain(url)) +
