@@ -29,6 +29,7 @@
 // #include "../inverted_index/Index.h"
 
 constexpr uint32_t MAX_PROCESSED = 10000;
+constexpr uint32_t MAX_VECTOR_SIZE = 50000;
 constexpr uint32_t MAX_QUEUE_SIZE = 100000;
 constexpr uint32_t TOP_K_ELEMENTS = 7500;
 constexpr uint32_t NUM_RANDOM = 10000;
@@ -72,7 +73,7 @@ void quickselect(int left, int right, int k) {
     return;
   }
 
-  std::uniform_int_distribution<> gen(left, right);
+  std::uniform_int_distribution<> gen(left, right - 1);
   int pivot_index = gen(mt);
 
   // Find the pivot position in a sorted list
@@ -94,7 +95,7 @@ void fill_queue() {
   // std::cout << "Enter fill_queue()" << std::endl;
   uint32_t links_vector_size = links_vector.size();
 
-  if (explore_queue.empty() && links_vector_size > NUM_RANDOM) {
+  if (explore_queue.empty() && links_vector_size > MAX_VECTOR_SIZE) {
     // std::cout << "Here1" << std::endl;
     // Establish range for uniform random num gen
     // Range is from 0 to the last element in the vector
@@ -110,14 +111,13 @@ void fill_queue() {
 
     // Sorts the last N elements of the vector
     quickselect(links_vector_size - NUM_RANDOM, links_vector_size - 1,
-                TOP_K_ELEMENTS);
+                NUM_RANDOM - TOP_K_ELEMENTS);
 
     // std::cout << "Here4" << std::endl;
 
     // Takes last K from vector and adds its to queue
-    for (size_t i = links_vector_size - 1;
-         i > links_vector_size - TOP_K_ELEMENTS; --i) {
-      explore_queue.push(std::move(links_vector[i].first));
+    for (size_t i = 0; i < TOP_K_ELEMENTS; ++i) {
+      explore_queue.push(std::move(links_vector.back().first));
       links_vector.pop_back();
     }
   }
@@ -135,7 +135,7 @@ std::string get_next_url() {
     // std::cout << "Pull url from explore queue" << std::endl;
     url = std::move(explore_queue.front());
     explore_queue.pop();
-  } else if (links_vector_size > NUM_RANDOM) {
+  } else if (links_vector_size > MAX_VECTOR_SIZE) {
     // std::cout << "Explore queue empty, fill queue with links from vector"
     // << std::endl;
     fill_queue();
@@ -221,7 +221,6 @@ void* runner(void*) {
     // Parse the html code
     std::string& html = args.html;
     HtmlParser parser(html.data(), html.size());
-    num_processed++;
 
     // ------------------------------------------------------------------
     // TODO: The code to add the words from parser to the index goes here
@@ -232,6 +231,7 @@ void* runner(void*) {
     {
       auto static_rank = get_static_rank(cstring_view{url}, parser);
       pthread_lock_guard guard{queue_lock};
+      num_processed++;
       if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
 
       if (links_vector.size() < MAX_QUEUE_SIZE) {
@@ -312,7 +312,7 @@ int main(int argc, char** argv) {
       "https://www.apnews.com/",
       "https://www.tripadvisor.com/",
       "https://www.dictionary.com/",
-      "https://www.urbandictionary.com/",
+      "https://www.foxnews.com/"
       "https://umich.edu/",
       "https://www.fandom.com/",
       "https://www.bing.com/"};

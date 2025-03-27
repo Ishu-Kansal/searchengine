@@ -85,17 +85,15 @@ enum TitleLengthWeights : int {
   OVERLY_LONG_TITLE_WEIGHT = 0
 };
 
-
-
-
 namespace {
 static constexpr double urlLengthWeight = 1.0;
 static constexpr double titleLengthWeight = 1.0;
 static constexpr double articleLengthWeight = 2.5;
 static constexpr double articleWeights[] = {-1.0, 0.8, 1.0, 0.5, -1.0};
-static constexpr double mobileFriendly = 2.0; // check if it has <meta name="viewport"
-static constexpr double titleExists = 2.0; // does it have title tag
-static constexpr double usingHTTPS = 1.0; // is it HTTPS
+static constexpr double mobileFriendly =
+    2.0;  // check if it has <meta name="viewport"
+static constexpr double titleExists = 2.0;  // does it have title tag
+static constexpr double usingHTTPS = 1.0;   // is it HTTPS
 
 /*const static double veryShortArticle = -1.0;
 const static double shortArticle = 0.8;
@@ -196,9 +194,9 @@ int get_url_length_weight(int length) {
                                      MODERATE_URL_WEIGHT, SHORT_URL_WEIGHT};
   // reward shorter urls
   return weightsarr[(length >= OVERLY_LONG_URL_LENGTH) ? 0
-                    : (length >= LONG_URL_LENGTH)          ? 1
-                    : (length >= MODERATE_URL_LENGTH)      ? 2
-                                                           : 3];
+                    : (length >= LONG_URL_LENGTH)      ? 1
+                    : (length >= MODERATE_URL_LENGTH)  ? 2
+                                                       : 3];
 }
 
 cstring_view get_top_level_domain(cstring_view url) {
