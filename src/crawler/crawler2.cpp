@@ -28,12 +28,12 @@
 #include "sockets.h"
 // #include "../inverted_index/Index.h"
 
-constexpr uint32_t MAX_PROCESSED = 100000;
+constexpr uint32_t MAX_PROCESSED = 10000;
 constexpr uint32_t MAX_QUEUE_SIZE = 100000;
 constexpr uint32_t TOP_K_ELEMENTS = 7500;
 constexpr uint32_t NUM_RANDOM = 10000;
 
-const static int NUM_THREADS = 16;  // start small
+const static int NUM_THREADS = 32;  // start small
 
 uint32_t STATIC_RANK = 0;  // temp global variable
 
@@ -144,7 +144,7 @@ std::string get_next_url() {
   } else {
     // std::cout << "Explore queue empty, use last link from vector"
     // << std::endl;
-    url = std::move(links_vector[links_vector_size - 1].first);
+    url = std::move(links_vector.back().first);
     links_vector.pop_back();
   }
 
@@ -176,11 +176,13 @@ void* getHTML_wrapper(void* arg) {
   return nullptr;
 }
 
-bool check_url(std::string& url) {
+bool check_url(cstring_view url) {
   // If link does not begin with 'http', ignore it
-  if (url.size() < 4 || url.substr(0, 4) != "http") {
+  if (url.size() < 4 || !url.starts_with(cstring_view{"http", 4UZ})) {
     return false;
   }
+
+  if (url.find(cstring_view{"porn"}) != cstring_view::npos) return false;
 
   if (url.size() > 250) {
     return false;
@@ -228,8 +230,9 @@ void* runner(void*) {
 
     // Process links found by the parser
     {
-      pthread_lock_guard guard{queue_lock};
       auto static_rank = get_static_rank(cstring_view{url}, parser);
+      pthread_lock_guard guard{queue_lock};
+      if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
 
       if (links_vector.size() < MAX_QUEUE_SIZE) {
         for (auto& link : parser.links) {
@@ -264,7 +267,7 @@ void* runner(void*) {
 
     // --------------------------------------------------
     // For debugging (not needed for crawler to function)
-    std::string filename =
+    /*std::string filename =
         "./files/file" + std::to_string(num_processed) + ".txt";
     std::ofstream output_file(filename);
 
@@ -280,8 +283,10 @@ void* runner(void*) {
     output_file << parser.words.size() << " words\n";
     output_file << parser.links.size() << " links\n\n";
     output_file << html;
+    output_file << "\n\n";
+    for (auto& word : parser.words) output_file << word << ' ';
 
-    output_file.close();
+    output_file.close();*/
     // --------------------------------------------------
 
     // std::cout << '\n';
@@ -314,6 +319,7 @@ int main(int argc, char** argv) {
 
   for (const auto& url : seed_urls) {
     explore_queue.push(url);
+    bf.insert(url);
   }
   sem_unlink("./crawler_sem");
   queue_sem = sem_open("./crawler_sem", O_CREAT, 0666, explore_queue.size());

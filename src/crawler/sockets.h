@@ -9,6 +9,9 @@
 #include <unistd.h>
 
 #include <iostream>
+#include <memory>
+
+#include "../../utils/cunique_ptr.h"
 
 class ParsedUrl {
  public:
@@ -70,6 +73,7 @@ class ParsedUrl {
 
 int runSocket(std::string req, std::string url_in, std::string &output) {
   ParsedUrl url(url_in.data());
+  if (!url.Host || !url.Port || !url.CompleteUrl) return 1;
   struct addrinfo hints, *address;
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_INET;
@@ -162,17 +166,19 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   }
 
   // Read and process the response
-  char buffer[32768]{};
-  int bytes;
+  // char buffer[32768]{};
+  const static size_t BUFFER_SIZE = 16384;
+  char *buffer = new char[BUFFER_SIZE]{};
+  std::unique_ptr<char[]> buf(buffer);
+
+  int bytes = 0;
   bool skip_header = false;
-  std::string leftover;
+  std::string leftover = "";
 
-  std::string header;
-  int code;
+  std::string header = "";
+  int code = 0;
 
-  while ((bytes = SSL_read(ssl, buffer, sizeof(buffer) - 1)) > 0) {
-    buffer[bytes] = '\0';  // Null-terminate for string operations
-
+  while ((bytes = SSL_read(ssl, buffer, BUFFER_SIZE)) > 0) {
     if (!skip_header) {
       // Combine leftover from previous reads
       std::string response = leftover + std::string(buffer, bytes);
@@ -205,11 +211,9 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
         assert(header_end <= response.length());
         output.append(response.data() + header_end,
                       response.length() - header_end);
-        /*output += std::string(response.c_str() + header_end,
-                              response.length() - header_end);*/
       } else {
-        leftover =
-            std::move(response);  // Save the partial response for the next read
+        leftover = std::move(response);
+        // Save the partial response for the next read
       }
     } else {
       // std::cout << "outputting\n";

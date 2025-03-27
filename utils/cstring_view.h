@@ -10,7 +10,7 @@ class cstring_view {
 
   explicit cstring_view() = default;
   explicit cstring_view(nullptr_t) = delete;
-  explicit cstring_view(const std::string &s)
+  cstring_view(const std::string &s)
       : first{s.data()}, last{s.data() + s.size()} {}
   explicit cstring_view(const char *c, size_t l) : first{c}, last{c + l} {}
   explicit cstring_view(const char *c) : first{c}, last{c + strlen(c)} {}
@@ -34,6 +34,10 @@ class cstring_view {
 
   void remove_prefix(size_t n) { first += n; }
   void remove_suffix(size_t n) { last -= n; }
+
+  bool starts_with(cstring_view other) const {
+    return (size() >= other.size()) && (substr(0, other.size()) == other);
+  }
 
   cstring_view substr(size_t pos, size_t count = npos) const {
     if (count == npos || pos + count > size())

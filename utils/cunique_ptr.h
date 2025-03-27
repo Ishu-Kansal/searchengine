@@ -1,7 +1,10 @@
 #pragma once
 
 #include <stddef.h>
+
+#include <memory>
 #include <utility>
+
 template <class T>
 struct Deleter {
   void operator()(T *ptr) { delete ptr; }
@@ -14,13 +17,13 @@ struct Deleter<T[]> {
 
 template <class T, class Delete = Deleter<T>>
 class cunique_ptr {
-  public:
+ public:
   // Default Constructor
   cunique_ptr() : ptr{nullptr} {}
   // Explicit Constructor
   explicit cunique_ptr(T *ptr) : ptr{ptr} {}
   // Destructor - overloaded () operator in Deleter
-  ~cunique_ptr() { Delete()(ptr); } 
+  ~cunique_ptr() { Delete()(ptr); }
 
   // allows transfer of ownership to raw pointer
   T *release() noexcept {
@@ -35,7 +38,7 @@ class cunique_ptr {
     if (old_ptr) Delete()(old_ptr);
     this->ptr = next;
   }
-  
+
   T *get() const noexcept { return ptr; }
 
   explicit operator bool() const noexcept { return ptr; }
@@ -46,10 +49,9 @@ class cunique_ptr {
   T *ptr{};
 };
 
-
 template <class T>
 class cunique_ptr<T[]> {
-  public:
+ public:
   cunique_ptr() : ptr{nullptr} {}
   explicit cunique_ptr(T *ptr) : ptr{ptr} {}
   ~cunique_ptr() { Deleter<T[]>()(ptr); }

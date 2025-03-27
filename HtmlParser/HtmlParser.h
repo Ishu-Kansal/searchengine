@@ -100,7 +100,7 @@ class HtmlParser {
   size_t extract_anchor(const char *buffer, size_t length, size_t index,
                         bool in_title) {
     // move past the first href
-    while (strncmp(buffer + index, "href", 4) != 0) {
+    while (index < length && strncmp(buffer + index, "href", 4) != 0) {
       if (buffer[index] == '>') {
         return index + 1;
       }
@@ -113,7 +113,7 @@ class HtmlParser {
 
     // move past the first open quote
     size_t url_start;
-    while (buffer[index] != '"' && buffer[index] != '\'') {
+    while (index < length && buffer[index] != '"' && buffer[index] != '\'') {
       if (buffer[index] == '>') {
         return index + 1;
       }
@@ -129,7 +129,7 @@ class HtmlParser {
 
     // move past the next end quote
     size_t url_end;
-    while (buffer[index] != quote_type) {
+    while (index < length && buffer[index] != quote_type) {
       // if (buffer[index] == '"' || buffer[index] == '\'')
       // {
       //    url_end = index;
@@ -197,7 +197,7 @@ class HtmlParser {
 
         else if (strncmp(buffer + index, "<img", 4) == 0) {
           img_count += 1;
-          while (buffer[index] != '>') {
+          while (index < length && buffer[index] != '>') {
             // This code does not ensure that </tag> is outside of any quotes
             // if (buffer[index] == '>')
             // {
@@ -214,7 +214,7 @@ class HtmlParser {
           return extract_base(buffer, length, index + 5);
         } else {
           index++;
-          if (buffer[index] == '/') {
+          if (index < length && buffer[index] == '/') {
             index++;
             if (index == length) return index;
           }
@@ -226,8 +226,9 @@ class HtmlParser {
           }
 
           // store tag in a c string
-          std::string tag_string =
-              std::string(buffer + index, buffer + index + tag_size);
+          /*std::string tag_string =
+              std::string(buffer + index, buffer + index + tag_size);*/
+          cstring_view tag_string{buffer + index, tag_size};
 
           // grab tag action based on name
           DesiredAction action =
@@ -239,6 +240,7 @@ class HtmlParser {
                 // This code does not ensure that </tag> is outside of any
                 // quotes
                 if (strncmp(buffer + index, "</", 2) == 0 &&
+                    index + 2 < length &&
                     strncmp(buffer + index + 2, "svg", tag_size) == 0) {
                   index += tag_size + 3;
                   break;
@@ -250,6 +252,7 @@ class HtmlParser {
                 // This code does not ensure that </tag> is outside of any
                 // quotes
                 if (strncmp(buffer + index, "</", 2) == 0 &&
+                    index + 2 < length &&
                     strncmp(buffer + index + 2, "style", tag_size) == 0) {
                   index += tag_size + 3;
                   break;
@@ -261,6 +264,7 @@ class HtmlParser {
                 // This code does not ensure that </tag> is outside of any
                 // quotes
                 if (strncmp(buffer + index, "</", 2) == 0 &&
+                    index + 2 < length &&
                     strncmp(buffer + index + 2, "script", tag_size) == 0) {
                   index += tag_size + 3;
                   break;
@@ -282,7 +286,9 @@ class HtmlParser {
             inside_bracket = true;
           } else {
             index += tag_size;
-            word += '<' + tag_string + buffer[index];
+            word.push_back('<');
+            word.insert(word.cend(), tag_string.begin(), tag_string.end());
+            if (index < length) word.push_back(buffer[index]);
           }
         }
       } else if (buffer[index] == '>') {
@@ -330,10 +336,10 @@ class HtmlParser {
       if (!strncmp(buffer + i, "href", 4)) {
         // std::cout << buffer + i;
         i += 4;
-        while (buffer[i] != '=' && i < length) {
+        while (i < length && buffer[i] != '=') {
           i++;
         }
-        while (buffer[i] != '"' && buffer[i] != '\'' && i < length) {
+        while (i < length && buffer[i] != '"' && buffer[i] != '\'') {
           i++;
         }
         in_quotes = true;
@@ -341,12 +347,12 @@ class HtmlParser {
         // now that we are inside the quotes, read in the base url
         i++;
         int url_start = i;
-        while (buffer[i] != quote_type) {
+        while (i < length && buffer[i] != quote_type) {
           i++;
         }
         int url_end = i;
         base = std::string(buffer + url_start, buffer + url_end);
-        while (buffer[i] != '>') i++;
+        while (i < length && buffer[i] != '>') i++;
         // std::cout << base << '\n';
         return i + 1;
       }
@@ -359,7 +365,7 @@ class HtmlParser {
     // <base href="url" />
     bool in_quotes = false;
     char quote_type;
-    while (!(buffer[i] == '>' && !in_quotes)) {
+    while (i < length && !(buffer[i] == '>' && !in_quotes)) {
       // if (buffer[i] == '>' && !in_quotes) {
       //    i++;
       //    break;
@@ -376,10 +382,10 @@ class HtmlParser {
       if (!strncmp(buffer + i, "src", 3)) {
         // std::cout << buffer + i;
         i += 3;
-        while (buffer[i] != '=' && i < length) {
+        while (i < length && buffer[i] != '=') {
           i++;
         }
-        while (buffer[i] != '"' && buffer[i] != '\'' && i < length) {
+        while (i < length && buffer[i] != '"' && buffer[i] != '\'') {
           i++;
         }
         in_quotes = true;
@@ -387,12 +393,12 @@ class HtmlParser {
         // now that we are inside the quotes, read in the base url
         i++;
         int url_start = i;
-        while (buffer[i] != quote_type) {
+        while (i < length && buffer[i] != quote_type) {
           i++;
         }
         int url_end = i;
         std::string url = std::string(buffer + url_start, buffer + url_end);
-        while (buffer[i] != '>') i++;
+        while (i < length && buffer[i] != '>') i++;
         Link link(url);
         links.push_back(link);
         return i;
@@ -411,9 +417,9 @@ class HtmlParser {
 
   HtmlParser(const char *buffer, size_t length)  // Your code here
   {
-    words.reserve(160000);
+    /*words.reserve(160000);
     titleWords.reserve(400);
-    links.reserve(16000);
+    links.reserve(16000);*/
 
     img_count = 0;
 
@@ -505,6 +511,7 @@ class HtmlParser {
                 // This code does not ensure that </tag> is outside of any
                 // quotes
                 if (strncmp(buffer + index, "</", 2) == 0 &&
+                    index + 2 < length &&
                     strncmp(buffer + index + 2, "svg", tag_size) == 0) {
                   index += tag_size + 3;
                   break;
@@ -516,6 +523,7 @@ class HtmlParser {
                 // This code does not ensure that </tag> is outside of any
                 // quotes
                 if (strncmp(buffer + index, "</", 2) == 0 &&
+                    index + 2 < length &&
                     strncmp(buffer + index + 2, "style", tag_size) == 0) {
                   index += tag_size + 3;
                   break;
@@ -527,6 +535,7 @@ class HtmlParser {
                 // This code does not ensure that </tag> is outside of any
                 // quotes
                 if (strncmp(buffer + index, "</", 2) == 0 &&
+                    index + 2 < length &&
                     strncmp(buffer + index + 2, "script", tag_size) == 0) {
                   index += tag_size + 3;
                   break;
@@ -624,7 +633,7 @@ class HtmlParser {
 
           case DesiredAction::Image:
             img_count += 1;
-            while (buffer[index] != '>') {
+            while (index < length && buffer[index] != '>') {
               // This code does not ensure that </tag> is outside of any quotes
               // if (buffer[index] == '>')
               // {
@@ -638,15 +647,15 @@ class HtmlParser {
 
           case DesiredAction::OrdinaryText:
             if (buffer[index] == ' ') {
-              words.push_back(
-                  word + '<' +
-                  std::string{buffer + index, buffer + index + tag_size});
-              word = "";
+              word.push_back('<');
+              word.insert(word.end(), buffer + index,
+                          buffer + index + tag_size);
+              words.push_back(std::move(word));
+              word = std::string();
               index++;
             } else {
-              word += '<' +
-                      std::string{buffer + index, buffer + index + tag_size} +
-                      buffer[index];
+              word +=
+                  '<' + std::string{buffer + index, tag_size} + buffer[index];
               index++;
             }
             break;
