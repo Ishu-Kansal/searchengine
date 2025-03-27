@@ -3,35 +3,12 @@
 
 #include "../../utils/cunique_ptr.h"
 
-constexpr unsigned char TITLE_FLAG = 0x01;
-constexpr unsigned char BOLD_FLAG = 0x02;
-struct Post
-{
-    unsigned char flags = 0;
-    uint8_t numBytes = 0;
-    cunique_ptr<uint8_t[]> delta{};
-
-    Post() = default;
-    Post(cunique_ptr<uint8_t[]> d, uint8_t numBytes, bool t, bool b)
-        : delta(std::move(d)), numBytes(numBytes)
-    {
-        if (t)
-            flags |= TITLE_FLAG;
-        if (b)
-            flags |= BOLD_FLAG;
-    }
-};
-struct EndDocData
-{
-    uint64_t doc_length;
-    uint64_t url_length;
-    uint64_t title_length;
-    uint64_t anchor_text_amount;
-    uint64_t unique_anchor_words;
-};
-
 #include "../../utils/unrolled_linked_list.h"
 #include "../../HashTable/HashTableStarterFiles/HashTable.h"
+
+constexpr unsigned char TITLE_FLAG = 0x01;
+constexpr unsigned char BOLD_FLAG = 0x02;
+
 
 [[nodiscard]] inline size_t SizeOfDelta(size_t offset)
 {
@@ -128,45 +105,13 @@ struct EndDocData
         uint64_t anchor_text_amount;
         uint64_t unique_anchor_words;
     };
-class IndexChunk {
 
-    public:
-        void add_url(std::string url)
-        {
-            url_list.push_back(std::move(url)); 
-        }
-        void add_enddoc(
-            uint64_t doc_length,
-            uint64_t url_length,
-            uint64_t title_length,
-            uint64_t anchor_text_amount,
-            uint64_t unique_anchor_words
-        )
-        {
-          EndDocData data{doc_length, url_length, title_length, anchor_text_amount, unique_anchor_words};
-          inverted_word_index.add_enddoc(data);
-        }
-        void add_word(
-            std::string word,
-            uint64_t pos, 
-            bool in_title = false, 
-            bool in_bold = false, 
-            bool new_document = true)
-        {
-            size_t delta = pos - prev_pos;
-            size_t num_bytes = SizeOfDelta(delta);
-            cunique_ptr<uint8_t[]> buf(new uint8_t[num_bytes]);
-            encodeVarint(delta, buf.get(), num_bytes);
-            inverted_word_index.add_word(word, Post(buf, num_bytes, in_title, in_bold), new_document);
-            prev_pos = pos;
-        }
-    private:
-        std::vector<std::string> url_list;
-        InvertedIndex inverted_word_index;
-        uint64_t prev_pos;
-
+struct Doc
+{
+    std::string url;
+    size_t staticRank;
+    Doc(const std::string &url_, size_t staticRank_) : url(url_), staticRank(staticRank_) {}
 };
-
 class InvertedIndex {
 
     public:
@@ -323,9 +268,9 @@ class IndexChunk
 {
 
 public:
-    void add_url(std::string url)
+    void add_url(const std::string &url, size_t staticRank)
     {
-        url_list.push_back(std::move(url));
+        url_list.emplace_back(url, staticRank);
     }
     void add_enddoc(
         uint64_t doc_length,
@@ -353,7 +298,7 @@ public:
     }
 
 private:
-    std::vector<std::string> url_list;
+    std::vector<Doc> url_list;
     InvertedIndex inverted_word_index;
     uint64_t prev_pos;
 };
