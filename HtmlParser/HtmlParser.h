@@ -573,7 +573,7 @@ class HtmlParser {
               if (buffer[index] == '<') {
                 if (strncmp(buffer + index, "<a", 2) == 0) {
                   extract_anchor(buffer, length, index + 2, true);
-                  links.pop_back();
+                  if (!links.empty()) links.pop_back();
                 }
                 if (word.size() > 0) {
                   titleWords.push_back(word);

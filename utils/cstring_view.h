@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstring>
+#include <iostream>
 #include <string>
 
 class cstring_view {
@@ -43,9 +44,8 @@ class cstring_view {
 
   bool operator==(const cstring_view &other) const {
     if (size() != other.size()) return false;
-    for (auto it1 = cbegin(), it2 = other.cbegin();
-         it1 != cend() && it2 != other.cend(); ++it1, ++it2) {
-      if (*it1 != *it2) return false;
+    for (size_t i = 0; i < size(); ++i) {
+      if (first[i] != other[i]) return false;
     }
     return true;
   }

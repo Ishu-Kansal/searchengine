@@ -111,12 +111,35 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   SSL *ssl = SSL_new(ctx);
   if (ssl == nullptr) {
     std::cerr << "could not create ssl object" << std::endl;
+    SSL_CTX_free(ctx);
+    close(socketFD);
+    return 1;
   }
 
   struct timeval tv;
   tv.tv_sec = 5;  // 5 seconds
   tv.tv_usec = 0;
-  setsockopt(socketFD, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
+  int ret = setsockopt(socketFD, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv,
+                       sizeof tv);
+
+  if (ret != 0) {
+    std::cerr << "Failed to set socket timeout" << std::endl;
+    SSL_free(ssl);
+    SSL_CTX_free(ctx);
+    close(socketFD);
+    return 1;
+  }
+
+  int val = 1;
+  ret = setsockopt(socketFD, SOL_SOCKET, SO_NOSIGPIPE, &val, sizeof(val));
+
+  if (ret != 0) {
+    std::cerr << "Failed to set socket timeout" << std::endl;
+    SSL_free(ssl);
+    SSL_CTX_free(ctx);
+    close(socketFD);
+    return 1;
+  }
 
   SSL_set_fd(ssl, socketFD);
 
@@ -156,7 +179,22 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
       size_t header_end = response.find("\r\n\r\n");
 
       header = response;
-      code = stoi(header.substr(9, 3));
+      // code = stoi(header.substr(9, 3));
+      if (header.size() < 9) {
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
+        SSL_CTX_free(ctx);
+        close(socketFD);
+        return -1;
+      }
+      int code = atoi(header.data() + 9);
+      if (code == 0) {
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
+        SSL_CTX_free(ctx);
+        close(socketFD);
+        return -1;
+      }
       if (code == 301) break;
 
       if (header_end != std::string::npos) {

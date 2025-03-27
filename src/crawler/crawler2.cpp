@@ -28,12 +28,12 @@
 #include "sockets.h"
 // #include "../inverted_index/Index.h"
 
-constexpr uint32_t MAX_PROCESSED = 100;
+constexpr uint32_t MAX_PROCESSED = 100000;
 constexpr uint32_t MAX_QUEUE_SIZE = 100000;
-constexpr uint32_t TOP_K_ELEMENTS = 50;
-constexpr uint32_t NUM_RANDOM = 100;
+constexpr uint32_t TOP_K_ELEMENTS = 7500;
+constexpr uint32_t NUM_RANDOM = 10000;
 
-const static int NUM_THREADS = 30;  // start small
+const static int NUM_THREADS = 16;  // start small
 
 uint32_t STATIC_RANK = 0;  // temp global variable
 
@@ -156,6 +156,7 @@ std::string getHostFromUrl(const std::string& url) {
   // return std::regex_replace(url, urlRe, "$1");
 
   std::string::size_type pos = url.find("://");
+  if (pos == std::string::npos) return "";
   pos += 3;
   std::string::size_type endPos = url.find('/', pos);
   return url.substr(pos, endPos - pos);
@@ -216,7 +217,7 @@ void* runner(void*) {
     }
 
     // Parse the html code
-    std::string html = args.html;
+    std::string& html = args.html;
     HtmlParser parser(html.data(), html.size());
     num_processed++;
 
@@ -263,13 +264,13 @@ void* runner(void*) {
 
     // --------------------------------------------------
     // For debugging (not needed for crawler to function)
-    /*std::string filename =
+    std::string filename =
         "./files/file" + std::to_string(num_processed) + ".txt";
     std::ofstream output_file(filename);
 
     if (!output_file) {
       // std::cerr << "Error opening file!\n" << std::endl;
-      std::cerr << url << std::endl;
+      // std::cerr << url << std::endl;
       continue;
     }
 
@@ -280,7 +281,7 @@ void* runner(void*) {
     output_file << parser.links.size() << " links\n\n";
     output_file << html;
 
-    output_file.close();*/
+    output_file.close();
     // --------------------------------------------------
 
     // std::cout << '\n';
