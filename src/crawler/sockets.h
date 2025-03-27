@@ -78,7 +78,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
 
   if (getaddrinfo(url.Host, (*url.Port ? url.Port : "443"), &hints, &address) !=
       0) {
-    std::cerr << "Failed to resolve host" << std::endl;
+    // std::cerr << "Failed to resolve host" << std::endl;
     return 1;
   }
 
@@ -113,6 +113,11 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
     std::cerr << "could not create ssl object" << std::endl;
   }
 
+  struct timeval tv;
+  tv.tv_sec = 5;  // 5 seconds
+  tv.tv_usec = 0;
+  setsockopt(socketFD, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
+
   SSL_set_fd(ssl, socketFD);
 
   if (SSL_connect(ssl) <= 0) {
@@ -134,7 +139,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   }
 
   // Read and process the response
-  char buffer[10240];
+  char buffer[32768]{};
   int bytes;
   bool skip_header = false;
   std::string leftover;
@@ -147,7 +152,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
 
     if (!skip_header) {
       // Combine leftover from previous reads
-      std::string response = leftover + std::string(buffer);
+      std::string response = leftover + std::string(buffer, bytes);
       size_t header_end = response.find("\r\n\r\n");
 
       header = response;
@@ -159,15 +164,19 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
         header_end += 4;  // Move past the "\r\n\r\n"
         // write(1, response.c_str() + header_end, response.length() -
         // header_end);
-        output += std::string(response.c_str() + header_end,
-                              response.length() - header_end);
+        assert(header_end <= response.length());
+        output.append(response.data() + header_end,
+                      response.length() - header_end);
+        /*output += std::string(response.c_str() + header_end,
+                              response.length() - header_end);*/
       } else {
-        leftover = response;  // Save the partial response for the next read
+        leftover =
+            std::move(response);  // Save the partial response for the next read
       }
     } else {
       // std::cout << "outputting\n";
       // write(1, buffer, bytes);
-      output += std::string(buffer, buffer + bytes);
+      output.append(buffer, bytes);  // avoid temp string construction
     }
   }
 
@@ -181,7 +190,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   }
 
   if (bytes < 0) {
-    std::cerr << "Error reading from SSL socket" << std::endl;
+    // std::cerr << "Error reading from SSL socket" << std::endl;
   }
 
   // Clean up

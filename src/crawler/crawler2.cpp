@@ -23,14 +23,16 @@
 #include "../../BloomFilterStarterFiles/BloomFilter.h"
 #include "../../HtmlParser/HtmlParser.h"
 #include "../../utils/pthread_lock_guard.h"
+#include "../ranker/rank.h"
 #include "sockets.h"
 // #include "../inverted_index/Index.h"
 
-constexpr uint32_t MAX_PROCESSED = 50;
+constexpr uint32_t MAX_PROCESSED = 100;
+constexpr uint32_t MAX_QUEUE_SIZE = 100000;
 constexpr uint32_t TOP_K_ELEMENTS = 50;
 constexpr uint32_t NUM_RANDOM = 100;
 
-const static int NUM_THREADS = 15;  // start small
+const static int NUM_THREADS = 30;  // start small
 
 uint32_t STATIC_RANK = 0;  // temp global variable
 
@@ -122,7 +124,7 @@ void fill_queue() {
 }
 
 std::string get_next_url() {
-  int ret = sem_wait(queue_sem);
+  sem_wait(queue_sem);
   pthread_lock_guard guard{queue_lock};
 
   size_t links_vector_size = links_vector.size();
@@ -149,14 +151,13 @@ std::string get_next_url() {
 }
 
 std::string getHostFromUrl(const std::string& url) {
-  //std::regex urlRe("^.*://([^/?:]+)/?.*$");
-  //return std::regex_replace(url, urlRe, "$1");
-  
+  // std::regex urlRe("^.*://([^/?:]+)/?.*$");
+  // return std::regex_replace(url, urlRe, "$1");
+
   std::string::size_type pos = url.find("://");
   pos += 3;
   std::string::size_type endPos = url.find('/', pos);
   return url.substr(pos, endPos - pos);
-
 }
 
 struct ThreadArgs {
@@ -204,18 +205,7 @@ void* runner(void*) {
 
     // Start getHTML in a new thread
     pthread_create(&thread, nullptr, getHTML_wrapper, &args);
-
-    // Wait up to 3 seconds
-    int wait_time = 3;
-    for (int i = 0; i < wait_time; i++) {
-      // If the thread finished
-      if (args.status != -1) {
-        pthread_join(thread, nullptr);
-        break;
-      }
-      // Sleep for 1 second
-      sleep(1);
-    }
+    pthread_join(thread, nullptr);
 
     // Continue if html code was not retrieved
     if (args.status != 0) {
@@ -237,53 +227,59 @@ void* runner(void*) {
     // Process links found by the parser
     {
       pthread_lock_guard guard{queue_lock};
-      for (auto& link : parser.links) {
-        std::string next_url = std::move(link.URL);
+      auto static_rank = get_static_rank(std::move(url), parser);
 
-        // Ignore links that begin with '#' or '?'
-        if (next_url[0] == '#' || next_url[0] == '?') {
-          continue;
-        }
+      if (links_vector.size() < MAX_QUEUE_SIZE) {
+        for (auto& link : parser.links) {
+          std::string next_url = std::move(link.URL);
 
-        // If link starts with '/', add the domain to the beginning of
-        // it
-        if (next_url[0] == '/') {
-          next_url = url.substr(0, 8) + getHostFromUrl(url) + next_url;
-        }
+          // Ignore links that begin with '#' or '?'
+          if (next_url[0] == '#' || next_url[0] == '?') {
+            continue;
+          }
 
-        if (!check_url(next_url)) {
-          continue;
-        }
+          // If link starts with '/', add the domain to the beginning of
+          // it
+          if (next_url[0] == '/') {
+            next_url = url.substr(0, 8) + getHostFromUrl(url) + next_url;
+          }
 
-        // If link has not been seen before, add it to the bf and links
-        // vector
-        if (!bf.contains(next_url)) {
-          bf.insert(next_url);
-          links_vector.push_back({std::move(next_url), STATIC_RANK++});
-          sem_post(queue_sem);
+          if (!check_url(next_url)) {
+            continue;
+          }
+
+          // If link has not been seen before, add it to the bf and links
+          // vector
+          if (!bf.contains(next_url)) {
+            bf.insert(next_url);
+            links_vector.emplace_back(std::move(next_url),
+                                      static_rank);  // STATIC_RANK++});
+            sem_post(queue_sem);
+          }
         }
       }
     }
 
     // --------------------------------------------------
     // For debugging (not needed for crawler to function)
-    /*     std::string filename =
-            "../files/file" + std::to_string(num_processed) + ".txt";
-        std::ofstream output_file(filename);
+    /*std::string filename =
+        "./files/file" + std::to_string(num_processed) + ".txt";
+    std::ofstream output_file(filename);
 
-        if (!output_file) {
-          std::cerr << "Error opening file!\n" << std::endl;
-          continue;
-        }
+    if (!output_file) {
+      // std::cerr << "Error opening file!\n" << std::endl;
+      std::cerr << url << std::endl;
+      continue;
+    }
 
-        output_file << url << "\n\n";
-        output_file << "Number of links in queue: "
-                    << explore_queue.size() + links_vector.size() << "\n\n";
-        output_file << parser.words.size() << " words\n";
-        output_file << parser.links.size() << " links\n\n";
-        output_file << html;
+    output_file << url << "\n\n";
+    output_file << "Number of links in queue: "
+                << explore_queue.size() + links_vector.size() << "\n\n";
+    output_file << parser.words.size() << " words\n";
+    output_file << parser.links.size() << " links\n\n";
+    output_file << html;
 
-        output_file.close(); */
+    output_file.close();*/
     // --------------------------------------------------
 
     // std::cout << '\n';
