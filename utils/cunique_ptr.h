@@ -62,7 +62,7 @@ class cunique_ptr<T[]> {
 
   void reset(T *next = nullptr) noexcept {
     auto old_ptr = ptr;
-    if (old_ptr) Deleter<T[]>(old_ptr);
+    if (old_ptr) Deleter<T[]>{}(old_ptr);
     this->ptr = next;
   }
 
