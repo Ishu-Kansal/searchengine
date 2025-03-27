@@ -16,7 +16,7 @@
 #include <sys/mman.h>
 
 #include "HashTable.h"
-
+#include "isr.h"
 using Hash = HashTable<const char *, size_t>;
 using Pair = Tuple<const char *, size_t>;
 using HashBucket = Bucket<const char *, size_t>;
@@ -136,31 +136,42 @@ public:
        BlobSize,
        NumberOfBuckets,
        Buckets[Unknown];
-
+      
+       const SerialTuple *Find(const char *key) const
+       {
+          size_t hashValue = HashT<const char *>()(key);
+          size_t bucketOffset = Buckets[hashValue % NumberOfBuckets];
+          const char *blobEnd = reinterpret_cast<const char *>(this) + BlobSize;
+          const char *bucket = reinterpret_cast<const char *>(this) + bucketOffset;
+    
+          while (bucket < blobEnd)
+          {
+             const SerialTuple *tuple = reinterpret_cast<const SerialTuple *>(bucket);
+             if (tuple->Length == 0)
+             {
+                break;
+             }
+             if (tuple->HashValue == hashValue && strcmp(tuple->Key, key) == 0)
+             {
+                return tuple;
+             }
+             bucket += tuple->Length;
+          }
+          return nullptr;
+       }
+    
+       ISRWord *OpenISRWord( const char *word )
+       {
+          const SerialTuple * serialWord = Find(word);
+          if (!serialWord)
+          {
+            // TODO
+          }
+          serialWord->Value;
+       }
+       ISRWord *OpenISREndDoc( );    
    // The SerialTuples will follow immediately after.
 
-   const SerialTuple *Find(const char *key) const
-   {
-      size_t hashValue = HashT<const char *>()(key);
-      size_t bucketOffset = Buckets[hashValue % NumberOfBuckets];
-      const char *blobEnd = reinterpret_cast<const char *>(this) + BlobSize;
-      const char *bucket = reinterpret_cast<const char *>(this) + bucketOffset;
-
-      while (bucket < blobEnd)
-      {
-         const SerialTuple *tuple = reinterpret_cast<const SerialTuple *>(bucket);
-         if (tuple->Length == 0)
-         {
-            break;
-         }
-         if (tuple->HashValue == hashValue && strcmp(tuple->Key, key) == 0)
-         {
-            return tuple;
-         }
-         bucket += tuple->Length;
-      }
-      return nullptr;
-   }
 
    static size_t BytesRequired(const Hash *hashTable)
    {
