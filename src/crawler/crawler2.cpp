@@ -149,8 +149,14 @@ std::string get_next_url() {
 }
 
 std::string getHostFromUrl(const std::string& url) {
-  std::regex urlRe("^.*://([^/?:]+)/?.*$");
-  return std::regex_replace(url, urlRe, "$1");
+  //std::regex urlRe("^.*://([^/?:]+)/?.*$");
+  //return std::regex_replace(url, urlRe, "$1");
+  
+  std::string::size_type pos = url.find("://");
+  pos += 3;
+  std::string::size_type endPos = url.find('/', pos);
+  return url.substr(pos, endPos - pos);
+
 }
 
 struct ThreadArgs {
