@@ -62,21 +62,41 @@ enum DomainWeights : int {
 enum UrlLengths : int {
   MODERATE_URL_LENGTH = 50,
   LONG_URL_LENGTH = 75,
-  EXCESSIVELYLONG_URL_LENGTH = 100
+  OVERLY_LONG_URL_LENGTH = 100
 };
 
 enum UrlLengthWeights : int {
-  SHORTURLWEIGHT = 3,
-  MODERATEURLWEIGHT = 2,
-  LONGURLWEIGHT = 1,
-  EXCESSIVELYLONGURLWEIGHT = 0
+  SHORT_URL_WEIGHT = 3,
+  MODERATE_URL_WEIGHT = 2,
+  LONG_URL_WEIGHT = 1,
+  OVERLY_LONG_URL_WEIGHT = 0
 };
 
-namespace {
-const static double urlLengthWeight = 1.0;
+enum TitleLengths : int {
+  MODERATE_TITLE_LENGTH = 50,
+  LONG_TITLE_LENGTH = 75,
+  OVERLY_LONG_TITLE_LENGTH = 100
+};
 
-const static double articleLengthWeight = 2.5;
-const static double articleWeights[] = {-1.0, 0.8, 1.0, 0.5, -1.0};
+enum TitleLengthWeights : int {
+  SHORT_TITLE_WEIGHT = 3,
+  MODERATE_TITLE_WEIGHT = 2,
+  LONG_TITLE_WEIGHT = 1,
+  OVERLY_LONG_TITLE_WEIGHT = 0
+};
+
+
+
+
+namespace {
+static constexpr double urlLengthWeight = 1.0;
+static constexpr double titleLengthWeight = 1.0;
+static constexpr double articleLengthWeight = 2.5;
+static constexpr double articleWeights[] = {-1.0, 0.8, 1.0, 0.5, -1.0};
+static constexpr double mobileFriendly = 2.0; // check if it has <meta name="viewport"
+static constexpr double titleExists = 2.0; // does it have title tag
+static constexpr double usingHTTPS = 1.0; // is it HTTPS
+
 /*const static double veryShortArticle = -1.0;
 const static double shortArticle = 0.8;
 const static double mediumArticle = 1.0;
@@ -172,10 +192,10 @@ double get_document_length_weight(const decltype(HtmlParser::words) &words) {
 
 // branchless
 int get_url_length_weight(int length) {
-  static const float weightsarr[] = {EXCESSIVELYLONGURLWEIGHT, LONGURLWEIGHT,
-                                     MODERATEURLWEIGHT, SHORTURLWEIGHT};
+  static const float weightsarr[] = {OVERLY_LONG_URL_WEIGHT, LONG_URL_WEIGHT,
+                                     MODERATE_URL_WEIGHT, SHORT_URL_WEIGHT};
   // reward shorter urls
-  return weightsarr[(length >= EXCESSIVELYLONG_URL_LENGTH) ? 0
+  return weightsarr[(length >= OVERLY_LONG_URL_LENGTH) ? 0
                     : (length >= LONG_URL_LENGTH)          ? 1
                     : (length >= MODERATE_URL_LENGTH)      ? 2
                                                            : 3];
