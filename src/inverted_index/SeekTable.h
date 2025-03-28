@@ -1,9 +1,11 @@
 #pragma once
 
 #include <cstdint>
+#include <cstdio>
 #include <vector>
 
-#include "IndexBlob.h"
+using PostOffset = uint64_t;
+using PostPosition = uint64_t;
 
 struct SeekEntry {
   SeekEntry(PostOffset postOffset, PostPosition location)
@@ -12,8 +14,6 @@ struct SeekEntry {
   PostOffset postOffset = -1;
   PostPosition location = -1;
 };
-
-const static SeekEntry EMPTY = SeekEntry(-1, -1);
 
 class SeekTable {
  public:
@@ -24,39 +24,18 @@ class SeekTable {
 
   const static size_t MASK = (1 << LOG_TABLE_SIZE) - 1;
 
-  static SeekTable *createSeekTable(const PostingListBlob &pl) {
-    SeekTable *table = new SeekTable(pl);
+  SeekTable() = default;
+
+  void addEntry(uint64_t postOffset, uint64_t location) {
+    const uint64_t mask = (location >> OFFSET) & MASK;
+    while (seek_table.size() <= mask)
+      seek_table.emplace_back(postOffset, location);
   }
 
-  SeekTable(const PostingListBlob &pl) {
-    seek_table.resize(1 << LOG_TABLE_SIZE);
-    uint64_t pos = 0;
+  size_t header_size() const { return sizeof(size_t); }
 
-    const char *start =
-        reinterpret_cast<const char *>(&pl) + sizeof(pl.blobHeader);
-    const char *end =
-        reinterpret_cast<const char *>(&pl) + pl.blobHeader.BlobSize;
-
-    // Linear search
-    while (start < end) {
-      const SerialPost *post = reinterpret_cast<const SerialPost *>(start);
-      uint64_t delta = 0;
-      decodeVarint(post->delta, delta);
-      pos += delta;
-      size_t mask = (pos >> OFFSET) & MASK;
-      size_t TEMP_LOC = -1;  // ???
-      if (seek_table[mask].location == -1) {
-        seek_table[mask] = SeekEntry(pos, TEMP_LOC);
-      }
-      start += post->totalLen;
-    }
-  }
-
-  const SeekEntry &FindStart(size_t seek) const {
-    const size_t index = (seek >> OFFSET) & MASK;
-    return seek_table[index];
-  }
+  size_t data_size() const { return sizeof(SeekEntry) * seek_table.size(); }
 
  private:
-  std::vector<SeekEntry> seek_table;
+  std::vector<SeekEntry> seek_table{};
 };
