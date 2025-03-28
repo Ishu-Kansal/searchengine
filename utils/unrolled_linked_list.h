@@ -1,5 +1,4 @@
-#ifndef LIST_H
-#define LIST_H
+#pragma once
 
 /*
 
@@ -50,7 +49,9 @@ public:
 
     void push_sentinel();
 
-    void clear(); // TODO
+    void pop_front();
+
+    void clear();
 
     UnrolledLinkList()
         : num_groups(0), num_elements(0), first(nullptr), last(nullptr) {}
@@ -121,12 +122,12 @@ size_t UnrolledLinkList<T>::size() const
 template <typename T>
 void UnrolledLinkList<T>::push_back(T &&datum)
 {
-    auto create_new_node = [](uint32_t group_size, T &&d) -> cunique_ptr<Node>
+    auto create_new_node = [](uint32_t group_size, T &&d) -> Node *
     {
-        auto new_node = make_cunique<Node>();
+        auto new_node = new Node;
         new_node->num_group_elements = 1;
         new_node->max_group_elements = group_size;
-        new_node->group = make_cunique<T[]>(group_size);
+        new_node->group = new T[group_size];
         new_node->group[0] = std::move(d);
         new_node->next = nullptr;
         return new_node;
@@ -134,7 +135,7 @@ void UnrolledLinkList<T>::push_back(T &&datum)
 
     if (empty())
     {
-        first = last = create_new_node(START_SIZE, std::move(datum)).release();
+        first = last = create_new_node(START_SIZE, std::move(datum));
         last->next = nullptr;
         ++num_groups;
         curr_size += START_SIZE;
@@ -150,7 +151,7 @@ void UnrolledLinkList<T>::push_back(T &&datum)
             uint32_t new_size = std::min(MAX_LIMIT, std::max(START_SIZE,
                 static_cast<uint32_t>((PRE_ALLOC_FACTOR - 1) * curr_size)));
             curr_size += new_size;
-            last->next = create_new_node(new_size, std::move(datum)).release();
+            last->next = create_new_node(new_size, std::move(datum));
             last = last->next;
             last->next = nullptr;
             ++num_groups;
@@ -158,6 +159,32 @@ void UnrolledLinkList<T>::push_back(T &&datum)
     }
     ++num_elements;
 }
+
+template <typename T>
+void UnrolledLinkList<T>::pop_front() {
+    Node *to_delete = first;
+    first = first->next;
+    if (first == nullptr)
+    {
+        last = nullptr;
+    }
+    num_elements -= to_delete->max_group_elements
+    num_groups--;
+    delete[] to_delete->group;
+    delete to_delete;
+
+}
+
+template <typename T>
+void UnrolledLinkList<T>::clear() {
+    while(!empty())
+    {
+        pop_front();
+    }
+    curr_size = 0;
+}
+
+/*
 template <typename T>
 void UnrolledLinkList<T>::push_sentinel()
 {
@@ -168,3 +195,5 @@ void UnrolledLinkList<T>::push_sentinel()
     new_node->group = nullptr;
 }
 #endif
+*/
+
