@@ -214,7 +214,7 @@ struct Args {
 void* add_to_index(void* addr) {
   Args* arg = reinterpret_cast<Args*>(addr);
 
-  /*pthread_lock_guard{chunks[arg->thread_id].lock};
+  pthread_lock_guard{chunks[arg->thread_id].lock};
   const uint16_t urlLength = arg->url.size();
   chunks[arg->thread_id].chunk.add_url(arg->url, arg->static_rank);
   for (auto& word : arg->parser.titleWords)
@@ -223,7 +223,7 @@ void* add_to_index(void* addr) {
     chunks[arg->thread_id].chunk.add_word(word, false);
   chunks[arg->thread_id].chunk.add_enddoc();
 
-  sem_post(chunks[arg->thread_id].sem);*/
+  sem_post(chunks[arg->thread_id].sem);
   delete arg;
   return NULL;
 }
@@ -260,7 +260,7 @@ void* runner(void*) {
     // Parse the html code
     std::string& html = args.html;
     HtmlParser parser(html.data(), html.size());
-    auto static_rank = get_static_rank(cstring_view{url}, parser);
+    int static_rank = get_static_rank(cstring_view{url}, parser);
     // Process links found by the parser
     {
       pthread_lock_guard guard{queue_lock};
@@ -320,12 +320,12 @@ void* runner(void*) {
       output_file.close();
        */
       // --------------------------------------------------
-      /*sem_wait(chunks[thread_id].sem);
+      sem_wait(chunks[thread_id].sem);
       pthread_t t;
       pthread_create(
           &t, NULL, add_to_index,
           new Args{std::move(parser), std::move(url), static_rank, thread_id});
-      pthread_detach(t);*/
+      pthread_detach(t);
       // std::cout << '\n';
     }
   }
