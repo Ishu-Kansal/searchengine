@@ -6,6 +6,8 @@
 #include <semaphore.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -24,15 +26,23 @@
 #include "../../HtmlParser/HtmlParser.h"
 #include "../../utils/cstring_view.h"
 #include "../../utils/pthread_lock_guard.h"
+#include "../inverted_index/IndexNew.h"
 #include "../ranker/rank.h"
 #include "sockets.h"
-// #include "../inverted_index/Index.h"
+
+struct ChunkBlock {
+  IndexChunk chunk;
+  pthread_mutex_t lock;
+};
 
 constexpr uint32_t MAX_PROCESSED = 10000;
 constexpr uint32_t MAX_VECTOR_SIZE = 50000;
 constexpr uint32_t MAX_QUEUE_SIZE = 100000;
 constexpr uint32_t TOP_K_ELEMENTS = 7500;
 constexpr uint32_t NUM_RANDOM = 10000;
+constexpr uint32_t NUM_CHUNKS = 5;
+
+ChunkBlock* chunks = new ChunkBlock[NUM_CHUNKS]{};
 
 const static int NUM_THREADS = 32;  // start small
 
@@ -46,6 +56,8 @@ pthread_mutex_t queue_lock{};
 sem_t* queue_sem;
 uint32_t num_processed{};
 std::mt19937 mt{std::random_device{}()};
+
+uint64_t thread_ids[NUM_THREADS];
 
 int partition(int left, int right, int pivot_index) {
   int pivot_rank = links_vector[pivot_index].second;
@@ -192,6 +204,8 @@ bool check_url(cstring_view url) {
 }
 
 void* runner(void*) {
+  // const static thread_local pid_t thread_id = syscall(SYS_gettid);
+  const static thread_local auto thread_id = rand() % NUM_CHUNKS;
   while (num_processed < MAX_PROCESSED) {
     // Get the next url to be processed
     std::string url = get_next_url();
@@ -221,15 +235,33 @@ void* runner(void*) {
     // Parse the html code
     std::string& html = args.html;
     HtmlParser parser(html.data(), html.size());
+    auto static_rank = get_static_rank(cstring_view{url}, parser);
 
     // ------------------------------------------------------------------
     // TODO: The code to add the words from parser to the index goes here
+    IndexChunk indexChunk;
+    uint64_t pos = 0;
 
+    for (std::string& word : parser.words) {
+      indexChunk.add_word(word, false);
+    }
+
+    for (std::string& titleWord : parser.titleWords) {
+      indexChunk.add_word(titleWord, true);
+    }
+
+    uint64_t doc_length = pos;
+    uint64_t url_length = 0;  // TODO:
+    uint64_t title_length = parser.titleWords.size();
+    uint64_t anchor_text_amount = 0;
+    uint64_t unique_anchor_words = 0;
+
+    indexChunk.add_enddoc(doc_length, url_length, title_length,
+                          anchor_text_amount, unique_anchor_words);
     // ------------------------------------------------------------------
 
     // Process links found by the parser
     {
-      auto static_rank = get_static_rank(cstring_view{url}, parser);
       pthread_lock_guard guard{queue_lock};
       num_processed++;
       if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
@@ -257,95 +289,101 @@ void* runner(void*) {
           // vector
           if (!bf.contains(next_url)) {
             bf.insert(next_url);
-            links_vector.emplace_back(std::move(next_url),
+            links_vector.emplace_back(next_url,
                                       static_rank);  // STATIC_RANK++});
             sem_post(queue_sem);
           }
         }
       }
+      // --------------------------------------------------
+      // For debugging (not needed for crawler to function)
+      std::string filename =
+          "./files/file" + std::to_string(num_processed) + ".txt";
+      std::ofstream output_file(filename);
+
+      if (!output_file) {
+        // std::cerr << "Error opening file!\n" << std::endl;
+        // std::cerr << url << std::endl;
+        continue;
+      }
+
+      output_file << url << "\n\n";
+      /*output_file << "Number of links in queue: "
+                  << explore_queue.size() + links_vector.size() << "\n\n";
+      output_file << parser.words.size() << " words\n";
+      output_file << parser.links.size() << " links\n\n";
+      output_file << html;
+      output_file << "\n\n";
+      for (auto& word : parser.words) output_file << word << ' ';*/
+
+      output_file.close();
+      // --------------------------------------------------
+      {
+        pthread_lock_guard(chunks[thread_id].lock);
+        const uint16_t urlLength = url.size();
+        chunks[thread_id].chunk.add_url(url, static_rank);
+        for (auto& word : parser.titleWords)
+          chunks[thread_id].chunk.add_word(word, true);
+        for (auto& word : parser.words)
+          chunks[thread_id].chunk.add_word(word, false);
+        chunks[thread_id].chunk.add_enddoc();
+      }
+      // std::cout << '\n';
     }
 
-    // --------------------------------------------------
-    // For debugging (not needed for crawler to function)
-    /*std::string filename =
-        "./files/file" + std::to_string(num_processed) + ".txt";
-    std::ofstream output_file(filename);
+    return NULL;
+  }
 
-    if (!output_file) {
-      // std::cerr << "Error opening file!\n" << std::endl;
-      // std::cerr << url << std::endl;
-      continue;
+  int main(int argc, char** argv) {
+    std::vector<std::string> seed_urls = {
+        "https://en.wikipedia.org/wiki/University_of_Michigan",
+        "https://www.cnn.com",
+        "https://www.reddit.com/",
+        "https://cse.engin.umich.edu/",
+        "https://stackoverflow.com/questions",
+        "https://www.usa.gov/",
+        "https://www.investopedia.com/",
+        "https://www.nationalgeographic.com/",
+        "https://www.nytimes.com/",
+        "https://www.espn.com/",
+        "https://weather.com/",
+        "https://www.npr.org/",
+        "https://www.apnews.com/",
+        "https://www.tripadvisor.com/",
+        "https://www.dictionary.com/",
+        "https://www.foxnews.com/",
+        "https://umich.edu/",
+        "https://www.fandom.com/",
+        "https://www.bing.com/"};
+
+    for (const auto& url : seed_urls) {
+      explore_queue.push(url);
+      bf.insert(url);
+    }
+    sem_unlink("./crawler_sem");
+    queue_sem = sem_open("./crawler_sem", O_CREAT, 0666, explore_queue.size());
+    if (queue_sem == SEM_FAILED) exit(EXIT_FAILURE);
+
+    pthread_mutex_init(&queue_lock, NULL);
+    for (int i = 0; i < NUM_CHUNKS; ++i)
+      pthread_mutex_init(&chunks[i].lock, NULL);
+
+    pthread_t threads[NUM_THREADS];
+    for (int i = 0; i < NUM_THREADS; i++) {
+      pthread_create(threads + i, NULL, runner, NULL);
+      int res = pthread_threadid_np(threads[i], thread_ids + i);
+      assert(res == 0);
+    }
+    for (int i = 0; i < NUM_THREADS; i++) {
+      pthread_join(threads[i], NULL);
     }
 
-    output_file << url << "\n\n";
-    output_file << "Number of links in queue: "
-                << explore_queue.size() + links_vector.size() << "\n\n";
-    output_file << parser.words.size() << " words\n";
-    output_file << parser.links.size() << " links\n\n";
-    output_file << html;
-    output_file << "\n\n";
-    for (auto& word : parser.words) output_file << word << ' ';
+    pthread_mutex_destroy(&queue_lock);
+    for (int i = 0; i < NUM_CHUNKS; ++i) pthread_mutex_destroy(&chunks[i].lock);
+    // for (int i = 0; i < NUM_CHUNKS; ++i) IndexChunk::Write(chunks[i].chunk,
+    // i);
 
-    output_file.close();*/
-    // --------------------------------------------------
-
-    // std::cout << '\n';
+    // std::cout << "Time taken: " << duration.count() << " ms" << std::endl;
+    sem_close(queue_sem);
+    return 0;
   }
-
-  return NULL;
-}
-
-int main(int argc, char** argv) {
-  std::vector<std::string> seed_urls = {
-      "https://en.wikipedia.org/wiki/University_of_Michigan",
-      "https://www.cnn.com",
-      "https://www.reddit.com/",
-      "https://cse.engin.umich.edu/",
-      "https://stackoverflow.com/questions",
-      "https://www.usa.gov/",
-      "https://www.investopedia.com/",
-      "https://www.nationalgeographic.com/",
-      "https://www.nytimes.com/",
-      "https://www.espn.com/",
-      "https://weather.com/",
-      "https://www.npr.org/",
-      "https://www.apnews.com/",
-      "https://www.tripadvisor.com/",
-      "https://www.dictionary.com/",
-      "https://www.foxnews.com/"
-      "https://umich.edu/",
-      "https://www.fandom.com/",
-      "https://www.bing.com/"};
-
-  for (const auto& url : seed_urls) {
-    explore_queue.push(url);
-    bf.insert(url);
-  }
-  sem_unlink("./crawler_sem");
-  queue_sem = sem_open("./crawler_sem", O_CREAT, 0666, explore_queue.size());
-  if (queue_sem == SEM_FAILED) exit(EXIT_FAILURE);
-
-  auto start = std::chrono::high_resolution_clock::now();
-
-  pthread_mutex_init(&queue_lock, NULL);
-  pthread_t threads[NUM_THREADS];
-  for (int i = 0; i < NUM_THREADS; i++) {
-    pthread_create(threads + i, NULL, runner, NULL);
-  }
-  for (int i = 0; i < NUM_THREADS; i++) {
-    pthread_join(threads[i], NULL);
-  }
-
-  pthread_mutex_destroy(&queue_lock);
-
-  // Stop measuring time
-  auto stop = std::chrono::high_resolution_clock::now();
-
-  // Calculate duration in milliseconds
-  auto duration =
-      std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-
-  // std::cout << "Time taken: " << duration.count() << " ms" << std::endl;
-  sem_close(queue_sem);
-  return 0;
-}
