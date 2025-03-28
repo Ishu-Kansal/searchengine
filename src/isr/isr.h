@@ -44,10 +44,57 @@ public:
         // Seek all the ISRs to the first occurrence beginning at
         // the target location. Return null if there is no match.
         // The document is the document containing the nearest term.
+        nearestStartLocation = std::numeric_limits<Location>::max();
+        nearestEndLocation = std::numeric_limits<Location>::max();
+        nearestTerm = -1;
+
+        Post* nearestPost = nullptr;
+
+        for (unsigned i = 0; i < NumberOfTerms; i++) {
+            Post* currPost = Terms[i]->Seek(target);
+            if (currPost != nullptr) {
+                Location currStart = Terms[i]->GetStartLocation();
+                if (currStart < nearestStartLocation) {
+                    nearestStartLocation = currStart; // Update the nearest start location
+                    nearestEndLocation = Terms[i]->GetEndLocation();
+                    nearestTerm = i; // Update the nearest term index
+                    nearestPost = currPost;
+                }
+            }
+        }
+        return nearestPost;
     }
     Post* Next() {
         // Do a next on the nearest term, then return
         // the new nearest match.
+
+        if (nearestTerm == -1) {
+            return nullptr;
+        }
+
+        Terms[nearestTerm]->Next(); // Move the nearest term to the next post
+
+        nearestStartLocation = std::numeric_limits<Location>::max();
+        nearestEndLocation = std::numeric_limits<Location>::max();
+        nearestTerm = -1;
+
+        Post* nearestPost = nullptr;
+
+        for (unsigned i = 0; i < NumberOfTerms; i++) {
+            Post* currPost = Terms[i]->getCurrentPost(); // Get the current post for each term
+            if (currPost != nullptr) {
+                Location currStart = Terms[i]->GetStartLocation();
+                if (currStart < nearestStartLocation) {
+                    nearestStartLocation = currStart; // Update the nearest start location
+                    nearestEndLocation = Terms[i]->GetEndLocation();
+                    nearestTerm = i; // Update the nearest term index
+                    nearestPost = currPost;
+                }
+            }
+        }
+
+        return nearestPost;
+
     }
     Post* NextDocument() {
         // Seek all the ISRs to the first occurrence just past
