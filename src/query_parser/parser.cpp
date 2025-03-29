@@ -1,112 +1,119 @@
-/*
- * parser.cpp
- *
- * Implementation of parser.h
- *
- * See parser.h for a full BNF of the grammar to implement.
- *
- * You should implement the different Find( ) functions,
- * as well as any additional functions you declare in parser.h.
- */
-
-#include "expression.h"
 #include "parser.h"
+#include "expression.h"
+#include <cctype>
+#include <iostream>
+#include <sstream>
 
-Expression *Parser::FindFactor() {
+QueryParser::QueryParser(const std::string &query) : stream(query) {}
 
-   bool neg = false;
-   while (stream.Match('-')) {
-      neg = !neg;
-   }
-   
-   Number* num = stream.ParseNumber();
-   if (num) {
-      if (!neg) {
-         return num;
-      }
-      return new AddSub(new Number(0), num, '-');
-   }
+// Find the next token from the input stream
+std::string QueryParser::FindNextToken() {
+   return stream.GetWord();
+}
 
-   if (stream.Match('(')) {
-      Expression *inner = FindAdd();
-      if (!stream.Match(')')) {
-         delete inner;
+// Parses a full query constraint (handles OR expressions)
+Tuple *QueryParser::FindConstraint() {
+   Tuple *left = FindBaseConstraint();
+   if (!left) return nullptr;
+
+   while (FindOrOp()) {
+      Tuple *right = FindBaseConstraint();
+      if (!right) {
+         delete left;
          return nullptr;
       }
-      if (!neg) {
-         return inner;
-      }
-      return new AddSub(new Number(0), num, '-');
+      left = new OrConstraint(left, right);
    }
-   
+   return left;
+}
+
+// Parses OR operators (OR, |, ||)
+bool QueryParser::FindOrOp() {
+   return stream.Match("OR") || stream.Match("|") || stream.Match("||");
+}
+
+// Parses a base constraint (handles AND expressions)
+Tuple *QueryParser::FindBaseConstraint() {
+   Tuple *left = FindSimpleConstraint();
+   if (!left) {
+      return nullptr;
+   }
+
+   while (true) {
+      if (!FindAndOp()) break;
+
+      Tuple *right = FindSimpleConstraint();
+      if (!right) {
+         delete left;
+         return nullptr;
+      }
+      left = new AndConstraint(left, right);
+   }
+   return left;
+}
+
+// Parses AND operators (AND, &, &&)
+bool QueryParser::FindAndOp() {
+   return stream.Match("AND") || stream.Match("&") || stream.Match("&&");
+}
+
+// Parses a simple constraint: phrase, nested constraint, unary operators, or a search word
+Tuple *QueryParser::FindSimpleConstraint() {
+   if (stream.Match("NOT") || stream.Match("-")) {
+      Tuple *constraint = FindSimpleConstraint();
+      if (constraint) {
+         return new NotConstraint(constraint);
+      }
+      return nullptr;
+   }
+   else if (stream.Match("+")) {
+      Tuple *constraint = FindSimpleConstraint();
+      if (constraint) {
+         return new RequiredConstraint(constraint);
+      }
+      return nullptr;
+   }
+   else if (stream.Peek() == std::string("'")) {
+      return FindPhrase();
+   }
+   else if (stream.Peek() == "(") {
+      return FindNestedConstraint();
+   }
+   else {
+      return FindSearchWord();
+   }
+}
+
+// Parses a quoted phrase (e.g., `"search engine"`)
+Tuple *QueryParser::FindPhrase() {
+    if (!stream.Match("\"")) return nullptr;
+    
+    std::vector<std::string> words;
+    while (!stream.Match("\"")) {
+        std::string word = stream.GetWord();
+        if (word.empty()) return nullptr;
+        words.push_back(word);
+    }
+    return new PhraseConstraint(words);
+}
+
+// Parses a nested constraint inside parentheses
+Tuple *QueryParser::FindNestedConstraint() {
+    if (!stream.Match("(")) return nullptr;
+
+    Tuple *constraint = FindConstraint();
+    if (!constraint || !stream.Match(")")) {
+        delete constraint;
+        return nullptr;
+    }
+    return constraint;
+}
+
+// Parses an individual search word
+Tuple *QueryParser::FindSearchWord() {
+   std::string word = stream.GetWord();
+   if (word.empty()) {
    return nullptr;
-}
-
-Expression *Parser::FindAdd() {
-   
-   Expression *left = FindMultiply();
-   if (!left) {
-      return nullptr;
    }
-
-   while (true) {
-      if (stream.Match('+')) {
-         Expression *right = FindMultiply();
-         if (!right) {
-            delete left;
-            return nullptr;
-         }
-         left = new AddSub(left, right, '+');
-      }
-      else if (stream.Match('-')) {
-         Expression *right = FindMultiply();
-         if (!right) {
-            delete left;
-            return nullptr;
-         }
-         left = new AddSub(left, right, '-');
-      }
-      else {
-         break;
-      }
-   }
-
-   return left;
+   return new SearchWordConstraint(word);
 }
-
-Expression *Parser::FindMultiply() {
-
-   Expression *left = FindFactor();
-   if (!left) {
-      return nullptr;
-   }
-
-   while (true) {
-      if (stream.Match('*')) {
-         Expression *right = FindFactor();
-         if (!right) {
-            delete left;
-            return nullptr;
-         }
-         left = new MulDiv(left, right, '*');
-      }
-      else if (stream.Match('/')) {
-         Expression *right = FindFactor();
-         if (!right) {
-            delete left;
-            return nullptr;
-         }
-         left = new MulDiv(left, right, '/');
-      }
-      else {
-         break;
-      }
-   }
-   return left;
-}
-
-Expression *Parser::Parse() {
-   return FindAdd();
-}
-
-Parser::Parser(const std::string &in) : stream(in) {}

@@ -1,76 +1,113 @@
-/*
- * expression.h
- *
- * Class declarations for expressions
- *
- * You should declare more classes and functionality to match
- * the target grammar. Don't forget to implement them in expression.cpp.
- */
-
 #ifndef EXPRESSION_H_
 #define EXPRESSION_H_
 
 #include <stdint.h>
+#include <string>
+#include <vector>
+//#include "../isr/isr.h" // Include ISR definitions for compilation and evaluation
+
+// Delete this ISR class after irs.h is done and can be included
+class ISR {
+   
+};
+
+class Tuple {
+public:
+   Tuple *Next;
+   virtual bool Eval( );
+   Tuple( );
+   virtual ~Tuple( );
+
+   // virtual ISR *Compile( );
+};
+
+// class TupleList : Tuple {
+// public:
+//    Tuple *Top, *Bottom;
+//    Fvoid Empty();
+//    void Append(Tuple *t);
+
+//    TupleList();
+//    ~TupleLIst();
+// }
 
 /**
- * Just a plain old expression
+ * Base class for all query constraints
  */
-class Expression {
+class Constraint : public Tuple {
 public:
+   virtual ~Constraint();
+   virtual bool Eval() const = 0;
 
-   virtual ~Expression( );
-
-   virtual int64_t Eval( ) const = 0;
+   // ISR *Compile( );
 };
-// class Expression
 
-/**
- * A number
- */
-class Number: public Expression {
-protected:
-
-   int64_t value;
-
-public:
-
-   Number(int64_t val);
-
-   int64_t Eval() const override;
-};
-// class Number
-
-class AddSub : public Expression {
+// AND constraint (e.g., A AND B)
+class AndConstraint : public Constraint {
 private:
-
-   Expression *left;
-   Expression *right;
-
-   // '+' or '-'
-   char op;
+   Tuple *left;
+   Tuple *right;
 
 public:
-   AddSub(Expression *l, Expression *r, char o) : left(l), right(r), op(o) {}
-
-   ~AddSub();
-
-   int64_t Eval() const override;
+   AndConstraint(Tuple *l, Tuple *r);
+   ~AndConstraint();
+   bool Eval() const override;
 };
 
-class MulDiv : public Expression {
+// OR constraint (e.g., A OR B)
+class OrConstraint : public Constraint {
 private:
-   Expression *left;
-   Expression *right;
-
-   // '*' or '/'
-   char op;
+   Tuple *left;
+   Tuple *right;
 
 public:
-   MulDiv(Expression *l, Expression *r, char o) : left(l), right(r), op(o) {}
+   OrConstraint(Tuple *l, Tuple *r);
+   ~OrConstraint();
+   bool Eval() const override;
+};
 
-   ~MulDiv();
+// NOT constraint (e.g., NOT A)
+class NotConstraint : public Constraint {
+private:
+   Tuple *expr;
 
-   int64_t Eval() const override;
+public:
+   NotConstraint(Tuple *e);
+   ~NotConstraint();
+   bool Eval() const override;
+};
+
+// Required constraint (e.g., +A)
+class RequiredConstraint : public Constraint {
+private:
+   Tuple *expr;
+
+public:
+   RequiredConstraint(Tuple *e);
+   ~RequiredConstraint();
+   bool Eval() const override;
+};
+
+// Phrase constraint (e.g., "search engine")
+class PhraseConstraint : public Constraint {
+private:
+   std::vector<std::string> words;
+
+public:
+   PhraseConstraint(const std::vector<std::string> &w);
+   ~PhraseConstraint();
+   bool Eval() const override;
+};
+
+// Search word constraint (e.g., individual words)
+class SearchWordConstraint : public Constraint {
+private:
+   std::string word;
+
+public:
+   SearchWordConstraint(const std::string &w);
+   ~SearchWordConstraint();
+   bool Eval() const override;
 };
 
 #endif /* EXPRESSION_H_ */

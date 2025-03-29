@@ -25,12 +25,12 @@
  *
  * and all digits
  */
-bool CharIsRelevant( char c );
+bool TokenIsRelevant( const std::string &token );
 
 /**
  * Opposite of char is relevant. Needed for filtering the input.
  */
-bool CharIsIrrelevant( char c );
+// bool CharIsIrrelevant( char c );
 
 /**
  * The token stream, which you can both Match( ) a single character from,
@@ -45,6 +45,8 @@ class TokenStream {
    // Where we currently are in the input
    size_t location { 0 };
 
+   void SkipWhitespace();
+
 public:
 
    /**
@@ -58,19 +60,16 @@ public:
     *
     * Returns true if the char was matched and consumed, false otherwise
     */
-   bool Match( char c );
+   bool Match( const std::string &in );
 
    /**
     * Check whether all the input was consumed
     */
    bool AllConsumed( ) const;
 
-   /**
-    * Attempt to match and consume a whole number
-    *
-    * Return a dynamically allocated Number if successful, nullptr otherwise
-    */
-   Number *ParseNumber( );
+   std::string GetWord();
+
+   std::string Peek();
 };
 
 #endif /* TOKENSTREAM_H_ */
