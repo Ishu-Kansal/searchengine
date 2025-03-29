@@ -39,8 +39,7 @@ bool CharIsIrrelevant( char c );
  * The input string by default is filtered of any characters that are
  * deemed "irrelevant" by the CharIsIrrelevant function above.
  */
-class TokenStream
-   {
+class TokenStream {
    // The input we receive, with only relevant characters left
    std::string input;
    // Where we currently are in the input
@@ -72,6 +71,6 @@ public:
     * Return a dynamically allocated Number if successful, nullptr otherwise
     */
    Number *ParseNumber( );
-   };
+};
 
 #endif /* TOKENSTREAM_H_ */

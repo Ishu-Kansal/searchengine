@@ -12,31 +12,101 @@
 #include "expression.h"
 #include "parser.h"
 
-Expression *Parser::FindFactor( )
-   {
-   // TODO
-   return nullptr;
+Expression *Parser::FindFactor() {
+
+   bool neg = false;
+   while (stream.Match('-')) {
+      neg = !neg;
+   }
+   
+   Number* num = stream.ParseNumber();
+   if (num) {
+      if (!neg) {
+         return num;
+      }
+      return new AddSub(new Number(0), num, '-');
    }
 
-Expression *Parser::FindAdd( )
-   {
-   // TODO
+   if (stream.Match('(')) {
+      Expression *inner = FindAdd();
+      if (!stream.Match(')')) {
+         delete inner;
+         return nullptr;
+      }
+      if (!neg) {
+         return inner;
+      }
+      return new AddSub(new Number(0), num, '-');
+   }
+   
    return nullptr;
+}
+
+Expression *Parser::FindAdd() {
+   
+   Expression *left = FindMultiply();
+   if (!left) {
+      return nullptr;
    }
 
-Expression *Parser::FindMultiply( )
-   {
-   // TODO
-   return nullptr;
+   while (true) {
+      if (stream.Match('+')) {
+         Expression *right = FindMultiply();
+         if (!right) {
+            delete left;
+            return nullptr;
+         }
+         left = new AddSub(left, right, '+');
+      }
+      else if (stream.Match('-')) {
+         Expression *right = FindMultiply();
+         if (!right) {
+            delete left;
+            return nullptr;
+         }
+         left = new AddSub(left, right, '-');
+      }
+      else {
+         break;
+      }
    }
 
-Expression *Parser::Parse( )
-   {
-   // TODO
-   return nullptr;
+   return left;
+}
+
+Expression *Parser::FindMultiply() {
+
+   Expression *left = FindFactor();
+   if (!left) {
+      return nullptr;
    }
 
-Parser::Parser( const std::string &in ) :
-      stream( in )
-   {
+   while (true) {
+      if (stream.Match('*')) {
+         Expression *right = FindFactor();
+         if (!right) {
+            delete left;
+            return nullptr;
+         }
+         left = new MulDiv(left, right, '*');
+      }
+      else if (stream.Match('/')) {
+         Expression *right = FindFactor();
+         if (!right) {
+            delete left;
+            return nullptr;
+         }
+         left = new MulDiv(left, right, '/');
+      }
+      else {
+         break;
+      }
    }
+   return left;
+}
+
+Expression *Parser::Parse() {
+   return FindAdd();
+}
+
+Parser::Parser(const std::string &in) : stream(in) {}

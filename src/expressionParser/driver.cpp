@@ -13,8 +13,7 @@
 #include "expression.h"
 #include "parser.h"
 
-int main( )
-   {
+int main( ) {
    std::string input;
    std::getline( std::cin, input );
 
@@ -22,13 +21,11 @@ int main( )
 
    Expression *expr = parser.Parse( );
 
-   if ( expr )
-      {
+   if ( expr ) {
       std::cout << expr->Eval( ) << "\n";
       delete expr;
-      }
-   else
-      {
-      std::cout << "Syntax error\n";
-      }
    }
+   else {
+      std::cout << "Syntax error\n";
+   }
+}
