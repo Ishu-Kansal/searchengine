@@ -109,7 +109,7 @@ class InvertedIndex {
   void add_word(std::string &word, size_t pos, bool title = true) {
     if (title) word.push_back('!');
     // Check if the word exists in the dictionary
-    auto *tuple = dictionary.Find(word.data());
+    auto *tuple = dictionary.Find(word);
     // Word doesn't exist yet
     if (!tuple) [[unlikely]] {
       // create a new posting list
@@ -131,7 +131,7 @@ class InvertedIndex {
   }
 
  private:
-  HashTable<const char *, size_t> dictionary;
+  HashTable<const std::string, size_t> dictionary;
   std::vector<PostingList> lists_of_posting_lists;
 };
 

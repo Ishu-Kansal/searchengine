@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
-
+#include <string>
 using namespace std;
 
 // You may add additional members or helper functions.
@@ -25,6 +25,7 @@ struct HashT
     assert(false);
     return 0;
   }
+
 };
 
 template <>
@@ -33,8 +34,8 @@ struct HashT<const char *>
   // Uses Fowler-Noll-Vo hash function
   size_t operator()(const char *c) const
   {
-    static const size_t FnvOffsetBasis = 146959810393466560UL;
-    static const size_t FnvPrime = 1099511628211UL;
+    static constexpr size_t FnvOffsetBasis = 146959810393466560UL;
+    static constexpr size_t FnvPrime = 1099511628211UL;
     size_t hash = FnvOffsetBasis;
     for (; *c; ++c)
     {
@@ -44,7 +45,13 @@ struct HashT<const char *>
     return hash;
   }
 };
-
+template<>
+struct HashT<const std::string>
+{
+  size_t operator()(const std::string &s) const {
+    return HashT<const char *>()(s.c_str());
+  }
+};
 template <typename T>
 struct EqualsT
 {
@@ -67,6 +74,14 @@ struct EqualsT<const char *>
     }
     return *L == *R;
   }
+};
+template <>
+struct EqualsT<const std::string>
+{
+  bool operator()(const std::string &L, const std::string &R) const
+  {
+    return EqualsT<const char *>()(L.c_str(), R.c_str());
+  } 
 };
 
 template <typename Key, typename Value>
