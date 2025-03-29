@@ -7,7 +7,7 @@ crawler: crawler2.cpp ../../HtmlParser/HtmlTags.cpp
 	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) $(LIBS) -o $@
 
 clean:
-	rm -rf bf debug
+	rm -rf crawler debug
 
 debug: CXXFLAGS += -g3 -DDEBUG -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG
 debug: crawler2.cpp ../../HtmlParser/HtmlTags.cpp

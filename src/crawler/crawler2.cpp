@@ -217,17 +217,19 @@ void* add_to_index(void* addr) {
   pthread_lock_guard{chunks[arg->thread_id].lock};
   const uint16_t urlLength = arg->url.size();
   chunks[arg->thread_id].chunk.add_url(arg->url, arg->static_rank);
+  
   for (auto& word : arg->parser.titleWords)
-  {
-    cout << word << "\n";
     chunks[arg->thread_id].chunk.add_word(word, true);
-  }
+
    
   for (auto& word : arg->parser.words)
-  {
-    cout << word << "\n";
-    chunks[arg->thread_id].chunk.add_word(word, false);
-  }
+
+    {
+      cout << word << '\n';
+      chunks[arg->thread_id].chunk.add_word(word, false);
+    }
+
+
 
   chunks[arg->thread_id].chunk.add_enddoc();
 
@@ -244,7 +246,9 @@ void* runner(void*) {
     std::string url = get_next_url();
 
     // Print the url that is being processed
-    // std::cout << url << std::endl;
+    std::cout << "-----------------" << '\n';
+     std::cout << url << '\n';
+     std::cout << "-----------------" << '\n';
 
     // std::cout << "URL length: " << url.size() << std::endl;
     // std::cout << "Size of link vector: " << links_vector.size()
