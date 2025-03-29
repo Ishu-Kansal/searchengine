@@ -150,7 +150,7 @@ DesiredAction LookupPossibleTag( const char *name, const char *nameEnd ) {
 
    size_t len = nameEnd - name + 1;
    if (len > LongestTagLength)
-      return DesiredAction::OrdinaryText;
+      return DesiredAction::Discard;
 
    // Use a stack-allocated buffer instead of heap allocation
    char lowerName[LongestTagLength + 1];
@@ -178,7 +178,7 @@ DesiredAction LookupPossibleTag( const char *name, const char *nameEnd ) {
       }
    }
 
-   return DesiredAction::OrdinaryText;
+   return DesiredAction::Discard;
 
 
 }

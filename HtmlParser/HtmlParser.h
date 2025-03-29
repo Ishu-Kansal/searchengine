@@ -485,7 +485,7 @@ class HtmlParser {
         // std::cout << "start\n";
         switch (action) {
           case DesiredAction::Discard:
-            while (buffer[index] != '>' || in_quotes) {
+            while (index < length && (buffer[index] != '>' || in_quotes)) {
               if (buffer[index] == '"') {
                 if (!in_quotes) {
                   in_quotes = true;
@@ -553,7 +553,7 @@ class HtmlParser {
                     buffer[index + 2] != '>')) {
               index++;
             }
-            index += 4;
+            index += 3;
 
             break;
 
