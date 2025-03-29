@@ -20,180 +20,127 @@ next pointer points to a group of posts
 #include <cstddef>
 #include <iostream>
 #include <utility>
+#include <vector>
+#include <algorithm>
 
-#include "cunique_ptr.h"
-
-
-constexpr float PRE_ALLOC_FACTOR = 1.2; // TEMP
-constexpr uint32_t MAX_LIMIT = 64;      // TEMP
-constexpr u_int32_t START_SIZE = 4;     // TEMP
+constexpr float PRE_ALLOC_FACTOR = 1.2f; // TEMP
+constexpr uint8_t MAX_LIMIT = 64;      // TEMP
+constexpr uint8_t START_SIZE = 4;      // TEMP
 
 template <typename T>
-class UnrolledLinkList
-{
+class UnrolledLinkList {
 public:
-    struct Node
-    {
-        Node *next;
+    struct Node {
+        Node* next;
+        std::vector<T> group;
 
-        uint32_t num_group_elements;
-        uint32_t max_group_elements;
-        cunique_ptr<T[]> group;
+        explicit Node(uint8_t group_size) : next(nullptr) {
+            group.reserve(group_size);
+        }
     };
 
-    bool empty() const;
-
-    size_t size() const;
-
-    void push_back(T &&datum);
-
-    void push_sentinel();
-
-    void pop_front();
-
-    void clear();
-
-    UnrolledLinkList()
-        : num_groups(0), num_elements(0), first(nullptr), last(nullptr) {}
+    UnrolledLinkList() : num_elements(0), curr_capacity(0), first(nullptr), last(nullptr) {}
 
     ~UnrolledLinkList() { clear(); }
 
-private:
-    uint32_t num_groups = 0;
-    uint32_t num_elements = 0;
-    uint32_t curr_size = 0;
+    bool empty() const { return (first == nullptr); }
 
-    Node *first;
-    Node *last;
+    size_t size() const { return num_elements; }
 
-public:
-    class Iterator
-    {
+    template <typename... Args>
+    void emplace_back(Args&&... args) {
+        if (empty()) {
+            first = create_new_node(START_SIZE, std::forward<Args>(args)...);
+            last = first;
+            curr_capacity += START_SIZE;
+        } else {
+            if (last->group.size() < last->group.capacity()) {
+                last->group.emplace_back(std::forward<Args>(args)...);
+            } else {
+                uint8_t new_size = std::min(MAX_LIMIT, std::max(START_SIZE,
+                    static_cast<uint8_t>((PRE_ALLOC_FACTOR - 1) * curr_capacity)));
+                curr_capacity += new_size;
+                last->next = create_new_node(new_size, std::forward<Args>(args)...);
+                last = last->next;
+            }
+        }
+        ++num_elements;
+    }
+
+    void push_back(T&& datum) {
+        emplace_back(std::move(datum));
+    }
+
+    void pop_front() {
+        if (empty()) return;
+
+        Node* to_delete = first;
+        num_elements -= first->group.size();
+        first = first->next;
+        delete to_delete;
+
+        if (!first) {
+            last = nullptr;
+            curr_capacity = 0;
+        }
+    }
+
+    void clear() {
+        while (first) {
+            pop_front();
+        }
+    }
+
+    class Iterator {
         friend class UnrolledLinkList;
-
     public:
-        Iterator() : node_ptr(nullptr) {}
-        T &operator*()
-        {
-            assert(node_ptr);
+        Iterator() : node_ptr(nullptr), curr_index(0) {}
 
+        T& operator*() {
+            assert(node_ptr);
             return node_ptr->group[curr_index];
         }
-        bool operator==(Iterator rhs) const { return node_ptr == rhs.node_ptr; }
-        bool operator!=(Iterator rhs) const { return !(node_ptr == rhs.node_ptr); }
-        Iterator &operator++()
-        {
-            if (!node_ptr)
-                return *this;
 
-            if (++curr_index >= node_ptr->num_group_elements)
-            {
-                node_ptr = node_ptr->next;
+        bool operator==(const Iterator& rhs) const {
+            return (node_ptr == rhs.node_ptr && curr_index == rhs.curr_index);
+        }
+
+        bool operator!=(const Iterator& rhs) const { return !(*this == rhs); }
+
+        Iterator& operator++() {
+            if (!node_ptr) return *this;
+
+            ++curr_index;
+            if (curr_index >= node_ptr->group.size()) {
+                if (node_ptr->next)
+                    node_ptr = node_ptr->next;
+                else
+                    node_ptr = nullptr;
                 curr_index = 0;
             }
             return *this;
         }
 
     private:
-        Node *node_ptr;
-        size_t curr_index = 0;
-        // construct an Iterator at a specific position
-        Iterator(Node *p, size_t i) : node_ptr(p), curr_index(i) {}
+        Node* node_ptr;
+        size_t curr_index;
+        Iterator(Node* p, size_t i) : node_ptr(p), curr_index(i) {}
     };
 
-    // return an Iterator pointing to the first element
     Iterator begin() const { return Iterator(first, 0); }
 
-    // return an Iterator pointing to "past the end"
     Iterator end() const { return Iterator(); }
-};
 
-template <typename T>
-bool UnrolledLinkList<T>::empty() const
-{
-    return (num_groups == 0);
-}
-template <typename T>
-size_t UnrolledLinkList<T>::size() const
-{
-    return num_elements;
-}
-
-template <typename T>
-void UnrolledLinkList<T>::push_back(T &&datum)
-{
-    auto create_new_node = [](uint32_t group_size, T &&d) -> Node *
-    {
-        auto new_node = new Node;
-        new_node->num_group_elements = 1;
-        new_node->max_group_elements = group_size;
-        new_node->group = new T[group_size];
-        new_node->group[0] = std::move(d);
-        new_node->next = nullptr;
+private:
+    template<typename... Args>
+    Node* create_new_node(uint8_t group_size, Args&&... args) {
+        Node* new_node = new Node(group_size);
+        new_node->group.emplace_back(std::forward<Args>(args)...);
         return new_node;
-    };
-
-    if (empty())
-    {
-        first = last = create_new_node(START_SIZE, std::move(datum));
-        last->next = nullptr;
-        ++num_groups;
-        curr_size += START_SIZE;
     }
-    else
-    {
-        if (last->num_group_elements < last->max_group_elements)
-        {
-            last->group[last->num_group_elements++] = std::move(datum);
-        }
-        else
-        {
-            uint32_t new_size = std::min(MAX_LIMIT, std::max(START_SIZE,
-                static_cast<uint32_t>((PRE_ALLOC_FACTOR - 1) * curr_size)));
-            curr_size += new_size;
-            last->next = create_new_node(new_size, std::move(datum));
-            last = last->next;
-            last->next = nullptr;
-            ++num_groups;
-        }
-    }
-    ++num_elements;
-}
 
-template <typename T>
-void UnrolledLinkList<T>::pop_front() {
-    Node *to_delete = first;
-    first = first->next;
-    if (first == nullptr)
-    {
-        last = nullptr;
-    }
-    num_elements -= to_delete->max_group_elements
-    num_groups--;
-    delete[] to_delete->group;
-    delete to_delete;
-
-}
-
-template <typename T>
-void UnrolledLinkList<T>::clear() {
-    while(!empty())
-    {
-        pop_front();
-    }
-    curr_size = 0;
-}
-
-/*
-template <typename T>
-void UnrolledLinkList<T>::push_sentinel()
-{
-    assert(!empty());
-    auto new_node = make_cunique<Node>();
-    new_node->max_group_elements = 0;
-    new_node->num_group_elements = 0;
-    new_node->group = nullptr;
-}
-#endif
-*/
-
+    uint64_t num_elements;
+    uint64_t curr_capacity;
+    Node* first;
+    Node* last;
+};
