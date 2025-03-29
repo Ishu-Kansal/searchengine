@@ -229,8 +229,6 @@ void* add_to_index(void* addr) {
       chunks[arg->thread_id].chunk.add_word(word, false);
     }
 
-
-
   chunks[arg->thread_id].chunk.add_enddoc();
 
   sem_post(chunks[arg->thread_id].sem);
