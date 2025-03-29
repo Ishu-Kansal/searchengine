@@ -218,9 +218,17 @@ void* add_to_index(void* addr) {
   const uint16_t urlLength = arg->url.size();
   chunks[arg->thread_id].chunk.add_url(arg->url, arg->static_rank);
   for (auto& word : arg->parser.titleWords)
+  {
+    cout << word << "\n";
     chunks[arg->thread_id].chunk.add_word(word, true);
+  }
+   
   for (auto& word : arg->parser.words)
+  {
+    cout << word << "\n";
     chunks[arg->thread_id].chunk.add_word(word, false);
+  }
+
   chunks[arg->thread_id].chunk.add_enddoc();
 
   sem_post(chunks[arg->thread_id].sem);
