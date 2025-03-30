@@ -4,6 +4,8 @@
 #include <cstdio>
 #include <vector>
 
+#include "../../utils/utf_encoding.h"
+
 using PostOffset = uint64_t;
 using PostPosition = uint64_t;
 
@@ -32,9 +34,28 @@ class SeekTable {
       seek_table.emplace_back(postOffset, location);
   }
 
+  size_t size() const { return seek_table.size(); }
+
   size_t header_size() const { return sizeof(size_t); }
 
   size_t data_size() const { return sizeof(SeekEntry) * seek_table.size(); }
+
+  static uint8_t *encode_header(uint8_t *buf, const SeekTable &table) {
+    return encodeVarint(table.size(), buf, SizeOf(table.size()));
+  }
+
+  static uint8_t *encode_data(uint8_t *buf, const SeekTable &table) {
+    for (const auto &entry : table.seek_table) {
+      buf = encodeVarint(entry.postOffset, buf, SizeOf(entry.postOffset));
+      buf = encodeVarint(entry.location, buf, SizeOf(entry.location));
+    }
+    return buf;
+  }
+
+  static uint8_t *encode_table(uint8_t *buf, const SeekTable &table) {
+    buf = encode_header(buf, table);
+    return encode_data(buf, table);
+  }
 
  private:
   std::vector<SeekEntry> seek_table{};

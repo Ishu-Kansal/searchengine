@@ -404,6 +404,6 @@ int main(int argc, char** argv) {
 
   // std::cout << "Time taken: " << duration.count() << " ms" << std::endl;
   sem_close(queue_sem);
-
+  delete[] chunks;
   return 0;
 }
