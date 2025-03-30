@@ -28,8 +28,8 @@
   }
 }
 
-inline uint8_t *encodeVarint(uint64_t val, uint8_t *buf, size_t num_bytes) {
-  for (size_t i = 0; i < num_bytes - 1; ++i) {
+inline uint8_t *encodeVarint(uint64_t val, uint8_t *buf) {
+  while (val >= 128) {
     *buf++ = 0x80 | (val & 0x7F);
     val >>= 7;
   }

@@ -116,10 +116,10 @@ class IndexChunk {
 };
 
 uint8_t *encode_url_list(uint8_t *buf, const std::vector<Doc> &url_list) {
-  buf = encodeVarint(url_list.size(), buf, SizeOf(url_list.size()));
+  buf = encodeVarint(url_list.size(), buf);
   for (const auto &url : url_list) {
-    buf = encodeVarint(url.staticRank, buf, SizeOf(url.staticRank));
-    buf = encodeVarint(url.url.size(), buf, SizeOf(url.url.size()));
+    buf = encodeVarint(url.staticRank, buf);
+    buf = encodeVarint(url.url.size(), buf);
     buf = static_cast<uint8_t *>(memcpy(buf, url.url.data(), url.url.size()));
   }
   return buf;
@@ -140,11 +140,11 @@ uint8_t *encode_posting_list(uint8_t *buf, const PostingList &pl) {
   buf = SeekTable::encode_header(buf, pl.table);
   buf = SeekTable::encode_data(buf, pl.table);
   buf =
-      encodeVarint(pl.posting_list.size(), buf, SizeOf(pl.posting_list.size()));
+      encodeVarint(pl.posting_list.size(), buf);
   uint64_t prev = 0;
   for (const auto entry : pl.posting_list) {
     const uint64_t delta = entry.location - prev;
-    buf = encodeVarint(delta, buf, SizeOf(delta));
+    buf = encodeVarint(delta, buf);
     prev = entry.location;
   }
   return buf;
