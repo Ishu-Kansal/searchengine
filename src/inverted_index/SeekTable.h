@@ -9,6 +9,11 @@
 using PostOffset = uint64_t;
 using PostPosition = uint64_t;
 
+struct TableDecode {
+  const uint8_t *buf;
+  SeekTable *table;
+};
+
 struct SeekEntry {
   SeekEntry(PostOffset postOffset, PostPosition location)
       : postOffset(postOffset), location(location) {}
@@ -36,9 +41,16 @@ class SeekTable {
 
   size_t size() const { return seek_table.size(); }
 
-  size_t header_size() const { return sizeof(size_t); }
+  size_t header_size() const { return SizeOf(seek_table.size()); }
 
-  size_t data_size() const { return sizeof(SeekEntry) * seek_table.size(); }
+  size_t data_size() const {
+    size_t ans = 0;
+    for (const auto &entry : seek_table) {
+      ans += SizeOf(entry.location);
+      ans += SizeOf(entry.postOffset);
+    }
+    return ans;
+  }
 
   static uint8_t *encode_header(uint8_t *buf, const SeekTable &table) {
     return encodeVarint(table.size(), buf, SizeOf(table.size()));
@@ -55,6 +67,18 @@ class SeekTable {
   static uint8_t *encode_table(uint8_t *buf, const SeekTable &table) {
     buf = encode_header(buf, table);
     return encode_data(buf, table);
+  }
+
+  static TableDecode decode_table(const uint8_t *buf) {
+    SeekTable *table = new SeekTable{};
+    uint64_t size, pos, loc;
+    buf = decodeVarint(buf, size);
+    for (size_t i = 0; i < size; ++i) {
+      buf = decodeVarint(buf, pos);
+      buf = decodeVarint(buf, loc);
+      table->seek_table.emplace_back(pos, loc);
+    }
+    return {buf, table};
   }
 
  private:

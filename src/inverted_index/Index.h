@@ -31,12 +31,14 @@ struct Doc {
 
 class PostingList {
  public:
-  void add_post(size_t pos) {
-    table.addEntry(posting_list.size(), pos);
-    posting_list.emplace_back(Post(pos));
-  }
+  friend uint8_t *encode_posting_list(uint8_t *, const PostingList &);
 
-  [[nodiscard]] size_t header_size() const { return sizeof(size_t); }
+  void add_post(size_t pos) {
+    table.addEntry(bytes, pos);
+    posting_list.emplace_back(pos);
+    bytes += SizeOf(pos - prev);
+    prev = pos;
+  }
 
   auto begin() { return posting_list.begin(); }
 
@@ -50,8 +52,10 @@ class PostingList {
 
  private:
   // Linked list of posts
-  std::deque<Post> posting_list;
-  SeekTable table;
+  std::deque<Post> posting_list{};
+  uint64_t bytes{};
+  uint64_t prev{};
+  SeekTable table{};
 };
 
 class InvertedIndex {
@@ -110,3 +114,40 @@ class IndexChunk {
   InvertedIndex inverted_word_index;
   uint64_t pos;
 };
+
+uint8_t *encode_url_list(uint8_t *buf, const std::vector<Doc> &url_list) {
+  buf = encodeVarint(url_list.size(), buf, SizeOf(url_list.size()));
+  for (const auto &url : url_list) {
+    buf = encodeVarint(url.staticRank, buf, SizeOf(url.staticRank));
+    buf = encodeVarint(url.url.size(), buf, SizeOf(url.url.size()));
+    buf = static_cast<uint8_t *>(memcpy(buf, url.url.data(), url.url.size()));
+  }
+  return buf;
+}
+
+size_t doc_list_required_size(const std::vector<Doc> &doc_list) {
+  size_t ans = SizeOf(doc_list.size());
+  for (const auto &url : doc_list) {
+    ans += SizeOf(url.staticRank);
+    ans += SizeOf(url.url.size());
+  }
+  return ans;
+}
+
+uint8_t *encode_posting_list(uint8_t *buf, const PostingList &pl) {
+  // save byte start for header
+  // isr will load seek table into memory; seek table needs byte offsets
+  buf = SeekTable::encode_header(buf, pl.table);
+  buf = SeekTable::encode_data(buf, pl.table);
+  buf =
+      encodeVarint(pl.posting_list.size(), buf, SizeOf(pl.posting_list.size()));
+  uint64_t prev = 0;
+  for (const auto entry : pl.posting_list) {
+    const uint64_t delta = entry.location - prev;
+    buf = encodeVarint(delta, buf, SizeOf(delta));
+    prev = entry.location;
+  }
+  return buf;
+}
+
+void *encodeIndex(const IndexChunk &h) {}
