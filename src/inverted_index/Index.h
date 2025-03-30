@@ -59,7 +59,6 @@ inline const uint8_t *decodeVarint(const uint8_t *buf, uint64_t &val) {
 
 struct Post {
   uint64_t location{};
-
   Post() = default;
   Post(uint64_t pos) : location{pos} {}
 };
@@ -78,7 +77,7 @@ class PostingList {
  public:
   void add_post(size_t pos) {
     table.addEntry(posting_list.size(), pos);
-    posting_list.push_back(Post(pos));
+    posting_list.emplace_back(Post(pos));
   }
 
   [[nodiscard]] size_t header_size() const { return sizeof(size_t); }
@@ -111,7 +110,7 @@ class InvertedIndex {
     // Check if the word exists in the dictionary
     auto *tuple = dictionary.Find(word);
     // Word doesn't exist yet
-    if (!tuple) [[unlikely]] {
+    if (!tuple) {
       // create a new posting list
       lists_of_posting_lists.emplace_back();
       PostingList &list = lists_of_posting_lists.back();

@@ -225,7 +225,7 @@ void* add_to_index(void* addr) {
   for (auto& word : arg->parser.words)
 
     {
-      cout << word << '\n';
+      // cout << word << '\n';
       chunks[arg->thread_id].chunk.add_word(word, false);
     }
 
@@ -244,9 +244,9 @@ void* runner(void*) {
     std::string url = get_next_url();
 
     // Print the url that is being processed
-    std::cout << "-----------------" << '\n';
-     std::cout << url << '\n';
-     std::cout << "-----------------" << '\n';
+    // std::cout << "-----------------" << '\n';
+     // std::cout << url << '\n';
+     // std::cout << "-----------------" << '\n';
 
     // std::cout << "URL length: " << url.size() << std::endl;
     // std::cout << "Size of link vector: " << links_vector.size()

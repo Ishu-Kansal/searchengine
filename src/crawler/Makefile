@@ -6,6 +6,7 @@ LIBS = -ldl -lssl -lcrypto
 crawler: crawler2.cpp ../../HtmlParser/HtmlTags.cpp
 	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) $(LIBS) -o $@
 
+
 clean:
 	rm -rf crawler debug
 

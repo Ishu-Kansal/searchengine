@@ -69,35 +69,7 @@ struct SerialPost {
         return buffer;
     }
 };
-struct SerialEndDoc {
-    uint64_t doc_length;
-    uint64_t url_length;
-    uint64_t title_length;
-    uint64_t anchor_text_amount;
-    uint64_t unique_anchor_words;
 
-    [[nodiscard]] static size_t BytesRequired(const EndDocData &endDoc)
-    {
-        return sizeof(SerialEndDoc);
-    }
-    static char* Write(char* buffer, char* bufferEnd, const EndDocData &endDoc)
-    {
-        size_t required = BytesRequired(endDoc);
-        if (buffer + required > bufferEnd) [[unlikely]]
-        {
-            return buffer;
-        }
-        SerialEndDoc sed {
-            endDoc.doc_length,
-            endDoc.url_length,
-            endDoc.title_length,
-            endDoc.anchor_text_amount,
-            endDoc.unique_anchor_words
-        };
-        std::memcpy(buffer, &sed, sizeof(sed));
-        return buffer + sizeof(sed);
-    }
-};
 struct SeekEntry {
     PostOffset postOffset;
     PostPosition location;
@@ -290,8 +262,7 @@ class PostingListBlob {
 
     [[nodiscard]] static PostingListBlob *Create(const PostingList &postingList) {
         BlobHeader blobHeader = BytesRequired(postingList);
-        void *mem = operator new(blobHeader.BlobSize);
-        std::memset(mem, 0, blobHeader.BlobSize);
+        void *mem = std::calloc(1, blobHeader.BlobSize);
         PostingListBlob * plb = new(mem) PostingListBlob();
         plb->blobHeader = blobHeader;
         plb = Write(plb, blobHeader.BlobSize, postingList);
