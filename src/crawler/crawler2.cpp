@@ -11,6 +11,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cstring>
 #include <fstream>
@@ -59,6 +61,20 @@ uint32_t num_processed{};
 std::mt19937 mt{std::random_device{}()};
 
 uint64_t thread_ids[NUM_THREADS];
+void cleanString(std::string &s) {
+  s.erase(std::remove(s.begin(), s.end(), '\''), s.end());
+  auto start = std::find_if(s.begin(), s.end(), ::isalnum);
+    
+  if (start == s.end()) {
+      s.clear();
+      return;
+  }
+  
+  auto end = std::find_if(s.rbegin(), s.rend(), ::isalnum).base();
+  
+  s.erase(end, s.end());
+  s.erase(s.begin(), start);
+}
 
 int partition(int left, int right, int pivot_index) {
   int pivot_rank = links_vector[pivot_index].second;
@@ -220,17 +236,23 @@ void* add_to_index(void* addr) {
   
     for (auto& word : arg->parser.titleWords)
   {
+      cleanString(word);
+      if(word.empty())
+        continue;
       std::transform(word.begin(), word.end(), word.begin(),
                      [](unsigned char c) { return std::tolower(c); });
-      //std::cout << word << '\n';
+      std::cout << word << '\n';
       chunks[arg->thread_id].chunk.add_word(word, true);
   }
 
   for (auto& word : arg->parser.words)
   {
+    cleanString(word);
+    if(word.empty())
+      continue;
     std::transform(word.begin(), word.end(), word.begin(),
                   [](unsigned char c) { return std::tolower(c); });
-    //std::cout << word << '\n';
+    std::cout << word << '\n';
     chunks[arg->thread_id].chunk.add_word(word, false);
   }
 
@@ -362,7 +384,7 @@ void* runner(void*) {
 }
 
 int main(int argc, char** argv) {
-
+/*
   std::vector<std::string> seed_urls = {
       "https://en.wikipedia.org/wiki/University_of_Michigan",
       "https://www.cnn.com",
@@ -384,7 +406,9 @@ int main(int argc, char** argv) {
       "https://www.fandom.com/",
       "https://www.bing.com/"
     };
-  /*
+*/
+
+  
     std::vector<std::string> seed_urls;
   std::ifstream infile("seed_list.txt");
   if (!infile.is_open()) {
@@ -400,7 +424,7 @@ int main(int argc, char** argv) {
   }
   infile.close();
 
-  */
+  
 
   std::vector<std::string> sem_names{};
   for (int i = 0; i < NUM_CHUNKS; ++i) {
