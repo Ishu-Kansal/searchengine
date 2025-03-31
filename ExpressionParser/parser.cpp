@@ -30,14 +30,14 @@ Expression *Parser::FindFactor() {
    if (stream.Match('(')) {
       Expression *inner = FindAdd();
       if (!stream.Match(')')) {
-         delete inner;
-         return nullptr;
+          delete inner;
+          return nullptr;
       }
       if (!neg) {
          return inner;
       }
-      return new AddSub(new Number(0), num, '-');
-   }
+      return new AddSub(new Number(0), inner, '-');
+  }
    
    return nullptr;
 }
@@ -106,7 +106,12 @@ Expression *Parser::FindMultiply() {
 }
 
 Expression *Parser::Parse() {
-   return FindAdd();
+   Expression* expr = FindAdd();
+   if (!expr || !stream.AllConsumed()) {
+      delete expr;
+      return nullptr;
+   }
+   return expr;
 }
 
 Parser::Parser(const std::string &in) : stream(in) {}

@@ -7,6 +7,7 @@
  * to include in expression.h.
  */
 
+#include <stdexcept>
 #include "expression.h"
 
 Expression::~Expression() {}
@@ -35,8 +36,18 @@ MulDiv::~MulDiv() {
 }
 
 int64_t MulDiv::Eval() const {
+   int64_t leftVal = left->Eval();
+   int64_t rightVal = right->Eval();
+
    if (op == '*') {
-      return left->Eval() * right->Eval();
+      return leftVal * rightVal;
    }
-   return left->Eval() / right->Eval();
+
+   // Check for division by zero
+   if (rightVal == 0) {
+      throw std::runtime_error("Division by zero");
+   }
+
+   return leftVal / rightVal;
 }
+
