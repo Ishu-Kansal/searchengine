@@ -219,13 +219,16 @@ void* add_to_index(void* addr) {
   chunks[arg->thread_id].chunk.add_url(arg->url, arg->static_rank);
   
   for (auto& word : arg->parser.titleWords)
+  {
+    cout << word << '\n';
     chunks[arg->thread_id].chunk.add_word(word, true);
+  }
 
    
   for (auto& word : arg->parser.words)
 
     {
-      // cout << word << '\n';
+      cout << word << '\n';
       chunks[arg->thread_id].chunk.add_word(word, false);
     }
 
@@ -343,6 +346,7 @@ void* runner(void*) {
 }
 
 int main(int argc, char** argv) {
+  /*
   std::vector<std::string> seed_urls = {
       "https://en.wikipedia.org/wiki/University_of_Michigan",
       "https://www.cnn.com",
@@ -362,7 +366,23 @@ int main(int argc, char** argv) {
       "https://www.foxnews.com/",
       "https://umich.edu/",
       "https://www.fandom.com/",
-      "https://www.bing.com/"};
+      "https://www.bing.com/"
+    };
+  */
+  std::vector<std::string> seed_urls;
+  std::ifstream infile("seed_list.txt");
+  if (!infile.is_open()) {
+      std::cerr << "Failed to open seed list" << std::endl;
+      exit(EXIT_FAILURE);
+  }
+  std::string line;
+  std::uniform_int_distribution<> pushDist(1, 5); 
+  while (std::getline(infile, line)) {
+      if (!line.empty() && pushDist(mt) == 1) {
+          seed_urls.push_back(line);
+      }
+  }
+  infile.close();
 
   std::vector<std::string> sem_names{};
   for (int i = 0; i < NUM_CHUNKS; ++i) {
