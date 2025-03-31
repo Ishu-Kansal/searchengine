@@ -139,8 +139,7 @@ uint8_t *encode_posting_list(uint8_t *buf, const PostingList &pl) {
   // isr will load seek table into memory; seek table needs byte offsets
   buf = SeekTable::encode_header(buf, pl.table);
   buf = SeekTable::encode_data(buf, pl.table);
-  buf =
-      encodeVarint(pl.posting_list.size(), buf);
+  buf = encodeVarint(pl.posting_list.size(), buf);
   uint64_t prev = 0;
   for (const auto entry : pl.posting_list) {
     const uint64_t delta = entry.location - prev;
