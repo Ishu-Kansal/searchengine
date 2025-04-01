@@ -1,31 +1,24 @@
-/*
- * driver.cpp
- *
- * Driver for the expression parser program
- *
- * You do not have to modify this file, but you may choose to do so.
- *
- * If you do, note that your output is expected to match ours.
- */
-
 #include <iostream>
 
-#include "expression.h"
 #include "parser.h"
+// #include "tokenstream.h"
 
 int main( ) {
    std::string input;
-   std::getline( std::cin, input );
+   std::getline(std::cin, input);
 
-   Parser parser( input );
+   //TokenStream stream(input);
 
-   Expression *expr = parser.Parse( );
+   QueryParser parser( input );
 
-   if ( expr ) {
-      std::cout << expr->Eval( ) << "\n";
-      delete expr;
+   Constraint *c = parser.Parse();
+
+   if (c) {
+      c->Eval();
    }
    else {
-      std::cout << "Syntax error\n";
+      std::cout << "Syntax error" << std::endl;
    }
+   
+   return 0;
 }

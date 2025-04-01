@@ -1,11 +1,3 @@
-/*
- * tokenstream.h
- *
- * Declaration of a stream of tokens that you can read from.
- *
- * You do not have to modify this file, but you may choose to do so.
- */
-
 #ifndef TOKENSTREAM_H_
 #define TOKENSTREAM_H_
 
@@ -41,11 +33,10 @@ bool TokenIsRelevant( const std::string &token );
  */
 class TokenStream {
    // The input we receive, with only relevant characters left
-   std::string input;
-   // Where we currently are in the input
-   size_t location { 0 };
+   std::vector<std::string> tokens;
 
-   void SkipWhitespace();
+   // Where we currently are in the input
+   size_t location;
 
 public:
 
@@ -53,7 +44,7 @@ public:
     * Construct a token stream that uses a copy of the input
     * that contains only characters relevant to math expressions
     */
-   TokenStream( const std::string &in );
+   TokenStream( std::string &in );
 
    /**
     * Attempt to match and consume a specific character

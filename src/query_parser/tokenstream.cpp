@@ -1,88 +1,132 @@
-/*
- * tokenstream.cpp
- *
- * Implementation of tokenstream.h
- *
- * You do not have to modify this file, but you may choose to do so.
- */
-
 #include <assert.h>
 
 #include <algorithm>
 #include <string>
 #include <cctype>
-
+#include <sstream>
+#include <iostream>
 #include "tokenstream.h"
+#include "unordered_set"
 
-bool TokenIsRelevant( const std::string &token ) {
-   std::transform(token.begin(), token.end(), token.begin(), ::tolower);
-   if (token == "&" || token == "&&" || token == "|" || token == "||" || token == "(" 
-      || token == ")" || token == "and" || token == "or" || token == "not") {
-      
-      return true; // Logical operators
+TokenStream::TokenStream( std::string &query ) : location( 0 ) {
+   std::string current;
+   size_t i = 0;
+
+   const std::unordered_set<char> strippedPunctuation = {
+      {'!', ',', '.', '?', ';'}
+   };
+
+   // Strip punctuation
+   query.erase(
+      std::remove_if(
+         query.begin(), 
+         query.end(), 
+         [&strippedPunctuation](char c) {
+            return strippedPunctuation.count(c) > 0;
+         }
+      ),
+      query.end()
+   );
+
+   // // Convert to lowercase
+   // std::transform(
+   //    query.begin(), 
+   //    query.end(), 
+   //    query.begin(), 
+   //    [](unsigned char c) { 
+   //       return std::tolower(c); 
+   //    }
+   // );
+   
+   while (i < query.length()) {
+      char c = query[i];
+
+      // Handle spaces (skip consecutive spaces)
+      if (std::isspace(c)) {
+         if (!current.empty()) {
+            tokens.push_back(current);
+            current.clear();
+         }
+         ++i;
+         continue;
+      }
+
+      // Handle special tokens
+      if (c == '&' || c == '|') {
+         if (!current.empty()) {
+            tokens.push_back(current);
+            current.clear();
+         }
+         if (i + 1 < query.length() && query[i + 1] == c) {
+            tokens.push_back(std::string(2, c));  // "&&" or "||"
+            i += 2;
+         } else {
+            tokens.push_back(std::string(1, c));  // "&" or "|"
+            ++i;
+         }
+         continue;
+      }
+
+      if (c == '(' || c == ')' || c == '"' || c == '\'') {
+         if (!current.empty()) {
+            tokens.push_back(current);
+            current.clear();
+         }
+         tokens.push_back(std::string(1, c));  // Push the single character
+         ++i;
+         continue;
+      }
+
+      current += c;
+      ++i;
    }
-   return false;
+
+   // Push the last collected token if any
+   if (!current.empty()) {
+      tokens.push_back(current);
+   }
+
+   const std::unordered_set<std::string> keywords = {"AND", "OR", "NOT"};
+
+   for (std::string& word : tokens) {
+      if (keywords.find(word) == keywords.end()) {
+         std::transform(word.begin(), word.end(), word.begin(), ::tolower);
+      }
+   }
+   
+   std::cout << "\nParsed search query:" << std::endl;
+   for (std::string& token : tokens) {
+      std::cout << token << ", ";
+   }
+   std::cout << '\n' << std::endl;
 }
 
-bool TokenIsIrrelevant( const std::string &token ) {
-   return !TokenIsRelevant( token );
-}
-
-TokenStream::TokenStream( const std::string &in ) : input( in ) {
-   // Erase irrelevant chars.
-   input.erase( std::remove_if( input.begin( ), input.end( ), TokenIsIrrelevant ), input.end( ) );
-}
-
-void TokenStream::SkipWhitespace() {
-    while (location < input.size() && std::isspace(input[location])) {
-        location++;
-    }
-}
-
-bool TokenStream::Match( const std::string &in ) {
-   SkipWhitespace();
-   if (input.compare(location, in.size(), in) == 0) {
-      location += in.size();
+// Matches and consumes the next token if it equals `in`
+bool TokenStream::Match(const std::string &in) {
+   if (location < tokens.size() && tokens[location] == in) {
+      ++location;  // Move to the next token
       return true;
    }
    return false;
 }
 
+// Returns and consumes the next word
 std::string TokenStream::GetWord() {
-   SkipWhitespace();
-   std::string word;
-   
-   while (location < input.size() && (std::isalnum(input[location]) || input[location] == '_')) {
-      word += input[location++];
+   if (location < tokens.size()) {
+      return tokens[location++];
    }
-
-   return word;
+   return "";
 }
 
+// Peeks at the next token without consuming it
 std::string TokenStream::Peek() {
-   SkipWhitespace();
-   return (location < input.size()) ? std::string(1, input[location]) : "";
+   if (location < tokens.size()) {
+      return tokens[location];
+   }
+   return "";
 }
 
-bool TokenStream::AllConsumed( ) const {
-   return location == input.size( );
+// Checks if all tokens have been consumed
+bool TokenStream::AllConsumed() const {
+   return location >= tokens.size();
 }
-
-// Number *TokenStream::ParseNumber( ) {
-//    if ( location >= input.size( ) ) {
-//       return nullptr;
-//    }
-//    // Parsing is done using strtoll, rather than atoi or variants
-//    // This way, we can easily check for parsing success, since strtoll
-//    // gives us a pointer to past how many characters it has consumed
-//    char *end;
-//    int64_t val = std::strtoll( input.c_str( ) + location, &end, 10 );
-//    // Check for parse success. If we start and end at input.c_str( ) + location,
-//    // then we have not processed any characters, and have failed to find a number
-//    if ( end == input.c_str( ) + location ) {
-//       return nullptr;
-//    }
-//    // Update location to the first unparsed char
-//    location = end - input.c_str( );
-//    return new Number( val );
-// }

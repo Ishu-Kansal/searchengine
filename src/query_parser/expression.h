@@ -11,81 +11,73 @@ class ISR {
    
 };
 
-class Tuple {
-public:
-   Tuple *Next;
-   virtual bool Eval( );
-   Tuple( );
-   virtual ~Tuple( );
-
-   // virtual ISR *Compile( );
-};
-
-// class TupleList : Tuple {
-// public:
-//    Tuple *Top, *Bottom;
-//    Fvoid Empty();
-//    void Append(Tuple *t);
-
-//    TupleList();
-//    ~TupleLIst();
-// }
-
 /**
  * Base class for all query constraints
  */
-class Constraint : public Tuple {
+class Constraint {
 public:
    virtual ~Constraint();
-   virtual bool Eval() const = 0;
+   virtual std::vector<std::string> Eval() const = 0;
 
    // ISR *Compile( );
+};
+
+class SequenceConstraint : public Constraint {
+public:
+    SequenceConstraint(const std::vector<std::string>& words);
+
+    virtual ~SequenceConstraint();
+
+    std::vector<std::string> Eval() const override;
+
+private:
+    std::vector<std::string> words;
 };
 
 // AND constraint (e.g., A AND B)
 class AndConstraint : public Constraint {
 private:
-   Tuple *left;
-   Tuple *right;
+   Constraint *left;
+   Constraint *right;
 
 public:
-   AndConstraint(Tuple *l, Tuple *r);
+   AndConstraint(Constraint *l, Constraint *r);
    ~AndConstraint();
-   bool Eval() const override;
+   std::vector<std::string> Eval() const override;
 };
 
 // OR constraint (e.g., A OR B)
 class OrConstraint : public Constraint {
 private:
-   Tuple *left;
-   Tuple *right;
+   Constraint *left;
+   Constraint *right;
 
 public:
-   OrConstraint(Tuple *l, Tuple *r);
+   OrConstraint(Constraint *l, Constraint *r);
    ~OrConstraint();
-   bool Eval() const override;
+   std::vector<std::string> Eval() const override;
 };
 
 // NOT constraint (e.g., NOT A)
 class NotConstraint : public Constraint {
 private:
-   Tuple *expr;
+   Constraint *expr;
 
 public:
-   NotConstraint(Tuple *e);
+   NotConstraint(Constraint *e);
    ~NotConstraint();
-   bool Eval() const override;
+   std::vector<std::string> Eval() const override;
 };
 
 // Required constraint (e.g., +A)
 class RequiredConstraint : public Constraint {
 private:
-   Tuple *expr;
+   Constraint *expr;
 
 public:
-   RequiredConstraint(Tuple *e);
+   RequiredConstraint(Constraint *e);
    ~RequiredConstraint();
-   bool Eval() const override;
+   std::vector<std::string> Eval() const override;
 };
 
 // Phrase constraint (e.g., "search engine")
@@ -96,7 +88,7 @@ private:
 public:
    PhraseConstraint(const std::vector<std::string> &w);
    ~PhraseConstraint();
-   bool Eval() const override;
+   std::vector<std::string> Eval() const override;
 };
 
 // Search word constraint (e.g., individual words)
@@ -107,7 +99,7 @@ private:
 public:
    SearchWordConstraint(const std::string &w);
    ~SearchWordConstraint();
-   bool Eval() const override;
+   std::vector<std::string> Eval() const override;
 };
 
 #endif /* EXPRESSION_H_ */

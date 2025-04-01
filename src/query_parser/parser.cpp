@@ -3,8 +3,9 @@
 #include <cctype>
 #include <iostream>
 #include <sstream>
+#include <unordered_set>
 
-QueryParser::QueryParser(const std::string &query) : stream(query) {}
+QueryParser::QueryParser(std::string &query) : stream(query) {}
 
 // Find the next token from the input stream
 std::string QueryParser::FindNextToken() {
@@ -12,12 +13,14 @@ std::string QueryParser::FindNextToken() {
 }
 
 // Parses a full query constraint (handles OR expressions)
-Tuple *QueryParser::FindConstraint() {
-   Tuple *left = FindBaseConstraint();
-   if (!left) return nullptr;
+Constraint *QueryParser::FindConstraint() {
+   Constraint *left = FindBaseConstraint();
+   if (!left) {
+      return nullptr;
+   }
 
    while (FindOrOp()) {
-      Tuple *right = FindBaseConstraint();
+      Constraint *right = FindBaseConstraint();
       if (!right) {
          delete left;
          return nullptr;
@@ -33,16 +36,15 @@ bool QueryParser::FindOrOp() {
 }
 
 // Parses a base constraint (handles AND expressions)
-Tuple *QueryParser::FindBaseConstraint() {
-   Tuple *left = FindSimpleConstraint();
+Constraint *QueryParser::FindBaseConstraint() {
+   Constraint *left = FindSimpleConstraint();
+
    if (!left) {
       return nullptr;
    }
 
-   while (true) {
-      if (!FindAndOp()) break;
-
-      Tuple *right = FindSimpleConstraint();
+   while (FindAndOp()) {
+      Constraint *right = FindSimpleConstraint();
       if (!right) {
          delete left;
          return nullptr;
@@ -58,62 +60,72 @@ bool QueryParser::FindAndOp() {
 }
 
 // Parses a simple constraint: phrase, nested constraint, unary operators, or a search word
-Tuple *QueryParser::FindSimpleConstraint() {
+Constraint* QueryParser::FindSimpleConstraint() {
    if (stream.Match("NOT") || stream.Match("-")) {
-      Tuple *constraint = FindSimpleConstraint();
-      if (constraint) {
-         return new NotConstraint(constraint);
-      }
-      return nullptr;
+      Constraint* constraint = FindSimpleConstraint();
+      return constraint ? new NotConstraint(constraint) : nullptr;
    }
-   else if (stream.Match("+")) {
-      Tuple *constraint = FindSimpleConstraint();
-      if (constraint) {
-         return new RequiredConstraint(constraint);
-      }
-      return nullptr;
-   }
-   else if (stream.Peek() == std::string("'")) {
+   else if (stream.Peek() == "'" || stream.Peek() == "\"") {
       return FindPhrase();
-   }
+   } 
    else if (stream.Peek() == "(") {
       return FindNestedConstraint();
+   } 
+    
+   std::vector<std::string> words;
+   std::unordered_set<std::string> not_words = {"OR", "|", "||", "AND", "&", "&&", "NOT", "-", "\"", "("};
+   while (stream.Peek() != "" && !not_words.count(stream.Peek())) {
+      std::string word = stream.GetWord();
+      if (word.empty()) break;
+      words.push_back(word);
    }
-   else {
-      return FindSearchWord();
-   }
+
+   return new SequenceConstraint(words);
 }
 
-// Parses a quoted phrase (e.g., `"search engine"`)
-Tuple *QueryParser::FindPhrase() {
-    if (!stream.Match("\"")) return nullptr;
-    
-    std::vector<std::string> words;
-    while (!stream.Match("\"")) {
-        std::string word = stream.GetWord();
-        if (word.empty()) return nullptr;
-        words.push_back(word);
-    }
-    return new PhraseConstraint(words);
+// Parses a quoted phrase (e.g., `"search engine"` or `'example phrase'`)
+Constraint *QueryParser::FindPhrase() {
+   std::string quoteChar = stream.GetWord();
+   if (quoteChar != "\"" && quoteChar != "'") {
+      return nullptr;
+   } 
+
+   std::vector<std::string> words;
+   while (!stream.Match(quoteChar)) {
+      std::string word = stream.GetWord();
+      if (word.empty()) {
+         return nullptr;
+      }
+      words.push_back(word);
+   }
+   return new PhraseConstraint(words);
 }
 
 // Parses a nested constraint inside parentheses
-Tuple *QueryParser::FindNestedConstraint() {
-    if (!stream.Match("(")) return nullptr;
+Constraint *QueryParser::FindNestedConstraint() {
+   if (!stream.Match("(")) return nullptr;
 
-    Tuple *constraint = FindConstraint();
-    if (!constraint || !stream.Match(")")) {
-        delete constraint;
-        return nullptr;
-    }
-    return constraint;
+   Constraint *constraint = FindConstraint();
+   if (!constraint || !stream.Match(")")) {
+      delete constraint;
+      return nullptr;
+   }
+   return constraint;
 }
 
 // Parses an individual search word
-Tuple *QueryParser::FindSearchWord() {
-   std::string word = stream.GetWord();
-   if (word.empty()) {
-   return nullptr;
-   }
-   return new SearchWordConstraint(word);
+// Constraint *QueryParser::FindSearchWord() {
+//    std::string word = stream.GetWord();
+//    std::cout << "find search word" << std::endl;
+//    if (word.empty()) {
+//       std::cout << "Returning nullptr" << std::endl;
+//       return nullptr;
+//    }
+//    std::cout << "Returning search word" << std::endl;
+//    return new SearchWordConstraint(word);
+// }
+
+// Main parse function
+Constraint *QueryParser::Parse() {
+   return FindConstraint();
 }

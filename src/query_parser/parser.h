@@ -10,17 +10,19 @@ private:
    TokenStream stream;
 
 public:
-   explicit QueryParser(const std::string &query);
+   explicit QueryParser(std::string &query);
+
+   Constraint *Parse();
 
    std::string FindNextToken();
-   Tuple *FindConstraint();
+   Constraint *FindConstraint();
    bool FindOrOp();
-   Tuple *FindBaseConstraint();
+   Constraint *FindBaseConstraint();
    bool FindAndOp();
-   Tuple *FindSimpleConstraint();
-   Tuple *FindPhrase();
-   Tuple *FindNestedConstraint();
-   Tuple *FindSearchWord();
+   Constraint *FindSimpleConstraint();
+   Constraint *FindPhrase();
+   Constraint *FindNestedConstraint();
+   Constraint *FindSearchWord();
 };
 
 #endif // PARSER_H_
