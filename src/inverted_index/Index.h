@@ -89,7 +89,10 @@ class InvertedIndex {
     }
   }
 
- private:
+  const std::vector<PostingList> & get_posting_lists() const {
+    return lists_of_posting_lists;
+  }
+  private:
   HashTable<const std::string, size_t> dictionary;
   std::vector<PostingList> lists_of_posting_lists;
 };
@@ -108,7 +111,12 @@ class IndexChunk {
     inverted_word_index.add_word(word, pos, in_title);
     ++pos;
   }
-
+  const std::vector<Doc>& get_docs() const {
+    return url_list;
+  }
+  const std::vector<PostingList> & get_posting_lists() const {
+    return InvertedIndex::get_posting_lists();
+  }
  private:
   std::vector<Doc> url_list;
   InvertedIndex inverted_word_index;
@@ -149,4 +157,6 @@ uint8_t *encode_posting_list(uint8_t *buf, const PostingList &pl) {
   return buf;
 }
 
-void *encodeIndex(const IndexChunk &h) {}
+void *encodeIndex(const IndexChunk &h) {
+
+}
