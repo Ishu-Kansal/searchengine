@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <cassert>
 #include <iostream>
 #include <memory>
 
