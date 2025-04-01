@@ -37,6 +37,12 @@ struct ChunkBlock {
   pthread_mutex_t lock;
   sem_t* sem;
 };
+// Get error when i try to use cstring_view
+static constexpr std::string_view APOS_ENTITY= "&#039;";
+static constexpr std::string_view UNWANTED_NBSP = "&nbsp";
+static constexpr std::string_view UNWANTED_LRM  = "&lrm";
+static constexpr std::string_view UNWANTED_RLM  = "&rlm";
+static constexpr size_t MAX_WORD_LENGTH = 50;
 
 constexpr uint32_t MAX_PROCESSED = 10000;
 constexpr uint32_t MAX_VECTOR_SIZE = 20000;
@@ -61,8 +67,43 @@ uint32_t num_processed{};
 std::mt19937 mt{std::random_device{}()};
 
 uint64_t thread_ids[NUM_THREADS];
+
+bool isEnglish(const std::string &s) {
+  for (const auto &ch : s) {
+      if (static_cast<unsigned char>(ch) > 127) {
+          return false;
+      }
+  }
+  return true;
+}
 void cleanString(std::string &s) {
+  // Gets rid of &#039;
+  size_t pos = 0;
+  while ((pos = s.find(APOS_ENTITY, pos)) != std::string::npos) {
+      s.erase(pos, APOS_ENTITY.length());
+  }
+  if (s.size() > MAX_WORD_LENGTH)
+  {
+    s.clear();
+    return;
+  }
+  // Gets rid of strings containing HTML entities
+  if (s.find(UNWANTED_NBSP) != std::string::npos ||
+  s.find(UNWANTED_LRM) != std::string::npos ||
+  s.find(UNWANTED_RLM) != std::string::npos)
+  {
+    s.clear();
+    return;
+  }
+  // Gets rid of non english words
+  if (!isEnglish(s)) {
+    s.clear();
+    return;
+  }
+  // Gets rid of '
   s.erase(std::remove(s.begin(), s.end(), '\''), s.end());
+
+  // Get rid of start and end non punctuation
   auto start = std::find_if(s.begin(), s.end(), ::isalnum);
     
   if (start == s.end()) {
@@ -74,6 +115,24 @@ void cleanString(std::string &s) {
   
   s.erase(end, s.end());
   s.erase(s.begin(), start);
+}
+std::vector<std::string> splitHyphenWords(const std::string &word) {
+  std::vector<std::string> parts;
+  if (word.find('-') != std::string::npos) {
+      size_t start = 0, end = 0;
+      while ((end = word.find('-', start)) != std::string::npos) {
+          std::string token = word.substr(start, end - start);
+          if (!token.empty())
+              parts.push_back(token);
+          start = end + 1;
+      }
+      std::string token = word.substr(start);
+      if (!token.empty())
+          parts.push_back(token);
+  } else {
+      parts.push_back(word);
+  }
+  return parts;
 }
 
 int partition(int left, int right, int pivot_index) {
@@ -239,10 +298,15 @@ void* add_to_index(void* addr) {
       cleanString(word);
       if(word.empty())
         continue;
-      std::transform(word.begin(), word.end(), word.begin(),
-                     [](unsigned char c) { return std::tolower(c); });
-      std::cout << word << '\n';
-      chunks[arg->thread_id].chunk.add_word(word, true);
+      auto parts = splitHyphenWords(word);
+      for (auto &part : parts)
+      {
+        std::transform(part.begin(), part.end(), part.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+        std::cout << part << '\n';
+        chunks[arg->thread_id].chunk.add_word(part, true);
+      }
+      
   }
 
   for (auto& word : arg->parser.words)
@@ -250,10 +314,14 @@ void* add_to_index(void* addr) {
     cleanString(word);
     if(word.empty())
       continue;
-    std::transform(word.begin(), word.end(), word.begin(),
-                  [](unsigned char c) { return std::tolower(c); });
-    std::cout << word << '\n';
-    chunks[arg->thread_id].chunk.add_word(word, false);
+      auto parts = splitHyphenWords(word);
+      for (auto &part : parts)
+      {
+        std::transform(part.begin(), part.end(), part.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+        std::cout << part << '\n';
+        chunks[arg->thread_id].chunk.add_word(part, false);
+      }
   }
 
  /*
