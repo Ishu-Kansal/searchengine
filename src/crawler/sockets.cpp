@@ -8,8 +8,7 @@
 #include <unistd.h>
 
 #include <iostream>
-
-static constexpr char* HTTP_HEADER = 
+static constexpr std::string_view HTTP_HEADER = 
     "\r\n"
     "User-Agent: SonOfAnton/1.0 404FoundEngine@umich.edu (Linux)\r\n"
     "Accept: */*\r\n"
@@ -216,7 +215,8 @@ int getHTML(std::string url_in, std::string &output) {
         "GET /" + std::string(url.Path) +
         " HTTP/1.1\r\n"
         "Host: " +
-        std::string(url.Host) + HTTP_HEADER;
+        std::string(url.Host);
+        req.append(HTTP_HEADER);
 
     int status = runSocket(req, url_in, output);
     // // std::cout << status << std::endl;
@@ -229,7 +229,8 @@ int getHTML(std::string url_in, std::string &output) {
             "GET /" + std::string(newURL.Path) +
             " HTTP/1.1\r\n"
             "Host: " +
-            std::string(newURL.Host) + HTTP_HEADER;
+            std::string(newURL.Host);
+            req2.append(HTTP_HEADER);
         std::string newishURL = output;
         output = "";
         status = runSocket(req2, newishURL, output);
