@@ -169,7 +169,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   // Read and process the response
   // char buffer[32768]{};
   const static size_t BUFFER_SIZE = 16384;
-  char *buffer = new char[BUFFER_SIZE]{};
+  char *buffer = new char[BUFFER_SIZE];
   std::unique_ptr<char[]> buf(buffer);
 
   int bytes = 0;
