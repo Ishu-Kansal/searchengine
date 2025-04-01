@@ -38,7 +38,10 @@ struct ChunkBlock {
   sem_t* sem;
 };
 // Get error when i try to use cstring_view
-static constexpr std::string_view APOS_ENTITY= "&#039;";
+static constexpr std::string_view APOS_ENTITY = "&#039;";
+static constexpr std::string_view APOS_ENTITY2 = "&apos;";
+static constexpr std::string_view HTML_ENTITY = "&#";
+
 static constexpr std::string_view UNWANTED_NBSP = "&nbsp";
 static constexpr std::string_view UNWANTED_LRM  = "&lrm";
 static constexpr std::string_view UNWANTED_RLM  = "&rlm";
@@ -77,20 +80,21 @@ bool isEnglish(const std::string &s) {
   return true;
 }
 void cleanString(std::string &s) {
-  // Gets rid of &#039;
-  size_t pos = 0;
-  while ((pos = s.find(APOS_ENTITY, pos)) != std::string::npos) {
-      s.erase(pos, APOS_ENTITY.length());
-  }
+    // Gets rid of both &#039; and &apos;
+    size_t pos = 0;
+    while ((pos = s.find(APOS_ENTITY, pos)) != std::string::npos || 
+           (pos = s.find(APOS_ENTITY2, pos)) != std::string::npos) {
+        s.erase(pos, (pos == s.find(APOS_ENTITY, pos)) ? APOS_ENTITY.length() : APOS_ENTITY2.length());
+    }
   if (s.size() > MAX_WORD_LENGTH)
   {
     s.clear();
     return;
   }
   // Gets rid of strings containing HTML entities
-  if (s.find(UNWANTED_NBSP) != std::string::npos ||
+  if (s.find(HTML_ENTITY) != std::string::npos || s.find(UNWANTED_NBSP) != std::string::npos ||
   s.find(UNWANTED_LRM) != std::string::npos ||
-  s.find(UNWANTED_RLM) != std::string::npos)
+  s.find(UNWANTED_RLM) != std::string::npos) 
   {
     s.clear();
     return;
