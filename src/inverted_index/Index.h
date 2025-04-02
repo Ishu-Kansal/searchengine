@@ -115,7 +115,7 @@ class IndexChunk {
     return url_list;
   }
   const std::vector<PostingList> & get_posting_lists() const {
-    return InvertedIndex::get_posting_lists();
+    return inverted_word_index.get_posting_lists();
   }
  private:
   std::vector<Doc> url_list;

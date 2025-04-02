@@ -63,13 +63,6 @@ class IndexFile {
         serializePostingLists(dataBuffer, listOfPostingList);
         
     }
-    int fileDescrip;
-    size_t FileSize(int f)
-    {
-        struct stat fileInfo;
-        fstat(f, &fileInfo);
-        return fileInfo.st_size;
-    }
     public:
     IndexFile(const char* filename, const IndexChunk &indexChunk)
     {
@@ -84,6 +77,8 @@ class IndexFile {
         // Every insert is at the end of the dataBuffer, 
         // so should be amortized constant time
         std::vector<uint8_t> dataBuffer;
+        // This is only for if we have more than one index chunk for each machine
+        dataBuffer.reserve(1000000000UL); // Gigabyte worth of bytes
         serializeChunk(indexChunk, dataBuffer);
 
         ssize_t bytesWritten = write(fileDescrip, dataBuffer.data(), dataBuffer.size());
@@ -106,4 +101,12 @@ class IndexFile {
             close(fileDescrip);
         }
     }
+    private:
+        int fileDescrip;
+        size_t FileSize(int f)
+        {
+            struct stat fileInfo;
+            fstat(f, &fileInfo);
+            return fileInfo.st_size;
+        }
 };
