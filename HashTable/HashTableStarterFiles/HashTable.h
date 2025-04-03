@@ -195,6 +195,16 @@ public:
     return nullptr;
   }
 
+  bool Update(const Key &k, const Value newValue)
+  {
+    Tuple<Key, Value> *entry = Find(k);
+    if (!entry)
+    {
+      return false;
+    }
+    entry->value = newValue;
+    return true;
+  }
   void Optimize(double loading = 1.5)
   {
     // Modify or rebuild the hash table as you see fit

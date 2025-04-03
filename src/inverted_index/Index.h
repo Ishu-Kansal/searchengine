@@ -39,7 +39,10 @@ class PostingList {
     bytes += SizeOf(pos - prev);
     prev = pos;
   }
-
+  void add_word(std::string & word_)
+  {
+    word = std::move(word_);
+  }
   auto begin() { return posting_list.begin(); }
 
   auto end() { return posting_list.end(); }
@@ -50,9 +53,14 @@ class PostingList {
 
   [[nodiscard]] size_t size() const { return posting_list.size(); }
 
+  [[nodiscard]] const std::string & get_word() const {
+    return word;
+  }
+
  private:
   // Linked list of posts
   std::deque<Post> posting_list{};
+  std::string word;
   uint64_t bytes{};
   uint64_t prev{};
   SeekTable table{};
@@ -77,7 +85,7 @@ class InvertedIndex {
 
       // Add the post to the posting list
       list.add_post(pos);
-
+      list.add_word(word);
       dictionary.Find(word.data(), lists_of_posting_lists.size() - 1);
     } else {
       // Word exists
@@ -89,8 +97,11 @@ class InvertedIndex {
     }
   }
 
-  const std::vector<PostingList> & get_posting_lists() const {
+  [[nodiscard]] const std::vector<PostingList> & get_posting_lists() const {
     return lists_of_posting_lists;
+  }
+  [[nodiscard]] HashTable<const std::string, size_t> & get_dictionary() {
+    return dictionary;
   }
   private:
   HashTable<const std::string, size_t> dictionary;
@@ -111,11 +122,14 @@ class IndexChunk {
     inverted_word_index.add_word(word, pos, in_title);
     ++pos;
   }
-  const std::vector<Doc>& get_docs() const {
+  [[nodiscard]] const std::vector<Doc>& get_urls() const {
     return url_list;
   }
-  const std::vector<PostingList> & get_posting_lists() const {
+  [[nodiscard]] const std::vector<PostingList> & get_posting_lists() const {
     return inverted_word_index.get_posting_lists();
+  }
+  [[nodiscard]] HashTable<const std::string, size_t> & get_dictionary() {
+    return inverted_word_index.get_dictionary();
   }
  private:
   std::vector<Doc> url_list;
