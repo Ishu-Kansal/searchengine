@@ -17,7 +17,7 @@ int main( ) {
       c->Eval();
    }
    else {
-      std::cout << "Syntax error" << std::endl;
+      std::cout << "Invalid Query" << std::endl;
    }
    
    return 0;

@@ -68,12 +68,18 @@ Constraint* QueryParser::FindSimpleConstraint() {
    else if (stream.Peek() == "'" || stream.Peek() == "\"") {
       return FindPhrase();
    } 
-   else if (stream.Peek() == "(") {
-      return FindNestedConstraint();
-   } 
+   else if (stream.Match("(")) {
+      Constraint* constraint = FindConstraint(); // recurse
+      if (!constraint || !stream.Match(")")) {
+         delete constraint;
+         return nullptr;
+      }
+      return constraint;
+   }
+    
     
    std::vector<std::string> words;
-   std::unordered_set<std::string> not_words = {"OR", "|", "||", "AND", "&", "&&", "NOT", "-", "\"", "("};
+   std::unordered_set<std::string> not_words = {"OR", "|", "||", "AND", "&", "&&", "-", "\"", "(", ")"};
    while (stream.Peek() != "" && !not_words.count(stream.Peek())) {
       std::string word = stream.GetWord();
       if (word.empty()) break;
