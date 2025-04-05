@@ -480,7 +480,7 @@ int main(int argc, char** argv) {
       exit(EXIT_FAILURE);
   }
   std::string line;
-  std::uniform_int_distribution<> pushDist(1, 5); 
+  std::uniform_int_distribution<> pushDist(1, 25); 
   while (std::getline(infile, line)) {
       if (!line.empty() && pushDist(mt) == 1) {
           seed_urls.push_back(line);
