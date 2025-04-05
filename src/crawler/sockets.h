@@ -13,7 +13,7 @@
 #include <memory>
 
 #include "../../utils/cunique_ptr.h"
-
+#include "robotParser.h"
 class ParsedUrl {
  public:
   const char *CompleteUrl;
@@ -241,48 +241,54 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   SSL_free(ssl);
   SSL_CTX_free(ctx);
   close(socketFD);
-
+  if (code == 404)
+  {
+    return 404;
+  }
   return 0;
 }
 
 int getHTML(std::string url_in, std::string &output) {
   ParsedUrl url(url_in.data());
+  static RobotParser bot;
+  int robotStatus = bot.handleRobotFile(url, url_in);
+  if (robotStatus == 0)
+  {
+    // Send the GET request
+    std::string req =
+    "GET /" + std::string(url.Path) +
+    " HTTP/1.1\r\n"
+    "Host: " +
+    std::string(url.Host) +
+    "\r\n"
+    "User-Agent: SonOfAnton/1.0 404FoundEngine@umich.edu (Linux)\r\n"
+    "Accept: */*\r\n"
+    "Accept-Encoding: identity\r\n"
+    "Connection: close\r\n\r\n";
 
-  // Send the GET request
-  std::string req =
-      "GET /" + std::string(url.Path) +
+    int status = runSocket(req, url_in, output);
+    // std::cout << status << std::endl;
+
+    // std::cout << "output:\n" << output << std::endl;
+
+    if (status == 301) {
+    ParsedUrl newURL(output.data());
+    std::string req2 =
+      "GET /" + std::string(newURL.Path) +
       " HTTP/1.1\r\n"
       "Host: " +
-      std::string(url.Host) +
+      std::string(newURL.Host) +
       "\r\n"
       "User-Agent: SonOfAnton/1.0 404FoundEngine@umich.edu (Linux)\r\n"
       "Accept: */*\r\n"
       "Accept-Encoding: identity\r\n"
       "Connection: close\r\n\r\n";
-
-  int status = runSocket(req, url_in, output);
-  // std::cout << status << std::endl;
-
-  // std::cout << "output:\n" << output << std::endl;
-
-  if (status == 301) {
-    ParsedUrl newURL(output.data());
-    std::string req2 =
-        "GET /" + std::string(newURL.Path) +
-        " HTTP/1.1\r\n"
-        "Host: " +
-        std::string(newURL.Host) +
-        "\r\n"
-        "User-Agent: SonOfAnton/1.0 404FoundEngine@umich.edu (Linux)\r\n"
-        "Accept: */*\r\n"
-        "Accept-Encoding: identity\r\n"
-        "Connection: close\r\n\r\n";
     std::string newishURL = output;
     output = "";
     status = runSocket(req2, newishURL, output);
 
     // std::cout << "redirected output:\n" << output << std::endl;
+    return status;
+    }
   }
-
-  return status;
 }

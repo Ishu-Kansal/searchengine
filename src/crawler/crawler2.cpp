@@ -448,32 +448,10 @@ void* runner(void*) {
 }
 
 int main(int argc, char** argv) {
-/*
-  std::vector<std::string> seed_urls = {
-      "https://en.wikipedia.org/wiki/University_of_Michigan",
-      "https://www.cnn.com",
-      "https://www.reddit.com/",
-      "https://cse.engin.umich.edu/",
-      "https://stackoverflow.com/questions",
-      "https://www.usa.gov/",
-      "https://www.investopedia.com/",
-      "https://www.nationalgeographic.com/",
-      "https://www.nytimes.com/",
-      "https://www.espn.com/",
-      "https://weather.com/",
-      "https://www.npr.org/",
-      "https://www.apnews.com/",
-      "https://www.tripadvisor.com/",
-      "https://www.dictionary.com/",
-      "https://www.foxnews.com/",
-      "https://umich.edu/",
-      "https://www.fandom.com/",
-      "https://www.bing.com/"
-    };
-*/
 
-  
-    std::vector<std::string> seed_urls;
+  // Randomizes what seed urls get crawled  
+  std::vector<std::string> seed_urls;
+  seed_urls.reserve(100);
   std::ifstream infile("seed_list.txt");
   if (!infile.is_open()) {
       std::cerr << "Failed to open seed list" << std::endl;
@@ -487,9 +465,7 @@ int main(int argc, char** argv) {
       }
   }
   infile.close();
-
   
-
   std::vector<std::string> sem_names{};
   for (int i = 0; i < NUM_CHUNKS; ++i) {
     sem_names.push_back("./sem_" + std::to_string(i));
