@@ -86,6 +86,7 @@ class HtmlParser {
   std::vector<Link> links;
   std::string base;
   int img_count;
+  bool isEnglish = false;
 
  private:
   // Your code here.
@@ -104,10 +105,6 @@ class HtmlParser {
       if (buffer[index] == '>') {
         return index + 1;
       }
-      // if (strncmp(buffer + index, "href", 4) == 0)
-      // {
-      //    break;
-      // }
       index++;
     }
 
@@ -117,11 +114,6 @@ class HtmlParser {
       if (buffer[index] == '>') {
         return index + 1;
       }
-      // if (buffer[index] == '"' || buffer[index] == '\'')
-      // {
-      //    url_start = ++index;
-      //    break;
-      // }
       index++;
     }
     char quote_type = buffer[index];
@@ -130,11 +122,6 @@ class HtmlParser {
     // move past the next end quote
     size_t url_end;
     while (index < length && buffer[index] != quote_type) {
-      // if (buffer[index] == '"' || buffer[index] == '\'')
-      // {
-      //    url_end = index;
-      //    break;
-      // }
       index++;
     }
     url_end = index;
@@ -148,11 +135,6 @@ class HtmlParser {
 
     // move past the next >
     while (buffer[index] != '>') {
-      // if (buffer[index] == '>')
-      // {
-      //    index++;
-      //    break;
-      // }
       index++;
     }
     index++;
@@ -166,7 +148,7 @@ class HtmlParser {
           if (!in_title) {
             words.push_back(word);
           }
-          links[link_idx].anchorText.push_back(word);
+          // links[link_idx].anchorText.push_back(word);
         }
         index += 4;
         break;
@@ -179,7 +161,7 @@ class HtmlParser {
           if (!in_title) {
             words.push_back(word);
           }
-          links[link_idx].anchorText.push_back(word);
+          // links[link_idx].anchorText.push_back(word);
         }
         index += 6;
         break;
@@ -198,12 +180,6 @@ class HtmlParser {
         else if (strncmp(buffer + index, "<img", 4) == 0) {
           img_count += 1;
           while (index < length && buffer[index] != '>') {
-            // This code does not ensure that </tag> is outside of any quotes
-            // if (buffer[index] == '>')
-            // {
-            //    index++;
-            //    break;
-            // }
             index++;
           }
           index++;
@@ -280,7 +256,7 @@ class HtmlParser {
               if (!in_title) {
                 words.push_back(word);
               }
-              links[link_idx].anchorText.push_back(word);
+              // links[link_idx].anchorText.push_back(word);
               word = "";
             }
             inside_bracket = true;
@@ -301,7 +277,7 @@ class HtmlParser {
             if (!in_title) {
               words.push_back(word);
             }
-            links[link_idx].anchorText.push_back(word);
+            // links[link_idx].anchorText.push_back(word);
             word = "";
           }
         } else {
@@ -494,11 +470,6 @@ class HtmlParser {
                 }
               }
               // This code does not ensure that </tag> is outside of any quotes
-              // if (buffer[index] == '>')
-              // {
-              //    index++;
-              //    break;
-              // }
               index++;
             }
             index++;
@@ -635,11 +606,6 @@ class HtmlParser {
             img_count += 1;
             while (index < length && buffer[index] != '>') {
               // This code does not ensure that </tag> is outside of any quotes
-              // if (buffer[index] == '>')
-              // {
-              //    index++;
-              //    break;
-              // }
               index++;
             }
             index++;
@@ -659,6 +625,40 @@ class HtmlParser {
               index++;
             }
             break;
+
+          case DesiredAction::Html:
+          {
+            std::string lang;
+            size_t pos = index;
+            while (pos < length && buffer[pos] != '>') {
+                if (strncmp(buffer + pos, "lang", 4) == 0) {
+                    pos += 4;
+                    while (pos < length && (buffer[pos] == ' ' || buffer[pos] == '=')) {
+                        pos++;
+                    }
+                    if (pos < length && (buffer[pos] == '"' || buffer[pos] == '\'')) {
+                        char quote = buffer[pos];
+                        pos++;
+                        size_t start = pos;
+                        while (pos < length && buffer[pos] != quote) {
+                            pos++;
+                        }
+                        lang = std::string(buffer + start, pos - start);
+                        break;
+                    }
+                }
+                pos++;
+            }
+            if (lang.size() >= 2) {
+                isEnglish = (lang.substr(0, 2) == "en");
+            }
+            while (index < length && buffer[index] != '>') {
+                index++;
+            }
+            index++;
+            break;
+        }
+            
         }
 
       } else {

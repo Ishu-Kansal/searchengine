@@ -100,10 +100,13 @@ void cleanString(std::string &s) {
     return;
   }
   // Gets rid of non english words
-  if (!isEnglish(s)) {
+  /*
+    if (!isEnglish(s)) {
     s.clear();
     return;
   }
+  */
+
   // Gets rid of '
   s.erase(std::remove(s.begin(), s.end(), '\''), s.end());
 
@@ -120,6 +123,7 @@ void cleanString(std::string &s) {
   s.erase(end, s.end());
   s.erase(s.begin(), start);
 }
+
 std::vector<std::string> splitHyphenWords(const std::string &word) {
   std::vector<std::string> parts;
   if (word.find('-') != std::string::npos) {
@@ -294,56 +298,44 @@ void* add_to_index(void* addr) {
   Args* arg = reinterpret_cast<Args*>(addr);
 
   pthread_lock_guard{chunks[arg->thread_id].lock};
-  const uint16_t urlLength = arg->url.size();
-  chunks[arg->thread_id].chunk.add_url(arg->url, arg->static_rank);
-  
-    for (auto& word : arg->parser.titleWords)
+  if (arg->parser.isEnglish)
   {
+    const uint16_t urlLength = arg->url.size();
+    chunks[arg->thread_id].chunk.add_url(arg->url, arg->static_rank);
+    
+      for (auto& word : arg->parser.titleWords)
+    {
+        cleanString(word);
+        if(word.empty())
+          continue;
+        auto parts = splitHyphenWords(word);
+        for (auto &part : parts)
+        {
+          std::transform(part.begin(), part.end(), part.begin(),
+          [](unsigned char c) { return std::tolower(c); });
+          std::cout << part << '\n';
+          chunks[arg->thread_id].chunk.add_word(part, true);
+        }
+        
+    }
+  
+    for (auto& word : arg->parser.words)
+    {
       cleanString(word);
       if(word.empty())
         continue;
-      auto parts = splitHyphenWords(word);
-      for (auto &part : parts)
-      {
-        std::transform(part.begin(), part.end(), part.begin(),
-        [](unsigned char c) { return std::tolower(c); });
-        std::cout << part << '\n';
-        chunks[arg->thread_id].chunk.add_word(part, true);
-      }
-      
-  }
-
-  for (auto& word : arg->parser.words)
-  {
-    cleanString(word);
-    if(word.empty())
-      continue;
-      auto parts = splitHyphenWords(word);
-      for (auto &part : parts)
-      {
-        std::transform(part.begin(), part.end(), part.begin(),
-        [](unsigned char c) { return std::tolower(c); });
-        std::cout << part << '\n';
-        chunks[arg->thread_id].chunk.add_word(part, false);
-      }
-  }
-
- /*
-  for (auto& word : arg->parser.titleWords)
-  {
-    //cout << word << '\n';
-    chunks[arg->thread_id].chunk.add_word(word, true);
-  }
-
-   
-  for (auto& word : arg->parser.words)
-    {
-      //cout << word << '\n';
-      chunks[arg->thread_id].chunk.add_word(word, false);
+        auto parts = splitHyphenWords(word);
+        for (auto &part : parts)
+        {
+          std::transform(part.begin(), part.end(), part.begin(),
+          [](unsigned char c) { return std::tolower(c); });
+          std::cout << part << '\n';
+          chunks[arg->thread_id].chunk.add_word(part, false);
+        }
     }
-    */
-  chunks[arg->thread_id].chunk.add_enddoc();
-
+  
+    chunks[arg->thread_id].chunk.add_enddoc();  
+  }
   sem_post(chunks[arg->thread_id].sem);
   delete arg;
   return NULL;
