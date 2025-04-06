@@ -30,7 +30,6 @@ enum Requirements: int {
     TOPSPANSIZE = 0
 };
 
-
 // given all of the occurences assigns the weights and returns the actual dynamic rank
 // ***RME CLAUSE***
 // Requires: The number of short spans, ordered spans, phrase matches, top spans, and the type of section this is being scored on
@@ -80,14 +79,16 @@ int get_dynamic_rank(ISRWord* anchorTerm, vector<ISRWord*> phraseTerms, ISRPhras
     Post* endPost = endDoc->GetCurrentPost(); 
     uint64_t endLoc = endPost->location;
     // seek all of the ISRs to the start location
-    Post* currPhrase = phrase->Seek(startLocation);
     for (int i = 0; i < phraseTerms.size(); i++) {
         phraseTerms[i]->Seek(startLocation);
     }
-    // keep seeking phrase ISR's until we get a nullptr(no more phrase matches) or the location is larger than the end doc location
-    while (currPhrase && currPhrase->location < endLoc) {
-        phraseMatches++; 
-        currPhrase = phrase->Next(); 
+    if (phrase) {
+        Post* currPhrase = phrase->Seek(startLocation);
+        // keep seeking phrase ISR's until we get a nullptr(no more phrase matches) or the location is larger than the end doc location
+        while (currPhrase && currPhrase->location < endLoc) {
+            phraseMatches++; 
+            currPhrase = phrase->Next(); 
+        }
     }
     // need to calculate the remaining amount of spans(shortSpans, orderedSpans, and topSpans)
     while (anchorTerm->GetCurrentPost()->location < endLoc) {
@@ -109,8 +110,10 @@ int get_dynamic_rank(ISRWord* anchorTerm, vector<ISRWord*> phraseTerms, ISRPhras
                 if (currPost->location > startLocation + TOPSPANSIZE) {
                     nearTop = false; 
                 }
-                // seek the current ISR to the next occurence
-                phraseTerms[i]->Next(); 
+                // seek the current ISR to the next occurence if in document
+                if (currPost->location < endLoc) {
+                    phraseTerms[i]->Next(); 
+                }
             }
             // dont do anything if its the anchor term in the vector
             else {
