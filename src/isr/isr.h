@@ -17,6 +17,8 @@ public:
 
 class ISRWord : public ISR {
 public:
+    // TO DO: Maybe fix the constructor, stub for query processor
+    ISRWord(std::string word);
     unsigned GetDocumentCount();
     unsigned GetNumberOfOccurrences();
     virtual Post* GetCurrentPost();
@@ -31,9 +33,10 @@ public:
 
 class ISROr : public ISR {
 public:
-    ISR** Terms;
-    unsigned NumberOfTerms;
-
+    
+    std::vector<ISR> terms;
+    // TO DO: Maybe fix the constructor, stub for query processor
+    ISROr(std::vector<ISR> ISRterms);
     Location GetStartLocation() {
         return nearestStartLocation;
     }
@@ -50,13 +53,13 @@ public:
 
         Post* nearestPost = nullptr;
 
-        for (unsigned i = 0; i < NumberOfTerms; i++) {
-            Post* currPost = Terms[i]->Seek(target);
+        for (unsigned i = 0; i < terms.size(); i++) {
+            Post* currPost = terms[i].Seek(target);
             if (currPost != nullptr) {
-                Location currStart = Terms[i]->GetStartLocation();
+                Location currStart = terms[i].GetStartLocation();
                 if (currStart < nearestStartLocation) {
                     nearestStartLocation = currStart; // Update the nearest start location
-                    nearestEndLocation = Terms[i]->GetEndLocation();
+                    nearestEndLocation = terms[i].GetEndLocation();
                     nearestTerm = i; // Update the nearest term index
                     nearestPost = currPost;
                 }
@@ -72,7 +75,7 @@ public:
             return nullptr;
         }
 
-        Terms[nearestTerm]->Next(); // Move the nearest term to the next post
+        terms[nearestTerm].Next(); // Move the nearest term to the next post
 
         nearestStartLocation = std::numeric_limits<Location>::max();
         nearestEndLocation = std::numeric_limits<Location>::max();
@@ -80,13 +83,13 @@ public:
 
         Post* nearestPost = nullptr;
 
-        for (unsigned i = 0; i < NumberOfTerms; i++) {
-            Post* currPost = Terms[i]->getCurrentPost(); // Get the current post for each term
+        for (unsigned i = 0; i < terms.size(); i++) {
+            Post* currPost = terms[i].getCurrentPost(); // Get the current post for each term
             if (currPost != nullptr) {
-                Location currStart = Terms[i]->GetStartLocation();
+                Location currStart = terms[i].GetStartLocation();
                 if (currStart < nearestStartLocation) {
                     nearestStartLocation = currStart; // Update the nearest start location
-                    nearestEndLocation = Terms[i]->GetEndLocation();
+                    nearestEndLocation = terms[i].GetEndLocation();
                     nearestTerm = i; // Update the nearest term index
                     nearestPost = currPost;
                 }
@@ -110,16 +113,42 @@ private:
 
 class ISRAnd : public ISR {
 public:
-    ISR** Terms;
-    unsigned NumberOfTerms;
+    std::vector<ISR> terms;
+    ISREndDoc endDocISR;
 
+    // TO DO: Maybe fix the constructor, stub for query processor
+    ISRAnd(std::vector<ISR> terms); 
     Post* Seek(Location target) {
-        // 1. Seek all the ISRs to the first occurrence beginning at
-        //    the target location.
-        // 2. Move the document end ISR to just past the furthest word, then calculate the document begin location.
         // 3. Seek all the other terms to past the document begin.
         // 4. If any term is past the document end, return to step 2.
         // 5. If any ISR reaches the end, there is no match.
+        for (size_t i = 0; i < terms.size(); ++i)
+        {
+            // 1. Seek all the ISRs to the first occurrence beginning at
+            // the target location.
+            Post * post = terms[i].Seek(target);
+            if (i == 0)
+            {
+                nearestTerm = post->location;
+                farthestTerm = post->location;
+            }
+            else
+            {
+                if (post->location > farthestTerm) farthestTerm = post->location;
+                if (post->location < farthestTerm) farthestTerm = post->location;    
+            }
+        }
+        // 2. Move the document end ISR to just past the furthest word, then calculate the document begin location.
+
+        Post * post = endDocISR.Seek(farthestTerm);
+        size_t docLen = endDocISR.GetDocumentLength();
+        size_t docStart =  post->location - docLen;
+        for (size_t i = 0; i < terms.size(); ++i)
+        {
+            Post * post = terms[i].Seek(docStart);
+        }
+        
+
     }
     Post* Next() {
         return Seek(nearestStartLocation + 1);
@@ -132,15 +161,16 @@ private:
 
 class ISRPhrase : public ISR {
 public:
-    ISR** Terms;
-    unsigned NumberOfTerms;
-
+    std::vector<ISR> terms;
+    // TO DO: Maybe fix the constructor, stub for query processor
+    ISRPhrase(std::vector<ISR> terms);
     Post* Seek(Location target) {
         // 1. Seek all ISRs to the first occurrence beginning at the target location.
         // 2. Pick the furthest term and attempt to seek all the other terms to the first location beginning
         //    where they should appear relative to the furthest term.
         // 3. If any term is past the desired location, return to step 2.
         // 4. If any ISR reaches the end, there is no match.
+        
     }
     Post* Next() {
         // Finds overlapping phrase matches.
