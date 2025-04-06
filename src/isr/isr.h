@@ -119,8 +119,6 @@ public:
     // TO DO: Maybe fix the constructor, stub for query processor
     ISRAnd(std::vector<ISR> terms); 
     Post* Seek(Location target) {
-        // 3. Seek all the other terms to past the document begin.
-        // 4. If any term is past the document end, return to step 2.
         // 5. If any ISR reaches the end, there is no match.
         for (size_t i = 0; i < terms.size(); ++i)
         {
@@ -138,16 +136,29 @@ public:
                 if (post->location < farthestTerm) farthestTerm = post->location;    
             }
         }
-        // 2. Move the document end ISR to just past the furthest word, then calculate the document begin location.
-
-        Post * post = endDocISR.Seek(farthestTerm);
-        size_t docLen = endDocISR.GetDocumentLength();
-        size_t docStart =  post->location - docLen;
-        for (size_t i = 0; i < terms.size(); ++i)
+        bool restart = false;
+        while(true)
         {
-            Post * post = terms[i].Seek(docStart);
+            // 2. Move the document end ISR to just past the furthest word, then calculate the document begin location.
+            restart = false;
+            Post * endDoc = endDocISR.Seek(farthestTerm);
+            size_t docLen = endDocISR.GetDocumentLength();
+            size_t docStart =  endDoc->location - docLen;
+            // 3. Seek all the other terms to past the document begin.
+            for (size_t i = 0; i < terms.size(); ++i)
+            {
+                Post * post = terms[i].Seek(docStart);
+                if (post->location > endDoc->location)
+                {
+                    restart = true;
+                    break;
+                }
+            }
+            // 4. If any term is past the document end, return to step 2.
+            if (restart) continue;
+            break;
         }
-        
+        // TODO: 5. If any ISR reaches the end, there is no match.
 
     }
     Post* Next() {
