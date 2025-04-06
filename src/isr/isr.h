@@ -18,10 +18,15 @@ public:
 class ISRWord : public ISR {
 public:
     // TO DO: Maybe fix the constructor, stub for query processor
-    ISRWord(std::string word);
+    ISRWord(std::string word_in) {
+        word = word_in;
+    }
     unsigned GetDocumentCount();
     unsigned GetNumberOfOccurrences();
     virtual Post* GetCurrentPost();
+
+private:
+    string word;
 };
 
 class ISREndDoc : public ISRWord {
@@ -36,7 +41,9 @@ public:
     
     std::vector<ISR> terms;
     // TO DO: Maybe fix the constructor, stub for query processor
-    ISROr(std::vector<ISR> ISRterms);
+    ISROr(std::vector<ISR> ISRterms) {
+        terms = ISRterms;
+    }
     Location GetStartLocation() {
         return nearestStartLocation;
     }
@@ -117,7 +124,9 @@ public:
     ISREndDoc endDocISR;
 
     // TO DO: Maybe fix the constructor, stub for query processor
-    ISRAnd(std::vector<ISR> terms); 
+    ISRAnd(std::vector<ISR> ISRterms) {
+        terms = ISRterms;
+    } 
     Post* Seek(Location target) {
         // 3. Seek all the other terms to past the document begin.
         // 4. If any term is past the document end, return to step 2.
@@ -163,7 +172,9 @@ class ISRPhrase : public ISR {
 public:
     std::vector<ISR> terms;
     // TO DO: Maybe fix the constructor, stub for query processor
-    ISRPhrase(std::vector<ISR> terms);
+    ISRPhrase(std::vector<ISR> ISRterms) {
+        terms = ISRterms;
+    }
     Post* Seek(Location target) {
         // 1. Seek all ISRs to the first occurrence beginning at the target location.
         // 2. Pick the furthest term and attempt to seek all the other terms to the first location beginning

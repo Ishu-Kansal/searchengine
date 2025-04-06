@@ -4,12 +4,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-//#include "../isr/isr.h" // Include ISR definitions for compilation and evaluation
-
-// Delete this ISR class after irs.h is done and can be included
-class ISR {
-   
-};
+#include "../isr/isr.h" // Include ISR definitions for compilation and evaluation
 
 /**
  * Base class for all query constraints

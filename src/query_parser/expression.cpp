@@ -1,5 +1,6 @@
 #include "expression.h"
 #include "../isr/isr.h"
+#include "driver.cpp"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -25,18 +26,18 @@ ISR SequenceConstraint::Eval() const {
         return ISRWord(words[0]);
     }
     else {
-        std::vector<ISR> terms;
-
          // Call sequence ISR on the sequence of words
         std::cout << "Run ISR on sequence: ";
+        std::vector<ISR> terms;
         for (const std::string& word : words) {
             std::cout << word << " ";
             terms.emplace_back(ISRWord(word));
+            word_isrs.emplace_back(ISRWord(word));
         }
         std::cout << std::endl;
         
         // build isr 
-        return ISROr(terms, terms.size());
+        return ISROr(terms);
     }
 }
 
@@ -50,16 +51,11 @@ AndConstraint::~AndConstraint() {
 }
 
 ISR AndConstraint::Eval() const {
-    // Placeholder: just AND the results (if Eval returns 0/1)
     // Call ISRS here and return exit status
     std::cout << "Evaluating AND" << std::endl;
-    // Return the intersection of the lists returned by each
-    std::vector<ISR> isrs(2);
-    isrs[0] = left->Eval();
-    isrs[1] = right->Eval(); 
     
     // build and isr on both left and right
-    return ISRAnd(isrs, isrs.size()); 
+    return ISRAnd({left->Eval(), right->Eval()});
 }
 
 // ---------- OR Constraint ----------
@@ -72,44 +68,38 @@ OrConstraint::~OrConstraint() {
 }
 
 ISR OrConstraint::Eval() const {
-    // Placeholder: OR the results (if Eval returns 0/1)
     std::cout << "Evaluating OR" << std::endl;
-    // Combine the lists returned by each and return combined list
-    left->Eval();
-    right->Eval();
-    // build or isr on both left and right
-    return {};
+    
+    return ISROr({left->Eval(), right->Eval()});
 }
 
 // ---------- NOT Constraint ----------
 
-NotConstraint::NotConstraint(Constraint *e) : expr(e) {}
+// NotConstraint::NotConstraint(Constraint *e) : expr(e) {}
 
-NotConstraint::~NotConstraint() {
-    delete expr;
-}
+// NotConstraint::~NotConstraint() {
+//     delete expr;
+// }
 
-ISR NotConstraint::Eval() const {
-    // Placeholder: NOT the result
-    std::cout << "Evaluating NOT" << std::endl;
-    expr->Eval();
-    return {};
-}
+// ISR NotConstraint::Eval() const {
+//     std::cout << "Evaluating NOT" << std::endl;
+//     return expr->Eval();
+// }
 
 // ---------- Required Constraint ----------
 
-RequiredConstraint::RequiredConstraint(Constraint *e) : expr(e) {}
+// RequiredConstraint::RequiredConstraint(Constraint *e) : expr(e) {}
 
-RequiredConstraint::~RequiredConstraint() {
-    delete expr;
-}
+// RequiredConstraint::~RequiredConstraint() {
+//     delete expr;
+// }
 
-ISR RequiredConstraint::Eval() const {
-    // Placeholder: acts like a regular constraint
-    std::cout << "Evaluating Required" << std::endl;
-    expr->Eval();
-    return {};
-}
+// ISR RequiredConstraint::Eval() const {
+//     // Placeholder: acts like a regular constraint
+//     std::cout << "Evaluating Required" << std::endl;
+//     expr->Eval();
+//     return {};
+// }
 
 // ---------- Phrase Constraint ----------
 
@@ -120,25 +110,28 @@ PhraseConstraint::~PhraseConstraint() {
 }
 
 ISR PhraseConstraint::Eval() const {
-    // Placeholder: just print the phrase and return true
     std::cout << "Run ISR on phrase: ";
+    std::vector<ISR> terms;
     for (const std::string &word : words) {
         std::cout << word << " ";
+        terms.emplace_back(ISRWord(word));
+        word_isrs.emplace_back(ISRWord(word));
     }
     std::cout << std::endl;
-    return {};
+
+    return ISRPhrase(terms);
 }
 
 // ---------- Search Word Constraint ----------
 
-SearchWordConstraint::SearchWordConstraint(const std::string &w) : word(w) {}
+// SearchWordConstraint::SearchWordConstraint(const std::string &w) : word(w) {}
 
-SearchWordConstraint::~SearchWordConstraint() {
-    // Nothing to delete
-}
+// SearchWordConstraint::~SearchWordConstraint() {
+//     // Nothing to delete
+// }
 
-ISR SearchWordConstraint::Eval() const {
-    // Placeholder: just print the word and return true
-    std::cout << "Evaluating search word: " << word << std::endl;
-    return {};
-}
+// ISR SearchWordConstraint::Eval() const {
+//     // Placeholder: just print the word and return true
+//     std::cout << "Evaluating search word: " << word << std::endl;
+//     return {};
+// }
