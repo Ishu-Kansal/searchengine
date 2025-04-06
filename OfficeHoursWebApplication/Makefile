@@ -1,2 +1,2 @@
-OfficeHours:  List.h Mutex.h Plugin.h LinuxTinyServer.cpp OfficeHours.cpp
-	g++ -pthread LinuxTinyServer.cpp OfficeHours.cpp -o OfficeHours
+engine:  List.h Mutex.h Plugin.h LinuxTinyServer.cpp engine.cpp
+	g++ -pthread LinuxTinyServer.cpp engine.cpp -o engine
