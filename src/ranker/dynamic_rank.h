@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include "../isr/isr.h"
 
-// NOTE: WEIGHTS ARE ALL 0 RIGHT NOW, WILL NEED TO SET THEM TO REAL VALUES SOON AND DEBUG THEM TO FIND WHICH WEIGHTS ARE THE BEST FOR 
+// TO DO: WEIGHTS ARE ALL 0 RIGHT NOW, WILL NEED TO SET THEM TO REAL VALUES SOON AND DEBUG THEM TO FIND WHICH WEIGHTS ARE THE BEST FOR 
 //       OUR RESULTS FOR THE ENGINE
 
 // Weights for computing the score of specific ranking components, enums for quick readjusting and no magic numbers
@@ -130,7 +130,8 @@ int get_dynamic_rank(ISRWord* anchorTerm, vector<ISRWord*> phraseTerms, ISRPhras
         // check if ordered
         for (int i = 0; i < phraseTerms.size() - 1; i++) {
             // if not ordered(next ISR is before the current one) then break out of the loop and set ordered to false
-            if (phraseTerms[i]->GetCurrentPost()->location > phraseTerms[i + 1]->GetCurrentPost()->location) {
+            if (phraseTerms[i]->GetCurrentPost()->location > phraseTerms[i + 1]->GetCurrentPost()->location
+                || phraseTerms[i]->GetCurrentPost()->location > endLoc) {
                 ordered = false; 
                 break; 
             }
