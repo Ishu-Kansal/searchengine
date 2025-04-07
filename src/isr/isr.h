@@ -1,10 +1,13 @@
 #pragma once
 
+#include <memory>
 #include <../utils/cstring_view.h>
 #include "Index.h"
 
 typedef size_t Location; // Location 0 is the null location.
 typedef size_t FileOffset;
+
+constexpr Location NULL_LOCATION = 0;
 
 class ISR {
 public:
@@ -120,58 +123,42 @@ private:
 
 class ISRAnd : public ISR {
 public:
-    std::vector<ISR> terms;
-    ISREndDoc endDocISR;
+    std::vector<std::unique_ptr<ISR>> terms;
+    ISREndDoc * docEndISR;
+    Post* currPost = nullptr;
 
-    // TO DO: Maybe fix the constructor, stub for query processor
-    ISRAnd(std::vector<ISR> ISRterms) {
-        terms = ISRterms;
-    } 
+    // TODO: Maybe fix the constructor, stub for query processor
+    ISRAnd(std::vector<std::unique_ptr<ISR>> childISRs, ISREndDoc* docEnd)
+        : terms(std::move(childISRs)), docEndISR(docEnd) {}
+    
     Post* Seek(Location target) {
-        // 5. If any ISR reaches the end, there is no match.
+        if (terms.empty() || target == NULL_LOCATION) return nullptr;
+        Post * lastPost = nullptr;
+
         for (size_t i = 0; i < terms.size(); ++i)
         {
-            // 1. Seek all the ISRs to the first occurrence beginning at
-            // the target location.
-            Post * post = terms[i].Seek(target);
-            if (i == 0)
-            {
-                nearestTerm = post->location;
-                farthestTerm = post->location;
-            }
-            else
-            {
-                if (post->location > farthestTerm) farthestTerm = post->location;
-                if (post->location < farthestTerm) farthestTerm = post->location;    
-            }
+            // 1. Seek all the ISRs to the first occurrence beginning at the target location. 
+            Post * post = terms[i]->Seek(target);
+            if (!post) return nullptr;
         }
-        bool restart = false;
         while(true)
         {
-            // 2. Move the document end ISR to just past the furthest word, then calculate the document begin location.
-            restart = false;
-            Post * endDoc = endDocISR.Seek(farthestTerm);
-            size_t docLen = endDocISR.GetDocumentLength();
-            size_t docStart =  endDoc->location - docLen;
-            // 3. Seek all the other terms to past the document begin.
-            for (size_t i = 0; i < terms.size(); ++i)
-            {
-                Post * post = terms[i].Seek(docStart);
-                if (post->location > endDoc->location)
-                {
-                    restart = true;
-                    break;
-                }
-            }
-            // 4. If any term is past the document end, return to step 2.
-            if (restart) continue;
-            break;
+            
         }
+
+            // 2. Move the document end ISR to just past the furthest word, then calculate the document begin location.
+            // 3. Seek all the other terms to past the document begin.
+            // 4. If any term is past the document end, return to step 2.
         // TODO: 5. If any ISR reaches the end, there is no match.
 
     }
-    Post* Next() {
-        return Seek(nearestStartLocation + 1);
+    Post* Next() override {
+         if (!currPost) {
+             return Seek(1);
+        }
+        Location startLoc = GetStartLocation();
+        if (startLoc == NULL_LOCATION) return Seek(1);
+        return Seek(startLoc + 1);
     }
 
 private:
