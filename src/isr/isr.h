@@ -26,10 +26,12 @@ public:
     {
         word = std::move(word_in);
     }
+    
     unsigned GetDocumentCount() 
     {
         return; // Get from index file
     } 
+    
     unsigned GetNumberOfOccurrences() 
     {
         return; // Get from index file
@@ -50,18 +52,22 @@ public:
 
 class ISROr : public ISR {
 public:
-    
     std::vector<std::unique_ptr<ISR>> terms;
-    // TO DO: Maybe fix the constructor, stub for query processor
-    ISROr(std::vector<ISR> ISRterms) {
-        terms = ISRterms;
+
+    ISROr(std::vector<ISR*> ISRterms) {
+        for (ISR *ptr : ISRterms) {
+            terms.emplace_back(ptr);
+        }
     }
+
     Location GetStartLocation() {
         return nearestStartLocation;
     }
+
     Location GetEndLocation() {
         return nearestEndLocation;
     }
+
     Post* Seek(Location target) {
         // Seek all the ISRs to the first occurrence beginning at
         // the target location. Return null if there is no match.
@@ -86,6 +92,7 @@ public:
         }
         return nearestPost;
     }
+
     Post* Next() {
         // Do a next on the nearest term, then return
         // the new nearest match.
@@ -136,9 +143,13 @@ public:
     ISREndDoc * docEndISR;
     Post* currPost = nullptr;
 
-    // TODO: Maybe fix the constructor, stub for query processor
-    ISRAnd(std::vector<std::unique_ptr<ISR>> childISRs, ISREndDoc* docEnd)
-        : terms(std::move(childISRs)), docEndISR(docEnd) {}
+    ISRAnd(std::vector<ISR*> childISRs, ISREndDoc* docEnd) : docEndISR(docEnd) {
+
+        for (ISR *ptr : childISRs)
+        {
+            terms.emplace_back(ptr);
+        }
+    }
     
     Post* Seek(Location target) {
         if (terms.empty() || target == NULL_LOCATION) return nullptr;
@@ -156,10 +167,20 @@ public:
                 farthestLocation = post->location;
             }
         }
-        
+        while (true)
+        {
             // 2. Move the document end ISR to just past the furthest word, then calculate the document begin location.
+            Post * docEnd = docEndISR->Seek(farthestLocation + 1);
+            unsigned docLen = docEndISR->GetDocumentLength();
+            unsigned docStart = docEnd->location - docLen;
             // 3. Seek all the other terms to past the document begin.
+            for (size_t i = 0; i < terms.size(); ++i)
+            {                                       
+                terms[i]->Seek(docStart + 1);        
+            }
+            
             // 4. If any term is past the document end, return to step 2.
+        }
             // TODO: 5. If any ISR reaches the end, there is no match.
 
     }
@@ -181,10 +202,12 @@ private:
 
 class ISRPhrase : public ISR {
 public:
-    std::vector<ISR> terms;
+    std::vector<std::unique_ptr<ISR>> terms;
     // TO DO: Maybe fix the constructor, stub for query processor
-    ISRPhrase(std::vector<ISR> ISRterms) {
-        terms = ISRterms;
+    ISRPhrase(std::vector<ISR*> ISRterms) {
+        for (ISR *ptr : ISRterms) {
+            terms.emplace_back(ptr);
+        }
     }
     Post* Seek(Location target) {
         // 1. Seek all ISRs to the first occurrence beginning at the target location.
