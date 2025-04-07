@@ -3,7 +3,7 @@
 
 #include "parser.h"
 
-std::vector<ISRWord> word_isrs;
+std::vector<vector<ISRWord*>> sequences;
 
 int main( ) {
    std::string input;
@@ -21,7 +21,7 @@ int main( ) {
    }
 
    // Constraint solver and dynamic ranker
-   // Nabeel's function accepts isr and word_isrs
+   // Nabeel's function accepts isr and sequences
 
    return 0;
 }

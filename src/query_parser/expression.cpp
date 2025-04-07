@@ -18,21 +18,27 @@ SequenceConstraint::SequenceConstraint(const std::vector<std::string> &words) : 
 SequenceConstraint::~SequenceConstraint() {}
 
 ISR* SequenceConstraint::Eval() const {
+    sequences.push_back({});
+
     if (words.size() == 1) {
         std::cout << "Run ISR on word: ";
         std::cout << words[0] << std::endl;
-        
+
+        sequences[sequences.size()].push_back(new ISRWord(words[0]));
+
         // build ISRWord
         return new ISRWord(words[0]);
     }
     else {
-         // Call sequence ISR on the sequence of words
+        // Call sequence ISR on the sequence of words
         std::cout << "Run ISR on sequence: ";
-        std::vector<ISR> terms;
+
+        std::vector<ISR*> terms;
         for (const std::string& word : words) {
             std::cout << word << " ";
-            terms.emplace_back(ISRWord(word));
-            word_isrs.emplace_back(ISRWord(word));
+
+            terms.push_back(new ISRWord(word));
+            sequences[sequences.size()].push_back(new ISRWord(word));
         }
         std::cout << std::endl;
         
@@ -111,11 +117,15 @@ PhraseConstraint::~PhraseConstraint() {
 
 ISR* PhraseConstraint::Eval() const {
     std::cout << "Run ISR on phrase: ";
-    std::vector<ISR> terms;
+
+    sequences.push_back({});
+
+    std::vector<ISR*> terms;
     for (const std::string &word : words) {
         std::cout << word << " ";
-        terms.emplace_back(ISRWord(word));
-        word_isrs.emplace_back(ISRWord(word));
+
+        terms.push_back(new ISRWord(word));
+        sequences[sequences.size()].push_back(new ISRWord(word));
     }
     std::cout << std::endl;
 

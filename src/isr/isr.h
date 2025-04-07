@@ -3,6 +3,7 @@
 #include <memory>
 #include <../utils/cstring_view.h>
 #include "Index.h"
+#include "IndexFile.h"
 
 typedef size_t Location; // Location 0 is the null location.
 typedef size_t FileOffset;
@@ -14,18 +15,26 @@ public:
     virtual Post* Next();
     virtual Post* NextDocument();
     virtual Post* Seek(Location target);
-    virtual Location GetStartLocation();
-    virtual Location GetEndLocation();
+    // virtual Location GetStartLocation();
+    // virtual Location GetEndLocation();
 };
 
 class ISRWord : public ISR {
 public:
     // TO DO: Maybe fix the constructor, stub for query processor
-    ISRWord(std::string word_in) {
-        word = word_in;
+    ISRWord(std::string & word_in) 
+    {
+        word = std::move(word_in);
     }
-    unsigned GetDocumentCount();
-    unsigned GetNumberOfOccurrences();
+    unsigned GetDocumentCount() 
+    {
+        return; // Get from index file
+    } 
+    unsigned GetNumberOfOccurrences() 
+    {
+        return; // Get from index file
+    }
+    
     virtual Post* GetCurrentPost();
 
 private:
@@ -42,7 +51,7 @@ public:
 class ISROr : public ISR {
 public:
     
-    std::vector<ISR> terms;
+    std::vector<std::unique_ptr<ISR>> terms;
     // TO DO: Maybe fix the constructor, stub for query processor
     ISROr(std::vector<ISR> ISRterms) {
         terms = ISRterms;
@@ -134,36 +143,40 @@ public:
     Post* Seek(Location target) {
         if (terms.empty() || target == NULL_LOCATION) return nullptr;
         Post * lastPost = nullptr;
-
+        farthestTerm = 0;
+        unsigned farthestLocation = 0;
         for (size_t i = 0; i < terms.size(); ++i)
         {
             // 1. Seek all the ISRs to the first occurrence beginning at the target location. 
             Post * post = terms[i]->Seek(target);
             if (!post) return nullptr;
+            if (post->location)
+            {
+                farthestTerm = i;
+                farthestLocation = post->location;
+            }
         }
-        while(true)
-        {
-            
-        }
-
+        
             // 2. Move the document end ISR to just past the furthest word, then calculate the document begin location.
             // 3. Seek all the other terms to past the document begin.
             // 4. If any term is past the document end, return to step 2.
-        // TODO: 5. If any ISR reaches the end, there is no match.
+            // TODO: 5. If any ISR reaches the end, there is no match.
 
     }
-    Post* Next() override {
-         if (!currPost) {
-             return Seek(1);
-        }
+    Post* Next() override 
+    {
+        if (!currPost) return Seek(1);
         Location startLoc = GetStartLocation();
         if (startLoc == NULL_LOCATION) return Seek(1);
         return Seek(startLoc + 1);
     }
-
+    Location GetStartLocation()
+    {
+        return nearestStartLocation;
+    }
 private:
-    unsigned nearestTerm, farthestTerm;
-    Location nearestStartLocation, nearestEndLocation;
+    unsigned farthestTerm;
+    Location nearestStartLocation;
 };
 
 class ISRPhrase : public ISR {
