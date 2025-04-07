@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package cloudcrawler;
+
+service Dispatcher {
+  rpc GetUrl(Empty) returns (GetResponse) {}
+  rpc AddUrls(AddRequest) returns (Empty) {}
+}
+
+message Empty {}
+
+message GetResponse {
+  string url = 1;
+}
+
+message AddRequest {
+  string url = 1;
+  uint32 rank = 2;
+}
