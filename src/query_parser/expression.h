@@ -12,7 +12,7 @@
 class Constraint {
 public:
    virtual ~Constraint();
-   virtual ISR Eval() const = 0;
+   virtual ISR* Eval() const = 0;
 
    // ISR *Compile( );
 };
@@ -23,7 +23,7 @@ public:
 
     virtual ~SequenceConstraint();
 
-    ISR Eval() const override;
+    ISR* Eval() const override;
 
 private:
     std::vector<std::string> words;
@@ -38,7 +38,7 @@ private:
 public:
    AndConstraint(Constraint *l, Constraint *r);
    ~AndConstraint();
-   ISR Eval() const override;
+   ISR* Eval() const override;
 };
 
 // OR constraint (e.g., A OR B)
@@ -50,7 +50,7 @@ private:
 public:
    OrConstraint(Constraint *l, Constraint *r);
    ~OrConstraint();
-   ISR Eval() const override;
+   ISR* Eval() const override;
 };
 
 // // NOT constraint (e.g., NOT A)
@@ -72,7 +72,7 @@ private:
 public:
    RequiredConstraint(Constraint *e);
    ~RequiredConstraint();
-   ISR Eval() const override;
+   ISR* Eval() const override;
 };
 
 // Phrase constraint (e.g., "search engine")
@@ -83,7 +83,7 @@ private:
 public:
    PhraseConstraint(const std::vector<std::string> &w);
    ~PhraseConstraint();
-   ISR Eval() const override;
+   ISR* Eval() const override;
 };
 
 // // Search word constraint (e.g., individual words)

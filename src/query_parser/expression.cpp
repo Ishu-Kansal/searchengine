@@ -17,13 +17,13 @@ SequenceConstraint::SequenceConstraint(const std::vector<std::string> &words) : 
 
 SequenceConstraint::~SequenceConstraint() {}
 
-ISR SequenceConstraint::Eval() const {
+ISR* SequenceConstraint::Eval() const {
     if (words.size() == 1) {
         std::cout << "Run ISR on word: ";
         std::cout << words[0] << std::endl;
         
         // build ISRWord
-        return ISRWord(words[0]);
+        return new ISRWord(words[0]);
     }
     else {
          // Call sequence ISR on the sequence of words
@@ -37,7 +37,7 @@ ISR SequenceConstraint::Eval() const {
         std::cout << std::endl;
         
         // build isr 
-        return ISROr(terms);
+        return new ISROr(terms);
     }
 }
 
@@ -50,12 +50,12 @@ AndConstraint::~AndConstraint() {
     delete right;
 }
 
-ISR AndConstraint::Eval() const {
+ISR* AndConstraint::Eval() const {
     // Call ISRS here and return exit status
     std::cout << "Evaluating AND" << std::endl;
     
     // build and isr on both left and right
-    return ISRAnd({left->Eval(), right->Eval()});
+    return new ISRAnd({left->Eval(), right->Eval()}, new ISREndDoc());
 }
 
 // ---------- OR Constraint ----------
@@ -67,10 +67,10 @@ OrConstraint::~OrConstraint() {
     delete right;
 }
 
-ISR OrConstraint::Eval() const {
+ISR* OrConstraint::Eval() const {
     std::cout << "Evaluating OR" << std::endl;
     
-    return ISROr({left->Eval(), right->Eval()});
+    return new ISROr({left->Eval(), right->Eval()});
 }
 
 // ---------- NOT Constraint ----------
@@ -109,7 +109,7 @@ PhraseConstraint::~PhraseConstraint() {
     // Nothing to delete, vector handles its own memory
 }
 
-ISR PhraseConstraint::Eval() const {
+ISR* PhraseConstraint::Eval() const {
     std::cout << "Run ISR on phrase: ";
     std::vector<ISR> terms;
     for (const std::string &word : words) {
@@ -119,7 +119,7 @@ ISR PhraseConstraint::Eval() const {
     }
     std::cout << std::endl;
 
-    return ISRPhrase(terms);
+    return new ISRPhrase(terms);
 }
 
 // ---------- Search Word Constraint ----------
