@@ -1,12 +1,14 @@
 #include <grpc/grpc.h>
-#include <grpcpp/channel.h>
-#include <grpcpp/client_context.h>
-#include <grpcpp/create_channel.h>
-#include <grpcpp/security/credentials.h>
+#include <grpcpp/security/server_credentials.h>
+#include <grpcpp/server.h>
+#include <grpcpp/server_builder.h>
+#include <grpcpp/server_context.h>
 #include <pthread.h>
 
 #include <cassert>
 #include <cstdint>
+#include <iostream>
+#include <memory>
 #include <queue>
 #include <random>
 #include <string>
@@ -38,6 +40,8 @@ constexpr uint64_t NUM_RANDOM = 10'000;
 constexpr uint64_t TOP_K_ELEMENTS = 7'500;
 constexpr double MAX_FALSE_POSITIVE_RATE = 1e3;
 
+constexpr const char *const server = "localhost:50051";
+
 class DispatcherImpl final : public Dispatcher::CallbackService {
  public:
   explicit DispatcherImpl() : bf(MAX_EXPECTED_LINKS, MAX_FALSE_POSITIVE_RATE) {
@@ -60,9 +64,9 @@ class DispatcherImpl final : public Dispatcher::CallbackService {
     return reactor;
   }
 
-  ServerUnaryReactor *AddUrls(CallbackServerContext *context,
-                              const AddRequest *request,
-                              Empty *response) override {
+  ServerUnaryReactor *AddUrl(CallbackServerContext *context,
+                             const AddRequest *request,
+                             Empty *response) override {
     auto *reactor = context->DefaultReactor();
     pthread_lock_guard{queue_lock};
     if (links_vector.size() < MAX_VECTOR_SIZE)
@@ -181,3 +185,17 @@ class DispatcherImpl final : public Dispatcher::CallbackService {
     // std::cout << "Exit fill_queue()" << std::endl;
   }
 };
+
+void RunDispatcher() {
+  std::string server_address = "0.0.0.0:50051";
+  DispatcherImpl dispatch{};
+
+  ServerBuilder builder;
+  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+  builder.RegisterService(&dispatch);
+  std::unique_ptr<Server> server(builder.BuildAndStart());
+  std::clog << "Starting server..." << std::endl;
+  server->Wait();
+}
+
+int main() { RunDispatcher(); }

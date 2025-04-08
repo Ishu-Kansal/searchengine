@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(RouteGuide C CXX)
 
-include(../cmake/common.cmake)
+include(./common.cmake)
 
 # Find absl package
 find_package(absl CONFIG REQUIRED)
@@ -60,25 +60,25 @@ target_link_libraries(rg_grpc_proto
   ${_GRPC_GRPCPP}
   ${_PROTOBUF_LIBPROTOBUF})
 
-# route_guide_helper
-add_library(route_guide_helper
-  "helper.h"
-  "helper.cc")
-target_link_libraries(route_guide_helper
+add_library(html_parser
+  "../../HtmlParser/HtmlParser.h"
+  "../../HtmlParser/HtmlTags.cpp"
+)
+target_link_libraries(html_parser
   rg_grpc_proto
   ${_REFLECTION}
   ${_GRPC_GRPCPP}
   ${_PROTOBUF_LIBPROTOBUF})
 
+
 # Targets route_guide_(client|server)
 foreach(_target
-  route_guide_client route_guide_server
-  route_guide_callback_client route_guide_callback_server)
+  dispatcher crawler)
   add_executable(${_target}
-    "${_target}.cc")
+    "./${_target}/${_target}.cpp")
   target_link_libraries(${_target}
     rg_grpc_proto
-    route_guide_helper
+    html_parser
     absl::flags_parse
     absl::absl_log
     absl::log_initialize

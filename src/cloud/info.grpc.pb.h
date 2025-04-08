@@ -43,20 +43,20 @@ class Dispatcher final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::GetResponse>> PrepareAsyncGetUrl(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::GetResponse>>(PrepareAsyncGetUrlRaw(context, request, cq));
     }
-    virtual ::grpc::Status AddUrls(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::cloudcrawler::Empty* response) = 0;
-    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>> AsyncAddUrls(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>>(AsyncAddUrlsRaw(context, request, cq));
+    virtual ::grpc::Status AddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::cloudcrawler::Empty* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>> AsyncAddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>>(AsyncAddUrlRaw(context, request, cq));
     }
-    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>> PrepareAsyncAddUrls(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>>(PrepareAsyncAddUrlsRaw(context, request, cq));
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>> PrepareAsyncAddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>>(PrepareAsyncAddUrlRaw(context, request, cq));
     }
     class async_interface {
      public:
       virtual ~async_interface() {}
       virtual void GetUrl(::grpc::ClientContext* context, const ::cloudcrawler::Empty* request, ::cloudcrawler::GetResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void GetUrl(::grpc::ClientContext* context, const ::cloudcrawler::Empty* request, ::cloudcrawler::GetResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
-      virtual void AddUrls(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response, std::function<void(::grpc::Status)>) = 0;
-      virtual void AddUrls(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void AddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void AddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response, ::grpc::ClientUnaryReactor* reactor) = 0;
     };
     typedef class async_interface experimental_async_interface;
     virtual class async_interface* async() { return nullptr; }
@@ -64,8 +64,8 @@ class Dispatcher final {
    private:
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::GetResponse>* AsyncGetUrlRaw(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::GetResponse>* PrepareAsyncGetUrlRaw(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::grpc::CompletionQueue* cq) = 0;
-    virtual ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>* AsyncAddUrlsRaw(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) = 0;
-    virtual ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>* PrepareAsyncAddUrlsRaw(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>* AsyncAddUrlRaw(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>* PrepareAsyncAddUrlRaw(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) = 0;
   };
   class Stub final : public StubInterface {
    public:
@@ -77,20 +77,20 @@ class Dispatcher final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::cloudcrawler::GetResponse>> PrepareAsyncGetUrl(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::cloudcrawler::GetResponse>>(PrepareAsyncGetUrlRaw(context, request, cq));
     }
-    ::grpc::Status AddUrls(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::cloudcrawler::Empty* response) override;
-    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>> AsyncAddUrls(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>>(AsyncAddUrlsRaw(context, request, cq));
+    ::grpc::Status AddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::cloudcrawler::Empty* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>> AsyncAddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>>(AsyncAddUrlRaw(context, request, cq));
     }
-    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>> PrepareAsyncAddUrls(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>>(PrepareAsyncAddUrlsRaw(context, request, cq));
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>> PrepareAsyncAddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>>(PrepareAsyncAddUrlRaw(context, request, cq));
     }
     class async final :
       public StubInterface::async_interface {
      public:
       void GetUrl(::grpc::ClientContext* context, const ::cloudcrawler::Empty* request, ::cloudcrawler::GetResponse* response, std::function<void(::grpc::Status)>) override;
       void GetUrl(::grpc::ClientContext* context, const ::cloudcrawler::Empty* request, ::cloudcrawler::GetResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
-      void AddUrls(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response, std::function<void(::grpc::Status)>) override;
-      void AddUrls(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void AddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response, std::function<void(::grpc::Status)>) override;
+      void AddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response, ::grpc::ClientUnaryReactor* reactor) override;
      private:
       friend class Stub;
       explicit async(Stub* stub): stub_(stub) { }
@@ -104,10 +104,10 @@ class Dispatcher final {
     class async async_stub_{this};
     ::grpc::ClientAsyncResponseReader< ::cloudcrawler::GetResponse>* AsyncGetUrlRaw(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::cloudcrawler::GetResponse>* PrepareAsyncGetUrlRaw(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::grpc::CompletionQueue* cq) override;
-    ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>* AsyncAddUrlsRaw(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) override;
-    ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>* PrepareAsyncAddUrlsRaw(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>* AsyncAddUrlRaw(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>* PrepareAsyncAddUrlRaw(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) override;
     const ::grpc::internal::RpcMethod rpcmethod_GetUrl_;
-    const ::grpc::internal::RpcMethod rpcmethod_AddUrls_;
+    const ::grpc::internal::RpcMethod rpcmethod_AddUrl_;
   };
   static std::unique_ptr<Stub> NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
 
@@ -116,7 +116,7 @@ class Dispatcher final {
     Service();
     virtual ~Service();
     virtual ::grpc::Status GetUrl(::grpc::ServerContext* context, const ::cloudcrawler::Empty* request, ::cloudcrawler::GetResponse* response);
-    virtual ::grpc::Status AddUrls(::grpc::ServerContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response);
+    virtual ::grpc::Status AddUrl(::grpc::ServerContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response);
   };
   template <class BaseClass>
   class WithAsyncMethod_GetUrl : public BaseClass {
@@ -139,26 +139,26 @@ class Dispatcher final {
     }
   };
   template <class BaseClass>
-  class WithAsyncMethod_AddUrls : public BaseClass {
+  class WithAsyncMethod_AddUrl : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithAsyncMethod_AddUrls() {
+    WithAsyncMethod_AddUrl() {
       ::grpc::Service::MarkMethodAsync(1);
     }
-    ~WithAsyncMethod_AddUrls() override {
+    ~WithAsyncMethod_AddUrl() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status AddUrls(::grpc::ServerContext* /*context*/, const ::cloudcrawler::AddRequest* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
+    ::grpc::Status AddUrl(::grpc::ServerContext* /*context*/, const ::cloudcrawler::AddRequest* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    void RequestAddUrls(::grpc::ServerContext* context, ::cloudcrawler::AddRequest* request, ::grpc::ServerAsyncResponseWriter< ::cloudcrawler::Empty>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+    void RequestAddUrl(::grpc::ServerContext* context, ::cloudcrawler::AddRequest* request, ::grpc::ServerAsyncResponseWriter< ::cloudcrawler::Empty>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
       ::grpc::Service::RequestAsyncUnary(1, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_GetUrl<WithAsyncMethod_AddUrls<Service > > AsyncService;
+  typedef WithAsyncMethod_GetUrl<WithAsyncMethod_AddUrl<Service > > AsyncService;
   template <class BaseClass>
   class WithCallbackMethod_GetUrl : public BaseClass {
    private:
@@ -187,33 +187,33 @@ class Dispatcher final {
       ::grpc::CallbackServerContext* /*context*/, const ::cloudcrawler::Empty* /*request*/, ::cloudcrawler::GetResponse* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
-  class WithCallbackMethod_AddUrls : public BaseClass {
+  class WithCallbackMethod_AddUrl : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithCallbackMethod_AddUrls() {
+    WithCallbackMethod_AddUrl() {
       ::grpc::Service::MarkMethodCallback(1,
           new ::grpc::internal::CallbackUnaryHandler< ::cloudcrawler::AddRequest, ::cloudcrawler::Empty>(
             [this](
-                   ::grpc::CallbackServerContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response) { return this->AddUrls(context, request, response); }));}
-    void SetMessageAllocatorFor_AddUrls(
+                   ::grpc::CallbackServerContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response) { return this->AddUrl(context, request, response); }));}
+    void SetMessageAllocatorFor_AddUrl(
         ::grpc::MessageAllocator< ::cloudcrawler::AddRequest, ::cloudcrawler::Empty>* allocator) {
       ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(1);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::cloudcrawler::AddRequest, ::cloudcrawler::Empty>*>(handler)
               ->SetMessageAllocator(allocator);
     }
-    ~WithCallbackMethod_AddUrls() override {
+    ~WithCallbackMethod_AddUrl() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status AddUrls(::grpc::ServerContext* /*context*/, const ::cloudcrawler::AddRequest* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
+    ::grpc::Status AddUrl(::grpc::ServerContext* /*context*/, const ::cloudcrawler::AddRequest* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual ::grpc::ServerUnaryReactor* AddUrls(
+    virtual ::grpc::ServerUnaryReactor* AddUrl(
       ::grpc::CallbackServerContext* /*context*/, const ::cloudcrawler::AddRequest* /*request*/, ::cloudcrawler::Empty* /*response*/)  { return nullptr; }
   };
-  typedef WithCallbackMethod_GetUrl<WithCallbackMethod_AddUrls<Service > > CallbackService;
+  typedef WithCallbackMethod_GetUrl<WithCallbackMethod_AddUrl<Service > > CallbackService;
   typedef CallbackService ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_GetUrl : public BaseClass {
@@ -233,18 +233,18 @@ class Dispatcher final {
     }
   };
   template <class BaseClass>
-  class WithGenericMethod_AddUrls : public BaseClass {
+  class WithGenericMethod_AddUrl : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithGenericMethod_AddUrls() {
+    WithGenericMethod_AddUrl() {
       ::grpc::Service::MarkMethodGeneric(1);
     }
-    ~WithGenericMethod_AddUrls() override {
+    ~WithGenericMethod_AddUrl() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status AddUrls(::grpc::ServerContext* /*context*/, const ::cloudcrawler::AddRequest* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
+    ::grpc::Status AddUrl(::grpc::ServerContext* /*context*/, const ::cloudcrawler::AddRequest* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -270,22 +270,22 @@ class Dispatcher final {
     }
   };
   template <class BaseClass>
-  class WithRawMethod_AddUrls : public BaseClass {
+  class WithRawMethod_AddUrl : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithRawMethod_AddUrls() {
+    WithRawMethod_AddUrl() {
       ::grpc::Service::MarkMethodRaw(1);
     }
-    ~WithRawMethod_AddUrls() override {
+    ~WithRawMethod_AddUrl() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status AddUrls(::grpc::ServerContext* /*context*/, const ::cloudcrawler::AddRequest* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
+    ::grpc::Status AddUrl(::grpc::ServerContext* /*context*/, const ::cloudcrawler::AddRequest* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    void RequestAddUrls(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+    void RequestAddUrl(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
       ::grpc::Service::RequestAsyncUnary(1, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
@@ -312,25 +312,25 @@ class Dispatcher final {
       ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
-  class WithRawCallbackMethod_AddUrls : public BaseClass {
+  class WithRawCallbackMethod_AddUrl : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithRawCallbackMethod_AddUrls() {
+    WithRawCallbackMethod_AddUrl() {
       ::grpc::Service::MarkMethodRawCallback(1,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
-                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->AddUrls(context, request, response); }));
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->AddUrl(context, request, response); }));
     }
-    ~WithRawCallbackMethod_AddUrls() override {
+    ~WithRawCallbackMethod_AddUrl() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status AddUrls(::grpc::ServerContext* /*context*/, const ::cloudcrawler::AddRequest* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
+    ::grpc::Status AddUrl(::grpc::ServerContext* /*context*/, const ::cloudcrawler::AddRequest* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual ::grpc::ServerUnaryReactor* AddUrls(
+    virtual ::grpc::ServerUnaryReactor* AddUrl(
       ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
@@ -361,35 +361,35 @@ class Dispatcher final {
     virtual ::grpc::Status StreamedGetUrl(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::cloudcrawler::Empty,::cloudcrawler::GetResponse>* server_unary_streamer) = 0;
   };
   template <class BaseClass>
-  class WithStreamedUnaryMethod_AddUrls : public BaseClass {
+  class WithStreamedUnaryMethod_AddUrl : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithStreamedUnaryMethod_AddUrls() {
+    WithStreamedUnaryMethod_AddUrl() {
       ::grpc::Service::MarkMethodStreamed(1,
         new ::grpc::internal::StreamedUnaryHandler<
           ::cloudcrawler::AddRequest, ::cloudcrawler::Empty>(
             [this](::grpc::ServerContext* context,
                    ::grpc::ServerUnaryStreamer<
                      ::cloudcrawler::AddRequest, ::cloudcrawler::Empty>* streamer) {
-                       return this->StreamedAddUrls(context,
+                       return this->StreamedAddUrl(context,
                          streamer);
                   }));
     }
-    ~WithStreamedUnaryMethod_AddUrls() override {
+    ~WithStreamedUnaryMethod_AddUrl() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable regular version of this method
-    ::grpc::Status AddUrls(::grpc::ServerContext* /*context*/, const ::cloudcrawler::AddRequest* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
+    ::grpc::Status AddUrl(::grpc::ServerContext* /*context*/, const ::cloudcrawler::AddRequest* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     // replace default version of method with streamed unary
-    virtual ::grpc::Status StreamedAddUrls(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::cloudcrawler::AddRequest,::cloudcrawler::Empty>* server_unary_streamer) = 0;
+    virtual ::grpc::Status StreamedAddUrl(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::cloudcrawler::AddRequest,::cloudcrawler::Empty>* server_unary_streamer) = 0;
   };
-  typedef WithStreamedUnaryMethod_GetUrl<WithStreamedUnaryMethod_AddUrls<Service > > StreamedUnaryService;
+  typedef WithStreamedUnaryMethod_GetUrl<WithStreamedUnaryMethod_AddUrl<Service > > StreamedUnaryService;
   typedef Service SplitStreamedService;
-  typedef WithStreamedUnaryMethod_GetUrl<WithStreamedUnaryMethod_AddUrls<Service > > StreamedService;
+  typedef WithStreamedUnaryMethod_GetUrl<WithStreamedUnaryMethod_AddUrl<Service > > StreamedService;
 };
 
 }  // namespace cloudcrawler

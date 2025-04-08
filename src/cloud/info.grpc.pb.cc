@@ -23,7 +23,7 @@ namespace cloudcrawler {
 
 static const char* Dispatcher_method_names[] = {
   "/cloudcrawler.Dispatcher/GetUrl",
-  "/cloudcrawler.Dispatcher/AddUrls",
+  "/cloudcrawler.Dispatcher/AddUrl",
 };
 
 std::unique_ptr< Dispatcher::Stub> Dispatcher::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
@@ -34,7 +34,7 @@ std::unique_ptr< Dispatcher::Stub> Dispatcher::NewStub(const std::shared_ptr< ::
 
 Dispatcher::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options)
   : channel_(channel), rpcmethod_GetUrl_(Dispatcher_method_names[0], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_AddUrls_(Dispatcher_method_names[1], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_AddUrl_(Dispatcher_method_names[1], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
 ::grpc::Status Dispatcher::Stub::GetUrl(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::cloudcrawler::GetResponse* response) {
@@ -60,25 +60,25 @@ void Dispatcher::Stub::async::GetUrl(::grpc::ClientContext* context, const ::clo
   return result;
 }
 
-::grpc::Status Dispatcher::Stub::AddUrls(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::cloudcrawler::Empty* response) {
-  return ::grpc::internal::BlockingUnaryCall< ::cloudcrawler::AddRequest, ::cloudcrawler::Empty, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_AddUrls_, context, request, response);
+::grpc::Status Dispatcher::Stub::AddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::cloudcrawler::Empty* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::cloudcrawler::AddRequest, ::cloudcrawler::Empty, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_AddUrl_, context, request, response);
 }
 
-void Dispatcher::Stub::async::AddUrls(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response, std::function<void(::grpc::Status)> f) {
-  ::grpc::internal::CallbackUnaryCall< ::cloudcrawler::AddRequest, ::cloudcrawler::Empty, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_AddUrls_, context, request, response, std::move(f));
+void Dispatcher::Stub::async::AddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::cloudcrawler::AddRequest, ::cloudcrawler::Empty, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_AddUrl_, context, request, response, std::move(f));
 }
 
-void Dispatcher::Stub::async::AddUrls(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response, ::grpc::ClientUnaryReactor* reactor) {
-  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_AddUrls_, context, request, response, reactor);
+void Dispatcher::Stub::async::AddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_AddUrl_, context, request, response, reactor);
 }
 
-::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>* Dispatcher::Stub::PrepareAsyncAddUrlsRaw(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::cloudcrawler::Empty, ::cloudcrawler::AddRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_AddUrls_, context, request);
+::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>* Dispatcher::Stub::PrepareAsyncAddUrlRaw(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::cloudcrawler::Empty, ::cloudcrawler::AddRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_AddUrl_, context, request);
 }
 
-::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>* Dispatcher::Stub::AsyncAddUrlsRaw(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) {
+::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>* Dispatcher::Stub::AsyncAddUrlRaw(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) {
   auto* result =
-    this->PrepareAsyncAddUrlsRaw(context, request, cq);
+    this->PrepareAsyncAddUrlRaw(context, request, cq);
   result->StartCall();
   return result;
 }
@@ -102,7 +102,7 @@ Dispatcher::Service::Service() {
              ::grpc::ServerContext* ctx,
              const ::cloudcrawler::AddRequest* req,
              ::cloudcrawler::Empty* resp) {
-               return service->AddUrls(ctx, req, resp);
+               return service->AddUrl(ctx, req, resp);
              }, this)));
 }
 
@@ -116,7 +116,7 @@ Dispatcher::Service::~Service() {
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
-::grpc::Status Dispatcher::Service::AddUrls(::grpc::ServerContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response) {
+::grpc::Status Dispatcher::Service::AddUrl(::grpc::ServerContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response) {
   (void) context;
   (void) request;
   (void) response;

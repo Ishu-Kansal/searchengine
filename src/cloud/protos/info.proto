@@ -4,7 +4,7 @@ package cloudcrawler;
 
 service Dispatcher {
   rpc GetUrl(Empty) returns (GetResponse) {}
-  rpc AddUrls(AddRequest) returns (Empty) {}
+  rpc AddUrl(AddRequest) returns (Empty) {}
 }
 
 message Empty {}

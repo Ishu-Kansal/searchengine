@@ -1,0 +1,2 @@
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ar qc librg_grpc_proto.a CMakeFiles/rg_grpc_proto.dir/info.grpc.pb.cc.o CMakeFiles/rg_grpc_proto.dir/info.pb.cc.o
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib librg_grpc_proto.a
