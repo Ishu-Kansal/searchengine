@@ -13,7 +13,14 @@ std::vector<std::string> run_engine(const std::string& query) {
 
    if (c) {
       ISR* isrs = c->Eval();
-      return results = constraint_solver(isrs, sequences);
+      std::vector<std::pair<std::string, int>> raw_results = constraint_solver(isrs, sequences);
+
+      std::vector<std::string> urls;
+      urls.reserve(raw_results.size());
+      std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(urls),
+                     [](const std::pair<std::string, int>& p) { return p.first; });
+      
+      return urls;
    } else {
       return {};  // Return empty vector on failure
    }
