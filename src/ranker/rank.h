@@ -148,17 +148,6 @@ struct DomainWeight {
   int weight;
 };
 
-std::array<DomainWeight, CHAR_MAX> get_domain_weights() {
-  std::array<DomainWeight, CHAR_MAX> arr{};
-  arr['g'] = {".gov", IMPORTANT};
-  arr['c'] = {".com", RELEVANT};
-  arr['b'] = {".biz", LESSRELEVANT};
-  arr['e'] = {".edu", IMPORTANT};
-  arr['n'] = {".net", RELEVANT};
-  arr['o'] = {".org", ORG};
-  arr['i'] = {".info", LESSRELEVANT};
-  return arr;
-}
 
 // branchless
 int get_domain_weight(cstring_view domain) {
