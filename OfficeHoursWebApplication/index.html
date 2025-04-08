@@ -12,15 +12,15 @@
   </head>
   <body>
     <div class="container">
-      <h2 class="text-center">Search Demo</h2>
+      <h2 class="text-center">404 Found</h2>
       <form id="searchForm" class="form-horizontal" autocomplete="off">
         <div class="form-group">
-          <label for="queryInput" class="col-sm-2 control-label">Query</label>
+          <label for="queryInput" class="col-sm-2 control-label">Queryous?</label>
           <div class="col-sm-8">
             <input type="text" class="form-control" id="queryInput" placeholder="Enter search terms" required>
           </div>
           <div class="col-sm-2">
-            <button type="submit" class="btn btn-primary btn-block">Search</button>
+            <button type="submit" class="btn btn-primary btn-block">Find</button>
           </div>
         </div>
       </form>
@@ -57,16 +57,14 @@
         container.innerHTML = '';
 
         if (!data.results || data.results.length === 0) {
-          container.textContent = 'No results found.';
+          container.textContent = 'Invalid query';
           return;
         }
 
         data.results.forEach(doc => {
           const div = document.createElement('div');
           div.className = 'result';
-          div.innerHTML = `<h4><a href="${doc.url}" target="_blank">${doc.title}</a></h4>
-                           <p>${doc.snippet}</p>
-                           <small>${doc.url}</small>`;
+          div.innerHTML = `<h4><a href="${doc.url}" target="_blank">${doc.url}</a></h4>`;
           container.appendChild(div);
         });
       }

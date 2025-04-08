@@ -2,24 +2,41 @@
 #include "Plugin.h"
 #include "Mutex.h"
 #include "json.hpp"   // Download from https://github.com/nlohmann/json
+#include "../src/driver.cpp"
+
 
 using json = nlohmann::json;
 
 // Forward‑declare your search routine. Implement it elsewhere.
 json run_query(const std::string &query) {
   json result;
-  result["results"] = {
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 2"},
-      {"url", "http://example.com/page2"},
-      {"snippet", "This is another result for query: " + query}
-    }
-  };
+
+  // call driver and return dict of results
+  std::vector<std::string> urls = main(query);
+
+  if (urls.empty()) {
+    result["results"] = json::array();
+    return result;
+  }
+
+  for (const auto& url : urls) {
+    result["results"].push_back({
+      {"url", url}
+    });
+  }
+
+  // result["results"] = {
+  //   {
+  //     {"title", "Test Result 1"},
+  //     {"url", "http://example.com/page1"},
+  //     {"snippet", "You searched for: " + query}
+  //   },
+  //   {
+  //     {"title", "Test Result 2"},
+  //     {"url", "http://example.com/page2"},
+  //     {"snippet", "This is another result for query: " + query}
+  //   }
+  // };
   return result;
 }
 
