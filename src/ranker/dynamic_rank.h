@@ -63,17 +63,12 @@ int get_rank_score(int shortSpans, int orderedSpans, int phraseMatches, int topS
 //           Needs a start location so we can seek to that location
 // Modifies: Nothing.
 // Effect: Returns the dynamic rank score for a single document.
-int get_dynamic_rank(ISRWord* anchorTerm, vector<vector<ISRWord*>> phraseTerms, ISREndDoc* endDoc, uint64_t startLocation, cstring_view type) {
+int get_dynamic_rank(ISRWord* anchorTerm, vector<vector<ISRWord*>> phraseTerms, uint64_t startLocation, uint64_t endLoc, cstring_view type) {
     // declare the variables that we will be passing onto rank_score()
     int shortSpans = 0;
     int orderedSpans = 0;
     int phraseMatches = 0; 
     int topSpans = 0; 
-    // go to the end of the document
-    endDoc->Seek(startLocation + 1);
-    // get the document end location for post location checking
-    Post* endPost = endDoc->GetCurrentPost(); 
-    uint64_t endLoc = endPost->location;
     // seek all of the ISRs to the start location
     for (int i = 0; i < phraseTerms.size(); i++) {
         for (int j = 0; j < phraseTerms[i].size(); j++) {
