@@ -7,3 +7,7 @@ TARGET = engine
 
 $(TARGET): $(SOURCES) $(HEADERS)
 	$(CXX) $(CXXFLAGS) $(SOURCES) -o $(TARGET)
+
+clean:
+	rm -f $(TARGET)
+
