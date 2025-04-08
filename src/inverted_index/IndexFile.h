@@ -14,10 +14,9 @@
 #include <cstring>
 
 #include "../../HashTable/HashTableStarterFiles/HashBlob.h"
-#include "../../HashTable/HashTableStarterFiles/HashTable.h"
-#include "../../HashTable/HashTableStarterFiles/HashBlob.h"
 #include "Index.h"
 #include "../../HashTable/HashTableStarterFiles/HashTable.h"
+#include "../../utils/utf_encoding.h"
 
 class IndexFile {
     private:
@@ -64,8 +63,8 @@ class IndexFile {
                     seekTable.addEntry(dataBuffer.size(), entry.location);
                 }
                 */
-
                 const uint64_t delta = entry.location - prev;
+                dataBuffer.insert(dataBuffer.end(), SizeOf(delta));
                 pushVarint(dataBuffer, delta);
                 prev = entry.location;
                 ++index;

@@ -16,7 +16,6 @@
 #include <sys/mman.h>
 
 #include "HashTable.h"
-#include "isr.h"
 using Hash = HashTable<const std::string, size_t>;
 using Pair = Tuple<const std::string, size_t>;
 using HashBucket = Bucket<const std::string, size_t>;
@@ -160,16 +159,6 @@ public:
           return nullptr;
        }
     
-       ISRWord *OpenISRWord( const char *word )
-       {
-          const SerialTuple * serialWord = Find(word);
-          if (!serialWord)
-          {
-            // TODO
-          }
-          serialWord->Value;
-       }
-       ISRWord *OpenISREndDoc( );    
    // The SerialTuples will follow immediately after.
 
 

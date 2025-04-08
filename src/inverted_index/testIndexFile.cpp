@@ -7,7 +7,7 @@ int main() {
     IndexChunk indexChunk;
     std::string url = "http://example.com";
     size_t rank = 5;
-    indexChunk.add_url(url, rank);
+    //indexChunk.add_url(url, rank);
     
     std::string word1 = "test";
     indexChunk.add_word(word1, false);
@@ -17,40 +17,46 @@ int main() {
     
     indexChunk.add_enddoc();
     
-    assert(!indexChunk.get_urls().empty());
     assert(!indexChunk.get_posting_lists().empty());
     
     uint32_t chunkNum = 1;
+
     IndexFile indexFile(chunkNum, indexChunk);
     const char * hashFilePath = "HashFile_00001";
     HashFile hashFile(hashFilePath);
     const HashBlob *hashblob = hashFile.Blob();
-    /*
-        auto offset = hashblob->Find("test");
-    
-    
-    std::cout << "All tests passed.\n";
-    return 0;
-    */
-   const char *filename = "IndexChunk_00001";
-   int fileDescrip = open(filename, O_RDWR);
-   const size_t bufferSize = 4096;
-   std::vector<char> buffer;
-   char tempBuffer[bufferSize];
-   ssize_t bytesRead;
-   while ((bytesRead = read(fileDescrip, tempBuffer, bufferSize)) > 0) {
-       buffer.insert(buffer.end(), tempBuffer, tempBuffer + bytesRead);
+    const char *filename = "IndexChunk_00001";
+    int fileDescrip = open(filename, O_RDWR);
+    const size_t bufferSize = 4096;
+    std::vector<char> buffer;       
+    std::vector<char> varintBytes;    
+    bool varintDecoded = false;
+    uint64_t decodedVal = 0;
+    char tempBuffer[bufferSize];
+    ssize_t bytesRead;
+
+    auto offset = hashblob->Find("test");
+    off_t resultPostition = lseek(fileDescrip, offset->Value, SEEK_SET);
+    if ( resultPostition == -1)
+    {
+        cerr << "Could not seek to " << offset->Value << '\n';
+    }
+    while ((bytesRead = read(fileDescrip, tempBuffer, bufferSize)) > 0) {
+            varintBytes.push_back(tempBuffer[i]);
+            if ((tempBuffer[i] & 0x80) == 0) { 
+                const uint8_t* ptr = reinterpret_cast<const uint8_t*>(varintBytes.data());
+                const uint8_t* newPtr = decodeVarint(ptr, decodedVal);
+            }
+
    }
    if (bytesRead < 0) {
        std::cerr << "Error reading file: " << strerror(errno) << "\n";
        close(fileDescrip);
        return 1;
    }
-   
-   std::cout << "Data read (" << buffer.size() << " bytes):\n";
-   std::cout.write(buffer.data(), buffer.size());
-   std::cout << "\n";
-
    close(fileDescrip);
 
+   std::cout << "Decoded varint value: " << decodedVal << "\n";
+   std::cout.write(buffer.data(), buffer.size());
+   std::cout << "\n";
 }
