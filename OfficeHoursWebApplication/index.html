@@ -5,14 +5,36 @@
     <title>Mini Search Engine</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <style>
-      body { font-family: 'Muli', sans-serif; margin-top: 40px; }
-      .result { margin-bottom: 1.2rem; }
-      .result h4 { margin: 0 0 .25rem 0; }
-    </style>
+      body {
+        font-family: 'Muli', sans-serif;
+        margin-top: 40px;
+      }
+
+      .result {
+        margin: 3rem 0;
+        text-align: center;
+      }
+
+      .result h4 {
+        margin: 0;
+      }
+
+      .result h4 a {
+        font-size: 30px;
+        word-break: break-word;
+        display: inline-block;
+        max-width: 90%;
+      }
+
+      #paginationControls {
+        margin: 30px 0;
+        display: none;
+      }
+    </style>    
   </head>
   <body>
     <div class="container">
-      <h2 class="text-center">404 Found</h2>
+      <h1 class="text-center">404 Found</h1>
       <form id="searchForm" class="form-horizontal" autocomplete="off">
         <div class="form-group">
           <label for="queryInput" class="col-sm-2 control-label">Queryous?</label>
@@ -27,47 +49,82 @@
 
       <hr />
       <div id="searchResults"></div>
+
+      <!-- Pagination Controls -->
+      <div id="paginationControls" class="text-center">
+        <button id="prevPage" class="btn btn-default">&laquo; Previous</button>
+        <span id="pageNumber" style="margin: 0 15px; font-size: 18px; font-weight: bold;"></span>
+        <button id="nextPage" class="btn btn-default">Next &raquo;</button>
+      </div>
     </div>
 
     <script>
+      let allResults = [];
+      let currentPage = 0;
+      const pageSize = 10;
+
       document.getElementById('searchForm').addEventListener('submit', function (e) {
         e.preventDefault();
-        search();
-      });
-
-      function search() {
         const query = document.getElementById('queryInput').value.trim();
         if (!query) return;
+
+        currentPage = 0;
+        allResults = [];
 
         fetch('/api/search/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json; charset=utf-8' },
           body: JSON.stringify({ query })
         })
-          .then(r => {
-            if (!r.ok) throw new Error(r.statusText);
-            return r.json();
-          })
-          .then(showResults)
-          .catch(err => console.error(err));
-      }
+        .then(r => {
+          if (!r.ok) throw new Error(r.statusText);
+          return r.json();
+        })
+        .then(data => {
+          if (!data.results || data.results.length === 0) {
+            document.getElementById('searchResults').textContent = 'Invalid query';
+            document.getElementById('paginationControls').style.display = 'none';
+            return;
+          }
+          allResults = data.results;
+          renderPage(0);
+          document.getElementById('paginationControls').style.display = 'block';
+        })
+        .catch(err => console.error(err));
+      });
 
-      function showResults(data) {
+      function renderPage(page) {
         const container = document.getElementById('searchResults');
         container.innerHTML = '';
 
-        if (!data.results || data.results.length === 0) {
-          container.textContent = 'Invalid query';
-          return;
-        }
+        const start = page * pageSize;
+        const end = start + pageSize;
+        const pageResults = allResults.slice(start, end);
 
-        data.results.forEach(doc => {
+        pageResults.forEach(doc => {
           const div = document.createElement('div');
           div.className = 'result';
           div.innerHTML = `<h4><a href="${doc.url}" target="_blank">${doc.url}</a></h4>`;
           container.appendChild(div);
         });
+
+        currentPage = page;
+        updatePaginationButtons();
       }
+
+      function updatePaginationButtons() {
+        document.getElementById('pageNumber').textContent = `Page ${currentPage + 1}`;
+        document.getElementById('prevPage').disabled = currentPage === 0;
+        document.getElementById('nextPage').disabled = (currentPage + 1) * pageSize >= allResults.length;
+      }
+
+      document.getElementById('prevPage').addEventListener('click', () => {
+        if (currentPage > 0) renderPage(currentPage - 1);
+      });
+
+      document.getElementById('nextPage').addEventListener('click', () => {
+        if ((currentPage + 1) * pageSize < allResults.length) renderPage(currentPage + 1);
+      });
     </script>
-</body>
+  </body>
 </html>
