@@ -22,7 +22,7 @@ struct Post {
 struct Doc {
   std::string url;
   size_t staticRank;
-
+  Doc() = default;
   Doc(std::string &url_, size_t staticRank_)
       : url(std::move(url_)), staticRank(staticRank_) {}
   Doc(const char *c1, const char *c2, size_t staticRank_)
@@ -41,7 +41,7 @@ class PostingList {
   }
   void add_word(std::string & word_)
   {
-    word = std::move(word_);
+    word = (word_);
   }
   auto begin() { return posting_list.begin(); }
 
