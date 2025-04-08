@@ -2,18 +2,18 @@
 // Nicole Hamilton  nham@umich.edu
 
 // This variation of LinuxTinyServer supports a simple plugin interface
-// to allow "magic paths" to be intercepted.
+// to allow "magic paths" to be intercepted.  (But the autograder will
+// not test this feature.)
 
 // Usage:  LinuxTinyServer port rootdirectory
 
 // Compile with g++ -pthread LinuxTinyServer.cpp -o LinuxTinyServer
-// To run under WSL (Windows Subsystem for Linux), must elevate with
-// sudo, otherwise bind will fail.
+// To run under WSL (Windows Subsystem for Linux), may have to elevate
+// with sudo if the bind fails.
 
 // LinuxTinyServer does not look for default index.htm or similar
 // files.  If it receives a GET request on a directory, it will refuse
-// it, returning an HTTP 403 error, access denied.  This could be
-// improved.
+// it, returning an HTTP 403 error, access denied.
 
 // It also does not support HTTP Connection: keep-alive requests and
 // will close the socket at the end of each response.  This is a
@@ -131,36 +131,33 @@ const MimetypeMap MimeTable[ ] =
 
 const char *Mimetype( const string filename )
    {
-   // Return the Mimetype associated with any extension on the filename.
+   // TO DO: if a matching a extentsion is found return the corresponding
+   // MIME type.
+   
+   // Anything not matched is an "octet-stream", treated
+   // as an unknown binary, which can be downloaded.
+   size_t lastDotIdx = filename.find_last_of('.');
 
-   const char *begin = filename.c_str( ),
-      *p = begin + filename.length( ) - 1;
-
-   // Scan back from the end for an extension.
-   while ( p >= begin && *p != '.' )
-      p--;
-
-   if ( *p == '.' )
-      {
-      // Found an extension.  Binary search for a matching mimetype.
-
-      int i = 0, j = sizeof( MimeTable )/sizeof( MimetypeMap ) - 1;
-      while ( i <= j )
-         {
-         int mid = ( i + j )/2,
-            compare = strcasecmp( p, MimeTable[ mid ].Extension );
-         if ( compare == 0 )
-            return MimeTable[ mid ].Mimetype;
-         if ( compare < 0 )
-            j = mid - 1;
-         else
-            i = mid + 1;
-         }
+   if (lastDotIdx == string::npos) 
+   {
+      return "application/octet-stream";
+   }
+   const char *extension = (filename.substr(lastDotIdx)).c_str();
+   //  std::cout << "extension: " << extension << std::endl;
+   int NumberofTags = 66;
+   int left = 0, right = NumberofTags - 1;
+   while (left <= right) {
+      int mid = (left + right) / 2;
+      // Use std::tolower on the fly instead of modifying original string
+      int compare = strcasecmp(MimeTable[mid].Extension, extension);
+      if (compare == 0) {
+         return MimeTable[mid].Mimetype;
       }
-
-   // Anything not matched is an "octet-stream", treated as
-   // an unknown binary, which browsers treat as a download.
-
+      if (compare < 0) {
+         left = mid + 1;
+      } else {
+         right = mid - 1;
+      }}
    return "application/octet-stream";
    }
 
@@ -238,77 +235,44 @@ string UnencodeUrlEncoding( string &path )
 
 bool SafePath( const char *path )
    {
-   // Watch out for paths containing .. segments that
-   // attempt to go higher than the root directory
-   // for the website.
-
-   // Should start with a /.
+   // The path must start with a /.
    if ( *path != '/' )
       return false;
 
-   int depth = 0;
-   for ( const char *p = path + 1;  *p;  )
-      if ( strncmp( p, "../", 3 ) == 0 )
-         {
-         depth--;
-         if ( depth < 0 )
-            return false;
-         else
-            p += 3;
-         }
-      else
-         {
-         for ( p++; *p && *p != '/';  p++ )
-            ;
-         if ( *p == '/' )
+   // TO DO:  Return false for any path containing ..
+   // segments that attempt to go higher than the root
+   // directory for the website.
+   const char *p = path;
+   int level = 0;
+   while(*p && *(p+1))
+   {    
+        if (strncmp(p, "../", 3) == 0)
+        {
+            if (--level < 0)
             {
-            depth++;
-            p++;
+                return false;
             }
-         }
-   return true;
-   }
+            p += 3;
+        }
+      
+      else
+      {  
+        while(*p && *p != '/')
+        {
+            ++p;
+        }
+        if (*p == '/')
+        {
+            ++level;
+            ++p;
+        }
 
-
-class RequestHeader
-   {
-   public:
-      string Action;
-      string Path;
-   };
-
-
-RequestHeader ParseRequestHeader( const char *request, size_t length )
-   {
-   // Extract the action and URL unencoded path.
-
-   RequestHeader r;
-   const char *p, *eof = request + length;
-
-   // First word is the action.
-   for ( p = request;  p < eof && *p != ' ';  p++ )
-      ;
-   if ( p - request )
-      r.Action = string( request, p - request );
-
-   // Skip over any whitespace.
-   while ( p < eof && *p == ' ' )
-      p++;
-
-   // Beginning of the path.
-   const char *path = p;
-   while ( p < eof && *p != ' ' )
-      p++;
-
-   if ( p > path )
-      {
-      r.Path = string( path, p - path );
-      r.Path = UnencodeUrlEncoding( r.Path );
       }
-
-   return r;
    }
+   return true;
 
+
+   }
 
 off_t FileSize( int f )
    {
@@ -343,134 +307,112 @@ void FileNotFound( int talkSocket )
    send( talkSocket, fileNotFound, sizeof( fileNotFound ) - 1, 0 );
    }
 
-               
-void *Talk( void *talkSocket )
-   {
-   // Look for a GET message, then reply with the
-   // requested file.
 
-   // Cast from void * to int * to recover the talk socket id
-   // as ts and then delete the copy passed on the heap.
+   void *Talk(void *talkSocket) {
+      int *p = (int *)talkSocket;
+      int ts = *p;
+      delete p;
+   
+      std::string request;
+      char buffer[4096];
+      int totalBytes = 0;
 
-   int *p = ( int * )talkSocket, ts = *p;
-   delete p;
+      while (true) {
+         int bytesRead = recv(ts, buffer, sizeof(buffer), 0);
+         if (bytesRead <= 0) break;
+         request.append(buffer, bytesRead);
+         totalBytes += bytesRead;
 
-   // The buffer will be used for reading the incoming request
-   // and for reading the requested file.  The buffer size was
-   // chosen somewhat arbitrarily to be appropriate for file
-   // i/o and much larger than any request we ever expect.
+         // Once we get headers, check Content-Length
+         size_t headersEnd = request.find("\r\n\r\n");
+         if (headersEnd != std::string::npos) {
+            size_t bodyStart = headersEnd + 4;
 
-   char buffer[ 10240 ];
-   int bytes;
+            size_t cl = request.find("Content-Length:");
+            if (cl != std::string::npos) {
+                  size_t valueStart = cl + 15;
+                  while (valueStart < request.size() && isspace(request[valueStart])) valueStart++;
+                  size_t valueEnd = request.find("\r\n", valueStart);
+                  int contentLength = std::stoi(request.substr(valueStart, valueEnd - valueStart));
 
-   // Ignore null requests.
-   if ( ( bytes = recv( ts, buffer, sizeof( buffer ) - 1, 0 ) ) > 0 )
-      {
-      // Null-terminate the request and print it.
-      buffer[ bytes ] = 0;
-      cout << endl << buffer;
-       
-      // Parse the request to find the action and path being requested.
-      RequestHeader r = ParseRequestHeader( buffer, bytes );
-
-      // Watch for a plugin that intercepts this path.
-      if ( Plugin && Plugin->MagicPath( r.Path ) )
-         {
-         string request( buffer, bytes );
-         string response = Plugin->ProcessRequest( request );
-         cout << response << endl;
-         send( ts, response.c_str( ), response.size( ), 0 );
-         close( ts );
-         return nullptr;
-         }
-
-      if ( r.Action == "GET" && r.Path != "" )
-         {
-         cout << "Requested path = " << r.Path << endl;
-
-         if ( SafePath( r.Path.c_str( ) ) )
-            {
-            string completePath = RootDirectory + r.Path;
-            cout << "Actual path = " << completePath << endl << endl;
-
-            int f = open( completePath.c_str( ), O_RDONLY );
-
-            if ( f != -1 )
-               {
-               // The path exists but it could be either a file
-               // or a directory.
-
-               off_t filesize = FileSize( f );
-               if ( filesize != -1 )
-                  {
-                  // The is a file, not a directory.
-                  string okMessage = "HTTP/1.1 200 OK\r\n"
-                                      "Content-Length: ";
-                  okMessage += to_string( filesize );
-                  okMessage += "\r\nConnection: close\r\nContent-Type: ";
-                  okMessage += Mimetype( completePath );
-                  okMessage += "\r\n\r\n";
-
-                  cout << okMessage;
-                  send( ts, okMessage.c_str( ), okMessage.length( ), 0 );
-
-                  while ( bytes = read( f, buffer, sizeof( buffer ) ) )
-                     send( ts, buffer, bytes, 0 );
+                  if (request.size() >= bodyStart + contentLength) {
+                     break; // Full body received
                   }
-               else
-                  {
-                  // Attempts to read a directory are denied.
-                  // (Might consider looking for the usual index.htm
-                  // or similar files.)
-                  cout << "Attempt to read a directory." << endl;
-                  AccessDenied( ts );
-                  }
-
-               close( f );
-               }
-            else
-               {
-               // Path does not exist.
-               cout << "Path does not exist." << endl;
-               FileNotFound( ts );
-               }
+            } else {
+                  break; // No Content-Length; assume single read
             }
-         else
-            {
-            // Attempt to access something outside the website with too
-            // many .. segments.
-            cout << "Unsafe path blocked." << endl;
-            AccessDenied( ts );
-            }
-         }
-      else
-         {
-         // Wasn't an identifiable GET request.
-         cout << "Garbled request." << endl;
-         FileNotFound( ts ); 
          }
       }
 
-   close( ts );
-   return nullptr;
+   
+      // Debug logging (optional)
+      // std::cout << "Request received:\n" << request << std::endl;
+   
+      // Parse HTTP method
+      size_t methodEnd = request.find(' ');
+      if (methodEnd == std::string::npos) {
+         close(ts);
+         return nullptr;
+      }
+      std::string method = request.substr(0, methodEnd);
+   
+      // Parse path
+      size_t pathStart = methodEnd + 1;
+      size_t pathEnd = request.find(' ', pathStart);
+      if (pathEnd == std::string::npos) {
+         close(ts);
+         return nullptr;
+      }
+      std::string path = request.substr(pathStart, pathEnd - pathStart);
+      path = UnencodeUrlEncoding(path);
+   
+      // Plugin handles request (regardless of method)
+      if (Plugin && Plugin->MagicPath(path)) {
+         std::string response = Plugin->ProcessRequest(request);
+         send(ts, response.c_str(), response.size(), 0);
+         close(ts);
+         return nullptr;
+      }
+   
+      // Only GET methods should reach here
+      if (method != "GET") {
+         close(ts);
+         return nullptr;
+      }
+   
+      // Security check
+      if (!SafePath(path.c_str())) {
+         AccessDenied(ts);
+         close(ts);
+         return nullptr;
+      }
+   
+      // Serve static file
+      std::string absolutePath = RootDirectory + path;
+      int fd = open(absolutePath.c_str(), O_RDONLY);
+      if (fd == -1) {
+         FileNotFound(ts);
+      } else {
+         off_t fileSize = FileSize(fd);
+         const char *mimeType = Mimetype(path);
+         std::string header = "HTTP/1.1 200 OK\r\n";
+         header += "Content-Type: " + std::string(mimeType) + "\r\n";
+         header += "Content-Length: " + std::to_string(fileSize) + "\r\n";
+         header += "Connection: close\r\n\r\n";
+         send(ts, header.c_str(), header.size(), 0);
+   
+         char fileBuffer[1024];
+         ssize_t bytesRead;
+         while ((bytesRead = read(fd, fileBuffer, sizeof(fileBuffer))) > 0) {
+            send(ts, fileBuffer, bytesRead, 0);
+         }
+         close(fd);
+      }
+   
+      close(ts);
+      return nullptr;
    }
 
-
-void PrintAddress( const sockaddr_in *s, const size_t saLength )
-   {
-   const struct in_addr *ip = &s->sin_addr;
-   uint32_t a = ntohl( ip->s_addr );
-
-   // A better alternative here might be to use the inet_ntop( )
-   // function, which can handle IPv6 addresses. But this does
-   // show clearly how an ordinary IPv4 address is encoded.
-
-   cout <<  ( a >> 24 ) << '.' <<
-            ( ( a >> 16 ) & 0xff ) << '.' <<
-            ( ( a >> 8 ) & 0xff ) << '.' <<
-            ( a & 0xff ) << ":" <<
-            ntohs( s->sin_port ) << endl;
-   }
 
 
 int main( int argc, char **argv )
@@ -520,32 +462,32 @@ int main( int argc, char **argv )
    // htons( ) transforms the port number from host (our)
    // byte-ordering into network byte-ordering (which could
    // be different).
-   listenAddress.sin_port = htons( port );
+   listenAddress.sin_port = htons( port ); // host to network short
 
    // INADDR_ANY means we'll accept connections to any IP
    // assigned to this machine.
-   listenAddress.sin_addr.s_addr = htonl( INADDR_ANY );
+   listenAddress.sin_addr.s_addr = htonl( INADDR_ANY ); // host to network long
 
-   // Create the listenSocket, specifying that we'll r/w
+   // TO DO:  Create the listenSocket, specifying that we'll r/w
    // it as a stream of bytes using TCP/IP.
-
-   listenSocket = socket( AF_INET, SOCK_STREAM, IPPROTO_TCP );
-   assert( listenSocket != -1 );
-
-   // Bind the listen socket to the IP address and protocol
+   listenSocket = socket(AF_INET, SOCK_STREAM, 0);
+   // TO DO:  Bind the listen socket to the IP address and protocol
    // where we'd like to listen for connections.
+   socklen_t listenAddressLength = sizeof(listenAddress);
 
-   int bindResult = bind( listenSocket, ( sockaddr * )&listenAddress,
-         sizeof( listenAddress ) );
-   if ( bindResult )
-      {
-      // On WSL, the bind will fail if we're not running as sudo.
-      cerr << "Bind failed, errno = " << errno << endl;
-      cerr << "Try running with sudo." << endl;
-      exit( errno );
-      }
+   if (::bind(listenSocket, (struct sockaddr*)&listenAddress, listenAddressLength) < 0) 
+   {
+      perror("bind failed");
+      close(listenSocket);
+      exit(EXIT_FAILURE);
+   }
 
-   // Begin listening for clients to connect to us.
+   if (listen(listenSocket, 128) < 0) {
+      perror("listen");
+      close(listenSocket);
+      exit(EXIT_FAILURE);
+   }
+   // TO DO:  Begin listening for clients to connect to us.
 
    // The second argument to listen( ) specifies the maximum
    // number of connection requests that can be allowed to
@@ -556,22 +498,14 @@ int main( int argc, char **argv )
    // queue length.  (Under WSL Ubuntu, it's defined as 128
    // in /usr/include/x86_64-linux-gnu/bits/socket.h.)
 
-   int listenResult = listen( listenSocket, SOMAXCONN );
-   assert( listenResult == 0 );
-
-   cout << "Listening on ";
-   PrintAddress( &listenAddress, sizeof( listenAddress ) );
-
-   // Accept each new connection and create a thread to talk with
+   // TO DO;  Accept each new connection and create a thread to talk with
    // the client over the new talk socket that's created by Linux
    // when we accept the connection.
-
-   while ( ( talkAddressLength = sizeof( talkAddress ),
-         talkSocket = accept( listenSocket, ( sockaddr * )&talkAddress,
-            &talkAddressLength ) ) && talkSocket != -1 )
+   while( ( talkAddressLength = sizeof(talkAddress), talkSocket = accept(listenSocket, (sockaddr *)&talkAddress, &talkAddressLength)) &&talkSocket != -1)
       {
-      cout << endl << "Connection accepted from ";
-      PrintAddress( &talkAddress, talkAddressLength );
+
+      // TO DO:  Create and detach a child thread to talk to the
+      // client using pthread_create and pthread_detach.
 
       // When creating a child thread, you get to pass a void *,
       // usually used as a pointer to an object with whatever
@@ -589,10 +523,9 @@ int main( int argc, char **argv )
       // caste the int talksocket to a void *, knowing that a void *
       // must be at least as large as the int.  But that would not
       // demonstrate what to do in the general case.)
-
-      pthread_t child;
-      pthread_create( &child, nullptr, Talk, new int( talkSocket ) );
-      pthread_detach( child );
+      pthread_t thread;
+      pthread_create(&thread, nullptr, Talk, new int (talkSocket));
+      pthread_detach(thread);
       }
 
    close( listenSocket );

@@ -1,2 +1,9 @@
-engine:  List.h Mutex.h Plugin.h LinuxTinyServer.cpp engine.cpp
-	g++ -pthread LinuxTinyServer.cpp engine.cpp -o engine
+CXX = g++
+CXXFLAGS = -pthread -Wall -Wextra -std=c++17
+
+SOURCES = LinuxTinyServer.cpp engine.cpp
+HEADERS = List.h Mutex.h Plugin.h
+TARGET = engine
+
+$(TARGET): $(SOURCES) $(HEADERS)
+	$(CXX) $(CXXFLAGS) $(SOURCES) -o $(TARGET)
