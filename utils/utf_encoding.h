@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 
-[[nodiscard]] inline size_t SizeOf(size_t offset) {
+[[nodiscard]] inline uint8_t SizeOf(size_t offset) {
   if (offset < (1ULL << 7)) {
     return 1;
   } else if (offset < (1ULL << 14)) {

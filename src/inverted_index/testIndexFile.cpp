@@ -7,7 +7,7 @@ int main() {
     IndexChunk indexChunk;
     std::string url = "http://example.com";
     size_t rank = 5;
-    //indexChunk.add_url(url, rank);
+    indexChunk.add_url(url, rank);
     
     std::string word1 = "test";
     indexChunk.add_word(word1, false);
@@ -42,11 +42,6 @@ int main() {
         cerr << "Could not seek to " << offset->Value << '\n';
     }
     while ((bytesRead = read(fileDescrip, tempBuffer, bufferSize)) > 0) {
-            varintBytes.push_back(tempBuffer[i]);
-            if ((tempBuffer[i] & 0x80) == 0) { 
-                const uint8_t* ptr = reinterpret_cast<const uint8_t*>(varintBytes.data());
-                const uint8_t* newPtr = decodeVarint(ptr, decodedVal);
-            }
 
    }
    if (bytesRead < 0) {
