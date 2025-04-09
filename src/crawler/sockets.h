@@ -13,7 +13,7 @@
 #include <memory>
 
 #include "../../utils/cunique_ptr.h"
-#include "robotParser.h"
+//#include "robotParser.h"
 class ParsedUrl {
  public:
   const char *CompleteUrl;
@@ -250,10 +250,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
 
 int getHTML(std::string url_in, std::string &output) {
   ParsedUrl url(url_in.data());
-  static RobotParser bot;
-  int robotStatus = bot.handleRobotFile(url, url_in);
-  if (robotStatus == 0)
-  {
+
     // Send the GET request
     std::string req =
     "GET /" + std::string(url.Path) +
@@ -288,7 +285,7 @@ int getHTML(std::string url_in, std::string &output) {
     status = runSocket(req2, newishURL, output);
 
     // std::cout << "redirected output:\n" << output << std::endl;
-    return status;
     }
-  }
+    return status;
+
 }

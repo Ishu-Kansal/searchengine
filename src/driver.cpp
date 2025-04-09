@@ -8,11 +8,12 @@
 #include <cstring>
 #include <algorithm>
 
-#include "query_parser/parser.h"
-#include "constraint_solver.h"
+// #include "query_parser/parser.h"
+// #include "constraint_solver.h"
 #include "../HtmlParser/HtmlParser.h"
+#include "./crawler/sockets.h"
 
-std::vector<vector<ISRWord*>> sequences;
+//std::vector<vector<ISRWord*>> sequences;
 
 struct SearchResult {
    std::string url;
@@ -33,68 +34,57 @@ std::string join_words(const std::vector<std::string>& words, size_t max_words =
 
 // Fetch content from URL using LinuxGetSsl and return SearchResult
 SearchResult get_and_parse_url(const cstring_view& url) {
-   static const char *const proc = "../../LinuxGetUrl/LinuxGetSsl";
-   int pipefd[2];
-   if (pipe(pipefd) == -1) {
-       perror("pipe");
-       exit(1);
-   }
-   pid_t pid = fork();
-   if (pid == -1) {
-       perror("fork");
-       exit(1);
-   }
-   if (pid == 0) {
-       // child
-       close(pipefd[0]);
-       dup2(pipefd[1], STDOUT_FILENO);
-       close(pipefd[1]);
-       execl(proc, proc, url.data(), nullptr); // Use url.data() to get the C-string
-       perror("exec");
-       exit(1);
-   }
-   // parent
-   close(pipefd[1]);
-   std::string content;
-   char buffer[4096];
-   ssize_t bytesRead;
-   while ((bytesRead = read(pipefd[0], buffer, sizeof(buffer))) > 0) {
-       content.append(buffer, bytesRead);
-   }
-   close(pipefd[0]);
-   waitpid(pid, nullptr, 0);
+   std::string url_str(url.data(), url.size());
+   std::string html;
 
+   int status = getHTML(url_str, html);
    SearchResult result;
-   result.url = std::string(url.data());
+   result.url = url_str;
+
+   if (status != 0 || html.empty()) {
+      std::cout << status << std::endl;
+       std::cerr << "Failed to fetch HTML from: " << url_str << std::endl;
+       result.title = "";
+       result.snippet = "";
+       return result;
+   }
 
    try {
-      HtmlParser parser(content.c_str(), content.size());
-      result.title = join_words(parser.titleWords);
-      result.snippet = join_words(parser.words, 30);
+       HtmlParser parser(html.data(), html.size());
+       result.title = join_words(parser.titleWords);
+       result.snippet = join_words(parser.words, 30);
    } catch (...) {
+       std::cerr << "Parsing failed for: " << url_str << std::endl;
        result.title = "";
        result.snippet = "";
    }
+
    return result;
 }
 
 // driver function for the search engine
 std::vector<cstring_view> run_engine(std::string& query) {
-   QueryParser parser(query);
-   Constraint *c = parser.Parse();
+   // QueryParser parser(query);
+   // Constraint *c = parser.Parse();
 
-   if (c) {
-      ISR* isrs = c->Eval();
-      std::vector<std::pair<cstring_view, int>> raw_results = constraint_solver(isrs, sequences);
+   // if (c) {
+   //    ISR* isrs = c->Eval();
+   //    std::vector<std::pair<cstring_view, int>> raw_results = constraint_solver(isrs, sequences);
 
-      std::vector<cstring_view> urls;
-      urls.reserve(raw_results.size());
-      std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(urls),
-                     [](const std::pair<cstring_view, int>& p) { return p.first; });
+   //    std::vector<cstring_view> urls;
+   //    urls.reserve(raw_results.size());
+   //    std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(urls),
+   //                   [](const std::pair<cstring_view, int>& p) { return p.first; });
 
-      return urls;
+   //    return urls;
 
-   } else {
-      return {};  // Return empty vector on failure
-   }
+   // } else {
+   //    return {};  // Return empty vector on failure
+   // }
+   std::vector<cstring_view> urls;
+   urls.push_back(cstring_view("https://nicolehamilton.com"));
+   urls.push_back(cstring_view("https://umich.edu"));
+   urls.push_back(cstring_view("https://www.espn.com/mlb/player/_/id/30473/josh-rainwater"));
+
+   return urls;
 }

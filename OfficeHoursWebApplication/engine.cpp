@@ -1,8 +1,8 @@
 #include <string>
 #include "Plugin.h"
 #include "Mutex.h"
-#include "json.hpp"   // Download from https://github.com/nlohmann/json
-#include "../src/driver.cpp"
+#include "json.hpp"   // Download from https://github.com/nlohmann/json"
+#include "../src/driver.h"
 
 
 using json = nlohmann::json;

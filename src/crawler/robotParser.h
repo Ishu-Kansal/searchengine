@@ -2,7 +2,7 @@
 #include <string>
 #include <sstream>
 
-#include <sockets.h>
+#include "sockets.h"
 
 static constexpr std::string_view USER_AGENT = "SonOfAnton/1.0";
 
@@ -64,6 +64,9 @@ class RobotParser
             {
                 if (isEqual(value_view, USER_AGENT)) ourUserAgentFound = true;
                 if (isEqual(value_view, "*")) 
+                {
+                    ourUserAgentFound = true;
+                }
             }  
         }
     }
