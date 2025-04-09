@@ -21,6 +21,8 @@
 constexpr size_t BLOCK_OFFSET_BITS = 13; // 2^13 or 8192
 constexpr size_t BLOCK_SIZE = 1 << BLOCK_OFFSET_BITS;
 
+// Didn't use pushVarint for some of them, because some of the values are only in the range of an unsigned byte.
+
 class IndexFile {
     private:
     int fileDescrip;
@@ -51,13 +53,11 @@ class IndexFile {
         }
     }
     void serializePostingLists(std::vector<uint8_t>& dataBuffer, const vector<PostingList> &listOfPostingList, HashTable<const std::string, size_t> & dictionary)
-    {
-        // TODO: add size of listOfPostingList? Don't think we need since we update the dictionary with new offset
+    {   
         for (const PostingList & postingList : listOfPostingList)
         {
             const std::string & word = postingList.get_word();
             // dataBuffer.size() is the byte offset for the start of this posting list
-
             bool success = dictionary.Update(word, dataBuffer.size());
             if (!success) [[unlikely]]
             {
@@ -80,7 +80,7 @@ class IndexFile {
             uint64_t pos = 0;
             uint64_t offset = 0; // offset from start of posting list
             std::vector<uint8_t> tempBuffer;
-            tempBuffer.reserve(1000000000UL);
+            tempBuffer.reserve(10000000000UL); // 1 gb
             for (const Post & entry : postingList)
             {
                 uint64_t delta = entry.location - prev;
@@ -128,28 +128,16 @@ class IndexFile {
             exit(EXIT_FAILURE);
         }
         /*
-        Method 1:
-
-        Don't need to reconstruct hash table: hash table has offset of word in vector of posting lists (listOfpostingList), use another vector (postingListOffsetVector) to store byte offset. Simplest way with our current structure.
-
-        std::vector<size_t> postingListOffsetVector;
-        postingListOffsetVector.reserve(indexChunk.get_posting_lists().size());
-        
-        */ 
-        /*
-        What we are currently doing
-        Method 2:
         Store word with posting list
         Once posting list is written out, update value to byte offset in file
         Added update func in hash table
         */
         HashTable<const std::string, size_t> & dictionary = indexChunk.get_dictionary();
         // used vector so that we didn't need to calculate size of buffer beforehand
-        // Every insert is at the end of the dataBuffer, 
-        // so should be amortized constant time (constant since we reserved 1 gb)
+        // Every insert is at the end of the dataBuffer
+        // no reallocation since we reserved mem
         std::vector<uint8_t> dataBuffer;
-        // This is only for if we have more than one index chunk for each machine
-        dataBuffer.reserve(1000000000UL); // Gigabyte worth of bytes
+        dataBuffer.reserve(8000000000UL); // 8 Gigabyte worth of bytes
         serializeChunk(indexChunk, dataBuffer, dictionary);
 
         ssize_t bytesWritten = write(fileDescrip, dataBuffer.data(), dataBuffer.size());
@@ -163,6 +151,7 @@ class IndexFile {
             cerr << "Incomplete write to " << indexFilename;
             exit(EXIT_FAILURE);
         }
+
         char hashFilename[32];
         snprintf(hashFilename, sizeof(hashFilename), "HashFile_%05u", chunkNum);
         HashFile hashfile(hashFilename, &dictionary);
