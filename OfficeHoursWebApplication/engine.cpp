@@ -2,161 +2,35 @@
 #include "Plugin.h"
 #include "Mutex.h"
 #include "json.hpp"   // Download from https://github.com/nlohmann/json
-// #include "../src/driver.cpp"
+#include "../src/driver.cpp"
 
 
 using json = nlohmann::json;
 
 // Forward‑declare your search routine. Implement it elsewhere.
-json run_query(const std::string &query) {
+json run_query(std::string &query) {
   json result;
 
-  // // call driver and return dict of results
-  // std::vector<std::string> urls = run_engine(query);
+  // call driver and return dict of results
+  std::vector<cstring_view> urls = run_engine(query);
 
-  // if (urls.empty()) {
-  //   result["results"] = json::array();
-  //   return result;
-  // }
+  if (urls.empty()) {
+    result["results"] = json::array();
+    return result;
+  }
 
-  // for (const auto& url : urls) {
-  //   result["results"].push_back({
-  //     {"url", url}
-  //   });
-  // }
+  result["results"] = json::array();
 
-  result["results"] = {
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 1"},
-      {"url", "http://example.com/page1"},
-      {"snippet", "You searched for: " + query}
-    },
-    {
-      {"title", "Test Result 2"},
-      {"url", "http://example.com/page2"},
-      {"snippet", "This is another result for query: " + query}
-    }
-  };
+  for (const auto &url : urls) {
+    SearchResult parsed = get_and_parse_url(url);
+
+    result["results"].push_back({
+      {"url", parsed.url},
+      {"title", parsed.title},
+      {"snippet", parsed.snippet}
+    });
+  }
+
   return result;
 }
 

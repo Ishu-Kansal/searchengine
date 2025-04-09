@@ -34,7 +34,7 @@
   </head>
   <body>
     <div class="container">
-      <h1 class="text-center">404 Found</h1>
+      <h1 class="text-center"><b>404 Found</b></h1>
       <form id="searchForm" class="form-horizontal" autocomplete="off">
         <div class="form-group">
           <label for="queryInput" class="col-sm-2 control-label">Queryous?</label>
@@ -104,7 +104,11 @@
         pageResults.forEach(doc => {
           const div = document.createElement('div');
           div.className = 'result';
-          div.innerHTML = `<h4><a href="${doc.url}" target="_blank">${doc.url}</a></h4>`;
+          div.innerHTML = `
+            <h4><a href="${doc.url}" target="_blank">${doc.title || doc.url}</a></h4>
+            <p>${doc.snippet || ''}</p>
+            <small>${doc.url}</small>
+          `;
           container.appendChild(div);
         });
 
