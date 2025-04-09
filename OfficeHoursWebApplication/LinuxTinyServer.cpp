@@ -308,109 +308,109 @@ void FileNotFound( int talkSocket )
    }
 
 
-void *Talk( void *talkSocket )
-   {
-   // TO DO:  Look for a GET message, then reply with the
-   // requested file.
+   void *Talk(void *talkSocket) {
+      int *p = (int *)talkSocket;
+      int ts = *p;
+      delete p;
    
-   // Cast from void * to int * to recover the talk socket id
-   // then delete the copy passed on the heap.
-   int *p = (int *)talkSocket;
-   int ts = *p;
-   delete p;
+      std::string request;
+      char buffer[4096];
+      int totalBytes = 0;
 
-   char buffer[4096];
-   int bytesRead = recv(ts, buffer, sizeof(buffer), 0);
-   if (bytesRead <= 0) {
-      close(ts);
-      return nullptr;
-   }
-   buffer[bytesRead] = '\0';
-   string request(buffer);
-   size_t methodEnd = request.find(' ');
-   if (methodEnd == string::npos) 
-   {
-      close(ts);
-      return nullptr;
-   }
-   string method = request.substr(0, methodEnd);
-   if (method != "GET") 
-   {
-      close(ts);
-      return nullptr;
-   }
-   size_t pathStart = methodEnd + 1;
-   size_t pathEnd = request.find(' ', pathStart);
-   if (pathEnd == string::npos) 
-   {
-      close(ts);
-      return nullptr;
-   
-   }
-   string path = request.substr(pathStart, pathEnd - pathStart);
-   path = UnencodeUrlEncoding(path);
-   if (!SafePath(path.c_str())) 
-   {
-      AccessDenied(ts);
-      close(ts);
-      return nullptr;
-   }
+      while (true) {
+         int bytesRead = recv(ts, buffer, sizeof(buffer), 0);
+         if (bytesRead <= 0) break;
+         request.append(buffer, bytesRead);
+         totalBytes += bytesRead;
 
-   // Read the request from the socket and parse it to extract
-   // the action and the path, unencoding any %xx encodings.
+         // Once we get headers, check Content-Length
+         size_t headersEnd = request.find("\r\n\r\n");
+         if (headersEnd != std::string::npos) {
+            size_t bodyStart = headersEnd + 4;
 
-   // Check to see if there's a plugin and, if there is,
-   // whether this is a magic path intercepted by the plugin.
+            size_t cl = request.find("Content-Length:");
+            if (cl != std::string::npos) {
+                  size_t valueStart = cl + 15;
+                  while (valueStart < request.size() && isspace(request[valueStart])) valueStart++;
+                  size_t valueEnd = request.find("\r\n", valueStart);
+                  int contentLength = std::stoi(request.substr(valueStart, valueEnd - valueStart));
 
-   //    If it is intercepted, call the plugin's ProcessRequest( )
-   //    and send whatever's returned over the socket.
-   if (Plugin && Plugin->MagicPath(path)) 
-   {
-      string response = Plugin->ProcessRequest(request);
-      send(ts, response.c_str(), response.size(), 0);
-      close(ts);
-      return nullptr;
-   } 
-
-   // If it isn't intercepted, action must be "GET" and
-   // the path must be safe.
-   
-   if (method == "GET" && path != "")
-   {
-      string absolutePath = RootDirectory + path;
-      // cout << absolutePath << endl;
-      int fd = open(absolutePath.c_str(), O_RDONLY);
-      //cout << fd << endl;
-      if (fd == -1)
-      {
-         FileNotFound(ts);
+                  if (request.size() >= bodyStart + contentLength) {
+                     break; // Full body received
+                  }
+            } else {
+                  break; // No Content-Length; assume single read
+            }
+         }
       }
-      else
-      {
+
+   
+      // Debug logging (optional)
+      // std::cout << "Request received:\n" << request << std::endl;
+   
+      // Parse HTTP method
+      size_t methodEnd = request.find(' ');
+      if (methodEnd == std::string::npos) {
+         close(ts);
+         return nullptr;
+      }
+      std::string method = request.substr(0, methodEnd);
+   
+      // Parse path
+      size_t pathStart = methodEnd + 1;
+      size_t pathEnd = request.find(' ', pathStart);
+      if (pathEnd == std::string::npos) {
+         close(ts);
+         return nullptr;
+      }
+      std::string path = request.substr(pathStart, pathEnd - pathStart);
+      path = UnencodeUrlEncoding(path);
+   
+      // Plugin handles request (regardless of method)
+      if (Plugin && Plugin->MagicPath(path)) {
+         std::string response = Plugin->ProcessRequest(request);
+         send(ts, response.c_str(), response.size(), 0);
+         close(ts);
+         return nullptr;
+      }
+   
+      // Only GET methods should reach here
+      if (method != "GET") {
+         close(ts);
+         return nullptr;
+      }
+   
+      // Security check
+      if (!SafePath(path.c_str())) {
+         AccessDenied(ts);
+         close(ts);
+         return nullptr;
+      }
+   
+      // Serve static file
+      std::string absolutePath = RootDirectory + path;
+      int fd = open(absolutePath.c_str(), O_RDONLY);
+      if (fd == -1) {
+         FileNotFound(ts);
+      } else {
          off_t fileSize = FileSize(fd);
          const char *mimeType = Mimetype(path);
-         string header = "HTTP/1.1 200 OK\r\n";
-         header += "Content-Type: " + string(mimeType) + "\r\n";
-         header += "Content-Length: " + to_string(fileSize) + "\r\n";
+         std::string header = "HTTP/1.1 200 OK\r\n";
+         header += "Content-Type: " + std::string(mimeType) + "\r\n";
+         header += "Content-Length: " + std::to_string(fileSize) + "\r\n";
          header += "Connection: close\r\n\r\n";
          send(ts, header.c_str(), header.size(), 0);
-
+   
          char fileBuffer[1024];
          ssize_t bytesRead;
-         while ((bytesRead = read(fd, fileBuffer, sizeof(fileBuffer))) > 0)
-         {
+         while ((bytesRead = read(fd, fileBuffer, sizeof(fileBuffer))) > 0) {
             send(ts, fileBuffer, bytesRead, 0);
          }
          close(fd);
       }
-
-   }
-   // If the path refers to a directory, access denied.
-   // If the path refers to a file, write it to the socket.
-
-   // Close the socket and return nullptr.
-   close(ts);
-   return nullptr;
+   
+      close(ts);
+      return nullptr;
    }
 
 

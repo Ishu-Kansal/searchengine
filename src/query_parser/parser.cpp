@@ -61,11 +61,11 @@ bool QueryParser::FindAndOp() {
 
 // Parses a simple constraint: phrase, nested constraint, unary operators, or a search word
 Constraint* QueryParser::FindSimpleConstraint() {
-   if (stream.Match("NOT") || stream.Match("-")) {
-      Constraint* constraint = FindSimpleConstraint();
-      return constraint ? new NotConstraint(constraint) : nullptr;
-   }
-   else if (stream.Peek() == "'" || stream.Peek() == "\"") {
+   // if (stream.Match("NOT") || stream.Match("-")) {
+   //    Constraint* constraint = FindSimpleConstraint();
+   //    return constraint ? new NotConstraint(constraint) : nullptr;
+   // }
+   if (stream.Peek() == "'" || stream.Peek() == "\"") {
       return FindPhrase();
    } 
    else if (stream.Match("(")) {
