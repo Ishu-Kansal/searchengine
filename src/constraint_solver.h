@@ -61,8 +61,8 @@ std::vector<pair<cstring_view, int>> constraint_solver(ISR* queryISR, vector<vec
     // seek to the first occurence
     Post* currPost = queryISR->NextDocument(); 
     while (currPost) {
-        int docStartLoc = queryISR->GetStartLocation(); 
-        int docEndLoc = queryISR->GetEndLocation(); 
+        int docStartLoc = queryISR->getDocStartLoc(); 
+        int docEndLoc = queryISR->getDocEndLoc(); 
         // TO DO use the relative loc to get relevant doc data
         int relativeLoc = queryISR->GetCurrentPost()->location;
         assert(false);

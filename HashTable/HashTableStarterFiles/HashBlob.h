@@ -16,10 +16,9 @@
 #include <sys/mman.h>
 
 #include "HashTable.h"
-#include "isr.h"
-using Hash = HashTable<const char *, size_t>;
-using Pair = Tuple<const char *, size_t>;
-using HashBucket = Bucket<const char *, size_t>;
+using Hash = HashTable<const std::string, size_t>;
+using Pair = Tuple<const std::string, size_t>;
+using HashBucket = Bucket<const std::string, size_t>;
 
 static const size_t Unknown = 0;
 
@@ -58,12 +57,12 @@ public:
 
    static size_t BytesRequired(const HashBucket *b)
    {
-      if (!b || !b->tuple.key)
+      if (!b || b->tuple.key.empty())
       {
          return 0;
       }
       size_t base = sizeof(Length) + sizeof(Value) + sizeof(size_t);
-      size_t keyLen = strlen(b->tuple.key) + 1;
+      size_t keyLen = b->tuple.key.size() + 1;
       
       size_t total = base + keyLen;
       return RoundUp(total, sizeof(size_t));
@@ -99,8 +98,8 @@ public:
       buffer += sizeof(b->hashValue);
 
       // Writes key to buffer
-      size_t keyLen = strlen(b->tuple.key) + 1;
-      std::memcpy(buffer, b->tuple.key, keyLen);
+      size_t keyLen = b->tuple.key.size() + 1;
+      std::memcpy(buffer, b->tuple.key.c_str(), keyLen);
       buffer += keyLen;
       size_t total = keyLen + 24;
       // Aligns buffer
@@ -160,16 +159,6 @@ public:
           return nullptr;
        }
     
-       ISRWord *OpenISRWord( const char *word )
-       {
-          const SerialTuple * serialWord = Find(word);
-          if (!serialWord)
-          {
-            // TODO
-          }
-          serialWord->Value;
-       }
-       ISRWord *OpenISREndDoc( );    
    // The SerialTuples will follow immediately after.
 
 
@@ -220,10 +209,6 @@ public:
          HashBucket *bucket = hashTable->buckets[i];
          while (bucket)
          {
-            if (strcmp(bucket->tuple.key, "the") == 0)
-            {
-               int s = 0;
-            }
             cur = SerialTuple::Write(cur, bufferEnd, bucket);
             bucket = bucket->next;
          }

@@ -2,12 +2,13 @@
 
 #include <memory>
 #include <../utils/cstring_view.h>
-#include "IndexFile.h"
+#include "IndexFileReader.h"
 
 typedef size_t Location; // Location 0 is the null location.
 typedef size_t FileOffset;
 
 constexpr Location NULL_LOCATION = 0;
+static IndexFileReader READER(1);
 
 class ISR {
 public:
@@ -39,7 +40,7 @@ public:
     }
     
     SeekObj* Seek(Location target) {
-
+        return READER.Find(word, target, 1);
     }
     
     unsigned GetDocumentCount() {

@@ -30,7 +30,6 @@ class SeekTable {
   // total: can store up to 2^20 = 1M posts
 
   const static size_t MASK = (1 << LOG_TABLE_SIZE) - 1;
-
   SeekTable() = default;
 
   void addEntry(uint64_t postOffset, uint64_t location) {

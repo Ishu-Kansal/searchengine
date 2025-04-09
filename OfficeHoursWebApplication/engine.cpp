@@ -11,6 +11,7 @@ using json = nlohmann::json;
 json run_query(std::string &query) {
   json result;
 
+
   // call driver and return dict of results
   std::vector<cstring_view> urls = run_engine(query);
 
@@ -30,6 +31,7 @@ json run_query(std::string &query) {
       {"snippet", parsed.snippet}
     });
   }
+
 
   return result;
 }

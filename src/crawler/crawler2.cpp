@@ -280,7 +280,7 @@ bool check_url(cstring_view url) {
 
   if (url.find(cstring_view{"porn"}) != cstring_view::npos) return false;
 
-  if (url.size() > 250) {
+  if (url.size() > 255) {
     return false;
   }
 

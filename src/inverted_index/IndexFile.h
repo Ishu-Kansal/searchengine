@@ -1,25 +1,35 @@
 #pragma once
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-#include <cmath>
-#include <cassert>
-#include <cstring>
-#include <cstdint>
 #include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <cstdint>
+#include <cstring>
 
-#include "HashTable.h"
-#include "HashBlob.h"
+#include "../../HashTable/HashTableStarterFiles/HashBlob.h"
 #include "Index.h"
+#include "../../HashTable/HashTableStarterFiles/HashTable.h"
+#include "../../utils/utf_encoding.h"
 
+constexpr size_t BLOCK_OFFSET_BITS = 13; // 2^13 or 8192
+constexpr size_t BLOCK_SIZE = 1 << BLOCK_OFFSET_BITS;
 
 class IndexFile {
     private:
+    int fileDescrip;
+    size_t FileSize(int f)
+    {
+        struct stat fileInfo;
+        fstat(f, &fileInfo);
+        return fileInfo.st_size;
+    }
     void pushVarint(std::vector<uint8_t>& dataBuffer, uint64_t value) {
 
         uint8_t buf[10];
@@ -27,39 +37,71 @@ class IndexFile {
         dataBuffer.insert(dataBuffer.end(), buf, ptr);
 
     }
-    void serializeUrlList(std::vector<uint8_t>& dataBuffer, const std::vector<Doc> &urlList)
+    void serializeUrlList(std::vector<uint8_t>& dataBuffer, const std::vector<Doc> &urlList, uint64_t urlListBytes)
     {
         // Every insert is at the end of the dataBuffer, so should be constant time
-        pushVarint(dataBuffer, urlList.size());
+        uint8_t size = SizeOf(urlListBytes);
+        dataBuffer.push_back(size);
+        pushVarint(dataBuffer, urlListBytes);
         for (auto & doc : urlList)
         {
-            pushVarint(dataBuffer, doc.staticRank);
-            pushVarint(dataBuffer, doc.url.size());
+            dataBuffer.push_back(doc.url.size());
+            dataBuffer.push_back(doc.staticRank);
             dataBuffer.insert(dataBuffer.end(), doc.url.begin(), doc.url.end());
         }
     }
     void serializePostingLists(std::vector<uint8_t>& dataBuffer, const vector<PostingList> &listOfPostingList, HashTable<const std::string, size_t> & dictionary)
     {
-        // TODO: add size of listOfPostingList?
+        // TODO: add size of listOfPostingList? Don't think we need since we update the dictionary with new offset
         for (const PostingList & postingList : listOfPostingList)
         {
             const std::string & word = postingList.get_word();
             // dataBuffer.size() is the byte offset for the start of this posting list
+
             bool success = dictionary.Update(word, dataBuffer.size());
             if (!success) [[unlikely]]
             {
                 cerr << word << " not found in dictionary.";
                 exit(EXIT_FAILURE);
             }
-            // TODO: Need to serialize seek table
-            pushVarint(dataBuffer, postingList.size());
+            if (postingList.size() < BLOCK_SIZE) 
+            {
+                dataBuffer.push_back(0); // No seek table
+            }
+            else
+            {
+                uint32_t numEntries = postingList.size() >> BLOCK_OFFSET_BITS;
+                // One byte to get size
+                dataBuffer.push_back(SizeOf(numEntries)); 
+                pushVarint(dataBuffer, numEntries);
+            }
             uint64_t prev = 0;
+            uint32_t index = 0;
+            uint64_t pos = 0;
+            uint64_t offset = 0; // offset from start of posting list
+            std::vector<uint8_t> tempBuffer;
+            tempBuffer.reserve(1000000000UL);
             for (const Post & entry : postingList)
             {
-                const uint64_t delta = entry.location - prev;
-                pushVarint(dataBuffer, delta);
+                uint64_t delta = entry.location - prev;
+                pos += delta;
+                uint8_t deltaSize = SizeOf(delta);
+                offset += deltaSize; 
+                if (postingList.size() >= BLOCK_SIZE && index % BLOCK_SIZE == 0)
+                {
+                    // Adds offset and absolute location
+                    uint8_t* bytes = reinterpret_cast<uint8_t*>(&offset);
+                    dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(offset));
+                    bytes = reinterpret_cast<uint8_t*>(&pos);
+                    dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(pos));
+                }
+                pushVarint(tempBuffer, delta);
                 prev = entry.location;
+                ++index;
             }
+            // adds all posts after seek table
+            dataBuffer.insert(dataBuffer.end(), tempBuffer.begin(), tempBuffer.end()); 
+
         }
     }
     void serializeChunk(const IndexChunk &indexChunk, std::vector<uint8_t>& dataBuffer, HashTable<const std::string, size_t> & dictionary)
@@ -69,17 +111,20 @@ class IndexFile {
         // Serialize everything 
         const auto urlList = indexChunk.get_urls();
         const auto listOfPostingList = indexChunk.get_posting_lists();
-        serializeUrlList(dataBuffer, urlList);
+        serializeUrlList(dataBuffer, urlList, indexChunk.get_url_list_size_bytes());
         serializePostingLists(dataBuffer, listOfPostingList, dictionary);
         
     }
     public:
-    IndexFile(const char* filename, IndexChunk &indexChunk)
+    IndexFile(uint32_t chunkNum, IndexChunk &indexChunk)
     {
-        fileDescrip = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0666);
+        if (chunkNum > 99999) exit(EXIT_FAILURE);
+        char indexFilename[32];
+        snprintf(indexFilename, sizeof(indexFilename), "IndexChunk_%05u", chunkNum);
+        fileDescrip = open(indexFilename, O_RDWR | O_CREAT | O_TRUNC, 0666);
         if ( fileDescrip == -1 )
         {
-            cerr << "Could not open " << filename;
+            cerr << "Could not open " << indexFilename;
             exit(EXIT_FAILURE);
         }
         /*
@@ -92,13 +137,14 @@ class IndexFile {
         
         */ 
         /*
+        What we are currently doing
         Method 2:
         Store word with posting list
         Once posting list is written out, update value to byte offset in file
         Added update func in hash table
         */
         HashTable<const std::string, size_t> & dictionary = indexChunk.get_dictionary();
-        // TODO: used vector so that we didn't need to calculate size of buffer beforehand
+        // used vector so that we didn't need to calculate size of buffer beforehand
         // Every insert is at the end of the dataBuffer, 
         // so should be amortized constant time (constant since we reserved 1 gb)
         std::vector<uint8_t> dataBuffer;
@@ -109,16 +155,17 @@ class IndexFile {
         ssize_t bytesWritten = write(fileDescrip, dataBuffer.data(), dataBuffer.size());
         if (bytesWritten == -1) 
         {
-            cerr << "Error writing to " << filename;
+            cerr << "Error writing to " << indexFilename;
             exit(EXIT_FAILURE);
         }
         else if (static_cast<size_t>(bytesWritten) != dataBuffer.size()) 
         {
-            cerr << "Incomplete write to " << filename;
+            cerr << "Incomplete write to " << indexFilename;
             exit(EXIT_FAILURE);
         }
-        HashFile hashfile( "IDK KNOW YET" );
-        const HashBlob *hashblob = hashfile.Blob( );
+        char hashFilename[32];
+        snprintf(hashFilename, sizeof(hashFilename), "HashFile_%05u", chunkNum);
+        HashFile hashfile(hashFilename, &dictionary);
           
     }
     ~IndexFile()
@@ -128,12 +175,4 @@ class IndexFile {
             close(fileDescrip);
         }
     }
-    private:
-        int fileDescrip;
-        size_t FileSize(int f)
-        {
-            struct stat fileInfo;
-            fstat(f, &fileInfo);
-            return fileInfo.st_size;
-        }
 };

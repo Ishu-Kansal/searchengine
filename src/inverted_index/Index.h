@@ -21,11 +21,11 @@ struct Post {
 
 struct Doc {
   std::string url;
-  size_t staticRank;
-
-  Doc(std::string &url_, size_t staticRank_)
+  uint8_t staticRank;
+  Doc() = default;
+  Doc(std::string &url_, uint8_t staticRank_)
       : url(std::move(url_)), staticRank(staticRank_) {}
-  Doc(const char *c1, const char *c2, size_t staticRank_)
+  Doc(const char *c1, const char *c2, uint8_t staticRank_)
       : url(c1, c2), staticRank(staticRank_) {}
 };
 
@@ -41,7 +41,7 @@ class PostingList {
   }
   void add_word(std::string & word_)
   {
-    word = std::move(word_);
+    word = (word_);
   }
   auto begin() { return posting_list.begin(); }
 
@@ -111,6 +111,7 @@ class InvertedIndex {
 class IndexChunk {
  public:
   void add_url(std::string &url, size_t staticRank) {
+    url_list_size += url.size() + 2; // 1 byte for static rank and 1 byte for url length
     url_list.emplace_back(url, staticRank);
   }
   void add_enddoc() {
@@ -131,9 +132,13 @@ class IndexChunk {
   [[nodiscard]] HashTable<const std::string, size_t> & get_dictionary() {
     return inverted_word_index.get_dictionary();
   }
+  [[nodiscard]] uint64_t get_url_list_size_bytes() const {
+    return url_list_size;
+  }
  private:
   std::vector<Doc> url_list;
   InvertedIndex inverted_word_index;
+  uint64_t url_list_size = 0;
   uint64_t pos;
 };
 
@@ -169,8 +174,4 @@ uint8_t *encode_posting_list(uint8_t *buf, const PostingList &pl) {
     prev = entry.location;
   }
   return buf;
-}
-
-void *encodeIndex(const IndexChunk &h) {
-
 }
