@@ -17,7 +17,7 @@
 
 constexpr size_t BLOCK_OFFSET_BITS = 13; // 2^13 or 8192
 constexpr size_t BLOCK_SIZE = 1 << BLOCK_OFFSET_BITS;
-constexpr size_t entrySize = 16;
+constexpr size_t ENTRY_SIZE = 16;
 typedef size_t Location;
 
 struct SeekObj {
@@ -95,21 +95,24 @@ public:
         if (it == mappedFilemap.end()) return nullptr;
         const MappedFile& mf = it->second; 
         Location fileOffset = tup->Value;
-        if (fileOffset >= mf.fileSize) {
-            // shouldn't happen
-            return nullptr;
-        }
-        uint8_t seekTableSize = static_cast<uint8_t*>(mf.map)[fileOffset];
+        if (fileOffset >= mf.fileSize) return nullptr; // shouldn't happen
+        uint8_t* fileStart = static_cast<uint8_t*>(mf.map);
+        uint8_t seekTableSize = fileStart[fileOffset];
         if (seekTableSize != 0)
         {
-            auto fileStart = static_cast<uint8_t*>(mf.map);
+            // Start of seek table
             const uint8_t* varintBuf = fileStart + fileOffset + 1;
+            // Need number of entries to know how many bytes to skip ahead
             uint64_t numEntries = 0;
+            // Seek table buffer
             const uint8_t* seekTable = decodeVarint(varintBuf, numEntries);
+            // Index into the table
             size_t tableIndex = target >> BLOCK_OFFSET_BITS;
-            const uint8_t* entryPtr = seekTable + tableIndex * entrySize;
+            // Gets seek table entry at target index
+            const uint8_t* entryPtr = seekTable + tableIndex * ENTRY_SIZE;
             uint64_t entryOffset = *reinterpret_cast<const uint64_t*>(entryPtr);
             uint64_t entryLocation = *reinterpret_cast<const uint64_t*>(entryPtr + sizeof(uint64_t));
+            // Returns if target was an entry in seek table
             if (entryLocation == target) 
             {
                 auto obj = new SeekObj;
@@ -117,13 +120,16 @@ public:
                 obj->location = entryLocation;
                 return obj;
             }
+            // Need to linearly scan to find first entry with location >= target
             uint64_t currentLocation = entryLocation;
             uint64_t currentOffset = entryOffset;
             while (currentLocation < target)
             {
                 uint64_t delta = 0;
+                // decode varint automatically moves the buffer ahead
                 varintBuf = decodeVarint(varintBuf, delta);
                 currentLocation += delta;
+                // current offset is the number of bytes into this posting list we are. I think
                 currentOffset += SizeOf(delta);
                 if (currentLocation >= target)
                 {
@@ -136,6 +142,7 @@ public:
         }
         else
         {
+            // Linearly scan if we don't have a seek table
             auto fileStart = static_cast<uint8_t*>(mf.map);
             const uint8_t* varintBuf = fileStart + fileOffset + 1;
             uint64_t currentLocation = 0;

@@ -45,9 +45,9 @@ class IndexFile {
         pushVarint(dataBuffer, urlListBytes);
         for (auto & doc : urlList)
         {
-            dataBuffer.push_back(doc.url.size());
-            dataBuffer.push_back(doc.staticRank);
+            dataBuffer.push_back(uint8_t(doc.url.size()));
             dataBuffer.insert(dataBuffer.end(), doc.url.begin(), doc.url.end());
+            dataBuffer.push_back(doc.staticRank);
         }
     }
     void serializePostingLists(std::vector<uint8_t>& dataBuffer, const vector<PostingList> &listOfPostingList, HashTable<const std::string, size_t> & dictionary)
@@ -66,13 +66,13 @@ class IndexFile {
             }
             if (postingList.size() < BLOCK_SIZE) 
             {
-                dataBuffer.push_back(0); // No seek table
+                dataBuffer.push_back(uint8_t(0)); // No seek table
             }
             else
             {
                 uint32_t numEntries = postingList.size() >> BLOCK_OFFSET_BITS;
                 // One byte to get size
-                dataBuffer.push_back(SizeOf(numEntries)); 
+                // dataBuffer.push_back(SizeOf(numEntries)); 
                 pushVarint(dataBuffer, numEntries);
             }
             uint64_t prev = 0;
