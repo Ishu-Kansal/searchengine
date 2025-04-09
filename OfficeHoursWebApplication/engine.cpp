@@ -2,7 +2,8 @@
 #include "Plugin.h"
 #include "Mutex.h"
 #include "json.hpp"   // Download from https://github.com/nlohmann/json
-// #include "../src/driver.cpp"
+#include "../src/driver.cpp"
+#include "../utils/cstring_view.h"
 
 
 using json = nlohmann::json;
@@ -12,7 +13,9 @@ json run_query(const std::string &query) {
   json result;
 
   // // call driver and return dict of results
-  // std::vector<std::string> urls = run_engine(query);
+  std::vector<pair<cstring_view, int>> urls = run_engine(query);
+  // page index to loop over
+  int currPage = 0; 
 
   // if (urls.empty()) {
   //   result["results"] = json::array();
