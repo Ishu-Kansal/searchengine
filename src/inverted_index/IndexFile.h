@@ -46,17 +46,42 @@ class IndexFile {
     }
     void serializeUrlList(std::vector<uint8_t>& dataBuffer, const std::vector<Doc> &urlList, uint64_t urlListBytes)
     {
-        // Every insert is at the end of the dataBuffer, so should be constant time
-        
-        uint8_t size = SizeOf(urlListBytes);
-        dataBuffer.push_back(size);
-        pushVarint(dataBuffer, urlListBytes);
+        // uint8_t size = SizeOf(urlListBytes);
+        // dataBuffer.push_back(size);
+        // pushVarint(dataBuffer, urlListBytes);
+        if (urlList.size() < BLOCK_SIZE) 
+        {
+            dataBuffer.push_back(uint8_t(0)); // No seek table
+        }
+        else
+        {
+            uint32_t numEntries = urlList.size() >> BLOCK_OFFSET_BITS;
+            // One byte to get size
+            dataBuffer.push_back(SizeOf(numEntries)); 
+            pushVarint(dataBuffer, numEntries);
+        }
+        uint32_t index = 0;
+        uint64_t offset = 0;
+        std::vector<uint8_t> tempBuffer;
+        tempBuffer.reserve(1000000000UL);
         for (auto & doc : urlList)
         {
-            dataBuffer.push_back(uint8_t(doc.url.size()));
-            dataBuffer.insert(dataBuffer.end(), doc.url.begin(), doc.url.end());
-            dataBuffer.push_back(doc.staticRank);
+            if (urlList.size() >= BLOCK_SIZE && (index + 1) % BLOCK_SIZE == 0 && index != 0)
+            {
+                uint8_t* bytes = reinterpret_cast<uint8_t*>(&offset);
+                dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(offset));
+                //bytes = reinterpret_cast<uint8_t*>(&index);
+                //dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(index));
+            }
+
+            offset += doc.url.size() + 2;
+            index++;
+
+            tempBuffer.push_back(uint8_t(doc.url.size()));
+            tempBuffer.insert(tempBuffer.end(), doc.url.begin(), doc.url.end());
+            tempBuffer.push_back(doc.staticRank);
         }
+        dataBuffer.insert(dataBuffer.end(), tempBuffer.begin(), tempBuffer.end()); 
     }
     void serializePostingLists(std::vector<uint8_t>& dataBuffer, const vector<PostingList> &listOfPostingList, HashTable<const std::string, size_t> & dictionary)
     {   
@@ -86,7 +111,7 @@ class IndexFile {
             uint64_t pos = 0;
             uint64_t offset = 0; 
             std::vector<uint8_t> tempBuffer;
-            tempBuffer.reserve(10000000000UL); // 1 gb
+            tempBuffer.reserve(1000000000UL); // 1 gb
             for (const Post & entry : postingList)
             {
                 uint64_t delta = entry.location - prev;

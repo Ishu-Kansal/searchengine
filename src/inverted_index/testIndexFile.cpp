@@ -185,19 +185,29 @@ void seekTableOffsetTest() {
     IndexFile indexFile(chunkNum, indexChunk);
 
     IndexFileReader reader(1);
-
+    for(int i = 0; i < 8192; ++i)
+    {
+        auto seekApple = reader.Find("apple", i, chunkNum);
+        assert(seekApple->location == i);
+        assert(seekApple->index == i);
+        assert(seekApple != nullptr && "apple not found by IndexFileReader");
+        delete seekApple;
+    }
     auto seekApple = reader.Find("apple", 8191, chunkNum);
     assert(seekApple->location == 8191);
+    assert(seekApple->index == 8191);
     assert(seekApple != nullptr && "apple not found by IndexFileReader");
     delete seekApple;
 
     seekApple = reader.Find("apple", 8192, chunkNum);
     assert(seekApple->location == 8193);
+    assert(seekApple->index == 8192);
     assert(seekApple != nullptr && "apple not found by IndexFileReader");
     delete seekApple;
 
     seekApple = reader.Find("apple", 8193, chunkNum);
     assert(seekApple->location == 8193);
+    assert(seekApple->index == 8192);
     assert(seekApple != nullptr && "apple not found by IndexFileReader");
     delete seekApple;
     
@@ -215,12 +225,50 @@ void seekTableOffsetTest() {
     std::cout << "seekTableOffsetTest passed." << std::endl;
 }
 
+void urlListNoSeekTableTest() {
+    IndexChunk indexChunk;
+    for (int i = 0; i < 1000; ++i) 
+    {
+        std::string url = "http://example.com/" + std::to_string(i);
+        size_t rank = 1;
+        indexChunk.add_url(url, rank);
+    }
+    uint32_t chunkNum = 0;
+    IndexFile indexFile(chunkNum, indexChunk);
+
+    IndexFileReader reader(1);
+    auto docObj = reader.FindUrl(0, 0);
+    delete docObj;
+    docObj = reader.FindUrl(5, 0);
+    delete docObj;
+}
+void urlListTest() {
+    IndexChunk indexChunk;
+    for (int i = 0; i < 8193; ++i) 
+    {
+        std::string url = "http://example.com/" + std::to_string(i);
+        size_t rank = 1;
+        indexChunk.add_url(url, rank);
+    }
+    uint32_t chunkNum = 0;
+    IndexFile indexFile(chunkNum, indexChunk);
+
+    IndexFileReader reader(1);
+    auto docObj = reader.FindUrl(0, 0);
+    delete docObj;
+    docObj = reader.FindUrl(8191, 0);
+    delete docObj;
+    docObj = reader.FindUrl(8192, 0);
+    delete docObj;
+}
 
 int main() {
-    // basicIndexFileTest();
-    // oneDocMultipleWordTest();
-    // oneDocOneWordLoopTest();
-    seekTableOffsetTest();
+    //basicIndexFileTest();
+    //oneDocMultipleWordTest();
+    //oneDocOneWordLoopTest();
+    //seekTableOffsetTest();
+    //urlListNoSeekTableTest();
+    urlListTest();
     std::cout << "All tests passed." << std::endl;
     return 0;
 }

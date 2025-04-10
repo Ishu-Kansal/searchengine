@@ -15,8 +15,10 @@
 #include "../../HashTable/HashTableStarterFiles/HashTable.h"
 #include "../../utils/utf_encoding.h"
 #include "IndexFile.h"
+#include "Index.h"
 
 constexpr size_t ENTRY_SIZE = 16;
+constexpr size_t URL_ENTRY_SIZE = 8;
 typedef size_t Location;
 
 struct SeekObj {
@@ -93,21 +95,21 @@ public:
         auto it = mappedFilemap.find(chunkNum);
         if (it == mappedFilemap.end()) return nullptr;
         const MappedFile& mf = it->second; 
-        Location fileOffset = tup->Value; // Start of posting list
-        if (fileOffset >= mf.fileSize) return nullptr; // shouldn't happen
+        Location offsetIntoFile = tup->Value; // Start of posting list
+        if (offsetIntoFile >= mf.fileSize) return nullptr; // shouldn't happen
         uint8_t* fileStart = static_cast<uint8_t*>(mf.map);
-        uint8_t numEntriesSize = fileStart[fileOffset];
+        uint8_t numEntriesSize = fileStart[offsetIntoFile];
         size_t tableIndex = (target + 1) >> BLOCK_OFFSET_BITS;
         uint64_t numEntries = 0;
         if (numEntriesSize) 
         {
-            const uint8_t* temp = fileStart + fileOffset + 1;
+            const uint8_t* temp = fileStart + offsetIntoFile + 1;
             decodeVarint(temp, numEntries);
         }
         if (numEntriesSize && tableIndex != 0)
         {
             // Start of seek table
-            const uint8_t* seekTable = fileStart + fileOffset + 1;
+            const uint8_t* seekTable = fileStart + offsetIntoFile + 1;
             // Gets seek table entry at target index
             const uint8_t* entryPtr = seekTable + ((tableIndex - 1) * ENTRY_SIZE) + numEntriesSize;
 
@@ -135,6 +137,7 @@ public:
             const uint8_t* postPtr = seekTable + (ENTRY_SIZE * numEntries) + entryOffset + numEntriesSize;
             while (currentLocation < target || target == 0)
             {
+                ++index;
                 uint64_t delta = 0;
                 // decode varint automatically moves the buffer ahead
                 postPtr = decodeVarint(postPtr, delta);
@@ -155,7 +158,7 @@ public:
         {
             // Linearly scan if we don't have a seek table
             auto fileStart = static_cast<uint8_t*>(mf.map);
-            const uint8_t* varintBuf = fileStart + fileOffset + 1 + (ENTRY_SIZE * numEntries) + numEntriesSize;
+            const uint8_t* varintBuf = fileStart + offsetIntoFile + 1 + (ENTRY_SIZE * numEntries) + numEntriesSize;
             uint64_t currentLocation = 0;
             uint64_t currentOffset = 0;
             uint64_t index = 0;
@@ -178,6 +181,72 @@ public:
             }
             }
 
+        return nullptr;
+    }
+
+
+    Doc * FindUrl(uint32_t index, uint32_t chunkNum)
+    {
+        if (!mappedFileVec[chunkNum]) return nullptr;
+        auto it = mappedFilemap.find(chunkNum);
+        if (it == mappedFilemap.end()) return nullptr;
+        const MappedFile& mf = it->second;
+        uint8_t* fileStart = static_cast<uint8_t*>(mf.map);
+        uint8_t numEntriesSize = fileStart[0];
+        size_t tableIndex = (index + 1) >> BLOCK_OFFSET_BITS;
+        uint64_t numEntries = 0;
+        if (numEntriesSize) 
+        {
+            const uint8_t* temp = fileStart + 1;
+            decodeVarint(temp, numEntries);
+        }
+        if (numEntriesSize && tableIndex != 0)
+        {
+            const uint8_t* seekTable = fileStart + 1;
+            const uint8_t* entryPtr = seekTable + ((tableIndex - 1) * URL_ENTRY_SIZE)+ numEntriesSize;
+            uint64_t entryOffset;
+            memcpy(&entryOffset, entryPtr, sizeof(uint64_t));
+            const uint8_t* urlPtr = seekTable + (URL_ENTRY_SIZE * numEntries) + entryOffset + numEntriesSize;
+            uint64_t urlIndex = (tableIndex * BLOCK_SIZE) - 1;
+            while (urlIndex < index)
+            {
+                uint64_t bytesToSkip = *urlPtr + 2;
+                urlPtr += bytesToSkip;
+                ++urlIndex;
+            }
+            if (urlIndex == index)
+            {
+                auto obj = new Doc;
+                uint8_t urlLen = *urlPtr;
+                obj->url = std::string(reinterpret_cast<const char*>(urlPtr + 1), urlLen);
+                urlPtr += urlLen + 1;
+                obj->staticRank = *urlPtr;
+                
+                return obj;
+            }
+        }
+        else
+        {
+            uint64_t urlIndex = 0;
+            const uint8_t* urlPtr = fileStart + (URL_ENTRY_SIZE * numEntries) + 1 + numEntriesSize;
+            
+            while (urlIndex < index)
+            {
+                uint64_t bytesToSkip = *urlPtr + 2;
+                urlPtr += bytesToSkip;
+                ++urlIndex;
+            }
+            if (urlIndex == index)
+            {
+                auto obj = new Doc;
+                uint8_t urlLen = *urlPtr;
+                obj->url = std::string(reinterpret_cast<const char*>(urlPtr + 1), urlLen);
+                urlPtr += urlLen + 1;
+                obj->staticRank = *urlPtr;
+                
+                return obj;
+            }
+        }
         return nullptr;
     }
 };
