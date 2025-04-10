@@ -275,7 +275,7 @@ public:
       // Your code here.
       fileDescrip = open(filename, O_RDONLY);
       size_t fileSize = FileSize(fileDescrip);
-      void *map = mmap(nullptr, fileSize, PROT_READ, MAP_PRIVATE, fileDescrip, 0);
+      void *map = mmap(nullptr, fileSize, PROT_READ, MAP_SHARED, fileDescrip, 0);
 
       blob = reinterpret_cast<HashBlob *>(map);
    }
@@ -291,7 +291,7 @@ public:
 
       size_t requiredSize = HashBlob::BytesRequired(hashtable);
       ftruncate(fileDescrip, requiredSize);
-      void *map = mmap(nullptr, requiredSize, PROT_WRITE, MAP_PRIVATE, fileDescrip, 0);
+      void *map = mmap(nullptr, requiredSize, PROT_WRITE, MAP_SHARED, fileDescrip, 0);
       std::memcpy(map, blob, requiredSize);
    }
 

@@ -14,9 +14,7 @@
 #include "../../HashTable/HashTableStarterFiles/HashBlob.h"
 #include "../../HashTable/HashTableStarterFiles/HashTable.h"
 #include "../../utils/utf_encoding.h"
-
-constexpr size_t BLOCK_OFFSET_BITS = 13; // 2^13 or 8192
-constexpr size_t BLOCK_SIZE = 1 << BLOCK_OFFSET_BITS;
+#include "IndexFile.h"
 constexpr size_t ENTRY_SIZE = 16;
 typedef size_t Location;
 
@@ -27,7 +25,6 @@ struct SeekObj {
 struct MappedFile {
     void * map;
     size_t fileSize;
-    MappedFile() = delete;
     MappedFile(void * map_, size_t fileSize_) : map(map_), fileSize(fileSize_) {}
 };
 class IndexFileReader {
@@ -67,7 +64,7 @@ public:
                 continue;
             }
             mappedFileVec[i] = 1;
-            mappedFilemap[i] = MappedFile(map, fileSize);            
+            mappedFilemap.emplace(i, MappedFile(map, fileSize));         
             close(fd);
         }
     }
@@ -94,24 +91,27 @@ public:
         auto it = mappedFilemap.find(chunkNum);
         if (it == mappedFilemap.end()) return nullptr;
         const MappedFile& mf = it->second; 
-        Location fileOffset = tup->Value;
+        Location fileOffset = tup->Value; // How many bytes into posting list this word is
         if (fileOffset >= mf.fileSize) return nullptr; // shouldn't happen
         uint8_t* fileStart = static_cast<uint8_t*>(mf.map);
-        uint8_t seekTableSize = fileStart[fileOffset];
-        if (seekTableSize != 0)
+        uint8_t numEntries = fileStart[fileOffset];
+        size_t tableIndex = target >> BLOCK_OFFSET_BITS;
+        if (numEntries != 0 && tableIndex != 0)
         {
             // Start of seek table
-            const uint8_t* varintBuf = fileStart + fileOffset + 1;
-            // Need number of entries to know how many bytes to skip ahead
-            uint64_t numEntries = 0;
-            // Seek table buffer
-            const uint8_t* seekTable = decodeVarint(varintBuf, numEntries);
-            // Index into the table
-            size_t tableIndex = target >> BLOCK_OFFSET_BITS;
+            const uint8_t* seekTable = fileStart + fileOffset + 1;
             // Gets seek table entry at target index
-            const uint8_t* entryPtr = seekTable + tableIndex * ENTRY_SIZE;
-            uint64_t entryOffset = *reinterpret_cast<const uint64_t*>(entryPtr);
-            uint64_t entryLocation = *reinterpret_cast<const uint64_t*>(entryPtr + sizeof(uint64_t));
+            const uint8_t* entryPtr = seekTable + ((tableIndex - 1) * ENTRY_SIZE);
+
+            uint64_t entryOffset;
+            memcpy(&entryOffset, entryPtr, sizeof(uint64_t));
+            entryPtr += sizeof(uint64_t);
+
+            uint64_t entryLocation;
+            memcpy(&entryLocation, entryPtr, sizeof(uint64_t));
+            entryPtr += sizeof(uint64_t);
+
+
             // Returns if target was an entry in seek table
             if (entryLocation == target) 
             {
@@ -123,11 +123,12 @@ public:
             // Need to linearly scan to find first entry with location >= target
             uint64_t currentLocation = entryLocation;
             uint64_t currentOffset = entryOffset;
-            while (currentLocation < target)
+            const uint8_t* postPtr = seekTable + (ENTRY_SIZE * numEntries) + entryOffset;
+            while (currentLocation < target || target == 0)
             {
                 uint64_t delta = 0;
                 // decode varint automatically moves the buffer ahead
-                varintBuf = decodeVarint(varintBuf, delta);
+                postPtr = decodeVarint(postPtr, delta);
                 currentLocation += delta;
                 // current offset is the number of bytes into this posting list we are. I think
                 currentOffset += SizeOf(delta);
@@ -144,10 +145,10 @@ public:
         {
             // Linearly scan if we don't have a seek table
             auto fileStart = static_cast<uint8_t*>(mf.map);
-            const uint8_t* varintBuf = fileStart + fileOffset + 1;
+            const uint8_t* varintBuf = fileStart + fileOffset + 1 + (ENTRY_SIZE * numEntries);
             uint64_t currentLocation = 0;
             uint64_t currentOffset = 0;
-            while (currentLocation < target)
+            while (currentLocation < target || target == 0)
             {
                 uint64_t delta = 0;
                 varintBuf = decodeVarint(varintBuf, delta);

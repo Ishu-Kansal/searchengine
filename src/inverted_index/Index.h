@@ -34,10 +34,7 @@ class PostingList {
   friend uint8_t *encode_posting_list(uint8_t *, const PostingList &);
 
   void add_post(size_t pos) {
-    table.addEntry(bytes, pos);
     posting_list.emplace_back(pos);
-    bytes += SizeOf(pos - prev);
-    prev = pos;
   }
   void add_word(std::string & word_)
   {
@@ -61,9 +58,6 @@ class PostingList {
   // Linked list of posts
   std::deque<Post> posting_list{};
   std::string word;
-  uint64_t bytes{};
-  uint64_t prev{};
-  SeekTable table{};
 };
 
 class InvertedIndex {
@@ -110,6 +104,10 @@ class InvertedIndex {
 
 class IndexChunk {
  public:
+  IndexChunk() : pos(0), url_list_size(0) 
+  {
+    url_list.reserve(100000);
+  }
   void add_url(std::string &url, size_t staticRank) {
     url_list_size += url.size() + 2; // 1 byte for static rank and 1 byte for url length
     url_list.emplace_back(url, staticRank);
@@ -138,7 +136,7 @@ class IndexChunk {
  private:
   std::vector<Doc> url_list;
   InvertedIndex inverted_word_index;
-  uint64_t url_list_size = 0;
+  uint64_t url_list_size;
   uint64_t pos;
 };
 
@@ -161,6 +159,7 @@ size_t doc_list_required_size(const std::vector<Doc> &doc_list) {
   return ans;
 }
 
+/*
 uint8_t *encode_posting_list(uint8_t *buf, const PostingList &pl) {
   // save byte start for header
   // isr will load seek table into memory; seek table needs byte offsets
@@ -175,3 +174,5 @@ uint8_t *encode_posting_list(uint8_t *buf, const PostingList &pl) {
   }
   return buf;
 }
+*/
+

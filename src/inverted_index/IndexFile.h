@@ -87,7 +87,7 @@ class IndexFile {
                 pos += delta;
                 uint8_t deltaSize = SizeOf(delta);
                 offset += deltaSize; 
-                if (postingList.size() >= BLOCK_SIZE && index % BLOCK_SIZE == 0)
+                if (postingList.size() >= BLOCK_SIZE && (index + 1) % BLOCK_SIZE == 0 && index != 0)
                 {
                     // Adds offset and absolute location
                     uint8_t* bytes = reinterpret_cast<uint8_t*>(&offset);

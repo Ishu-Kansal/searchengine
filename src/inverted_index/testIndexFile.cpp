@@ -1,57 +1,174 @@
+#include <iostream>
 #include <fstream>
+#include <cassert>
+#include <cstdio>
 #include "../../utils/utf_encoding.h"
 #include "Index.h"
 #include "IndexFile.h"
+#include "IndexFileReader.h"
 
-int main() {
+bool fileExists(const std::string &filename) {
+    std::ifstream file(filename);
+    return file.good();
+}
+
+void basicIndexFileTest() {
+    // Just checks if files get created
     IndexChunk indexChunk;
     std::string url = "http://example.com";
     size_t rank = 5;
     indexChunk.add_url(url, rank);
-    
+
     std::string word1 = "test";
     indexChunk.add_word(word1, false);
-    
+
     std::string word2 = "creeper";
     indexChunk.add_word(word2, true);
-    
+
     indexChunk.add_enddoc();
-    
+
     assert(!indexChunk.get_posting_lists().empty());
-    
+
     uint32_t chunkNum = 1;
-
     IndexFile indexFile(chunkNum, indexChunk);
-    const char * hashFilePath = "HashFile_00001";
-    HashFile hashFile(hashFilePath);
-    const HashBlob *hashblob = hashFile.Blob();
-    const char *filename = "IndexChunk_00001";
-    int fileDescrip = open(filename, O_RDWR);
-    const size_t bufferSize = 4096;
-    std::vector<char> buffer;       
-    std::vector<char> varintBytes;    
-    bool varintDecoded = false;
-    uint64_t decodedVal = 0;
-    char tempBuffer[bufferSize];
-    ssize_t bytesRead;
 
-    auto offset = hashblob->Find("test");
-    off_t resultPostition = lseek(fileDescrip, offset->Value, SEEK_SET);
-    if ( resultPostition == -1)
+    char indexFilename[32];
+    snprintf(indexFilename, sizeof(indexFilename), "IndexChunk_%05u", chunkNum);
+    
+    char hashFilename[32];
+    snprintf(hashFilename, sizeof(hashFilename), "HashFile_%05u", chunkNum);
+
+    assert(fileExists(indexFilename) && "Index file not created");
+    assert(fileExists(hashFilename) && "Hash file not created");
+    std::remove(indexFilename);
+    std::remove(hashFilename);
+    std::cout << "basicIndexFileTest passed." << std::endl;
+}
+
+void oneDocMultipleWordTest() {
+    IndexChunk indexChunk;
+    std::string url = "http://example.com";
+    size_t rank = 1;
+    indexChunk.add_url(url, rank);
+    
+    std::string wordApple = "apple";
+    std::string wordBanana = "banana";
+
+    indexChunk.add_word(wordApple, false);
+    indexChunk.add_word(wordBanana, false);
+    indexChunk.add_word(wordApple, false);
+    indexChunk.add_word(wordApple, false);
+    indexChunk.add_word(wordBanana, false);
+    indexChunk.add_enddoc();
+
+    assert(!indexChunk.get_posting_lists().empty());
+    uint32_t chunkNum = 0;
+    IndexFile indexFile(chunkNum, indexChunk);
+
+    IndexFileReader reader(1);
+
+    auto seekApple = reader.Find("apple", 0, chunkNum);
+    assert(seekApple->location == 0);
+    assert(seekApple != nullptr && "apple not found by IndexFileReader");
+    delete seekApple;
+
+    seekApple = reader.Find("apple", 1, chunkNum);
+    assert(seekApple->location == 2);
+    assert(seekApple != nullptr && "apple not found by IndexFileReader");
+    delete seekApple;
+
+    seekApple = reader.Find("apple", 2, chunkNum);
+    assert(seekApple->location == 2);
+    assert(seekApple != nullptr && "apple not found by IndexFileReader");
+    delete seekApple;
+
+    seekApple = reader.Find("apple", 3, chunkNum);
+    assert(seekApple->location == 3);
+    assert(seekApple != nullptr && "apple not found by IndexFileReader");
+    delete seekApple;
+
+    auto seekBanana = reader.Find("banana", 0, chunkNum);
+    assert(seekBanana != nullptr && "banana not found by IndexFileReader");
+    delete seekBanana;
+    
+    char indexFilename[32];
+    snprintf(indexFilename, sizeof(indexFilename), "IndexChunk_%05u", chunkNum);
+    
+    char hashFilename[32];
+    snprintf(hashFilename, sizeof(hashFilename), "HashFile_%05u", chunkNum);
+
+    assert(fileExists(indexFilename) && "Index file not created");
+    assert(fileExists(hashFilename) && "Hash file not created");
+
+    std::remove(indexFilename);
+    std::remove(hashFilename);
+    std::cout << "oneDocMultipleWordTest passed." << std::endl;
+}
+
+void oneDocOneWordLoopTest() {
+    IndexChunk indexChunk;
+    std::string url = "http://example.com";
+    size_t rank = 1;
+    indexChunk.add_url(url, rank);
+    
+    std::string wordApple = "apple";
+
+    for(int i = 0; i < (1 << 14); ++i)
     {
-        cerr << "Could not seek to " << offset->Value << '\n';
+        indexChunk.add_word(wordApple, false);
     }
-    while ((bytesRead = read(fileDescrip, tempBuffer, bufferSize)) > 0) {
+    indexChunk.add_enddoc();
 
-   }
-   if (bytesRead < 0) {
-       std::cerr << "Error reading file: " << strerror(errno) << "\n";
-       close(fileDescrip);
-       return 1;
-   }
-   close(fileDescrip);
+    assert(!indexChunk.get_posting_lists().empty());
+    uint32_t chunkNum = 0;
+    IndexFile indexFile(chunkNum, indexChunk);
 
-   std::cout << "Decoded varint value: " << decodedVal << "\n";
-   std::cout.write(buffer.data(), buffer.size());
-   std::cout << "\n";
+    IndexFileReader reader(1);
+
+    auto seekApple = reader.Find("apple", 0, chunkNum);
+    assert(seekApple->location == 0);
+    assert(seekApple != nullptr && "apple not found by IndexFileReader");
+    delete seekApple;
+
+    seekApple = reader.Find("apple", 8192, chunkNum);
+    assert(seekApple->location == 8192);
+    assert(seekApple != nullptr && "apple not found by IndexFileReader");
+    delete seekApple;
+
+    seekApple = reader.Find("apple", 8193, chunkNum);
+    assert(seekApple->location == 8193);
+    assert(seekApple != nullptr && "apple not found by IndexFileReader");
+    delete seekApple;
+
+    seekApple = reader.Find("apple", 3, chunkNum);
+    assert(seekApple->location == 3);
+    assert(seekApple != nullptr && "apple not found by IndexFileReader");
+    delete seekApple;
+
+    auto seekBanana = reader.Find("banana", 0, chunkNum);
+    assert(seekBanana == nullptr);
+    delete seekBanana;
+    
+    char indexFilename[32];
+    snprintf(indexFilename, sizeof(indexFilename), "IndexChunk_%05u", chunkNum);
+    
+    char hashFilename[32];
+    snprintf(hashFilename, sizeof(hashFilename), "HashFile_%05u", chunkNum);
+
+    assert(fileExists(indexFilename) && "Index file not created");
+    assert(fileExists(hashFilename) && "Hash file not created");
+
+    std::remove(indexFilename);
+    std::remove(hashFilename);
+    std::cout << "oneDocOneWordLoopTest passed." << std::endl;
+}
+
+
+
+int main() {
+    //basicIndexFileTest();
+    //oneDocMultipleWordTest();
+    oneDocOneWordLoopTest();
+    std::cout << "All tests passed." << std::endl;
+    return 0;
 }
