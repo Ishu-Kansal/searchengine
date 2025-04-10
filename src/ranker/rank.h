@@ -39,8 +39,8 @@ enum ImagesWeights : int {
 enum NumImages : int {
   NOIMAGES = 0,
   FEWIMAGES = 5,
-  MODERATEIMAGES = 15,
-  MANYIMAGES = 25
+  MODERATEIMAGES = 100,
+  MANYIMAGES = 250
 };
 
 enum NumLinks : int { NOLINKS = 0, MODERATELINKS = 250 };
@@ -52,7 +52,7 @@ enum NumLinksWeights : int {
 };
 
 enum DomainWeights : int {
-  NONRECOGNIZED = -1,
+  NONRECOGNIZED = -2,
   LESSRELEVANT = 1,
   RELEVANT = 2,
   ORG = 3,
@@ -89,7 +89,7 @@ namespace {
 static constexpr double urlLengthWeight = 1.0;
 static constexpr double titleLengthWeight = 1.0;
 static constexpr double articleLengthWeight = 2.5;
-static constexpr double articleWeights[] = {-1.0, 0.8, 1.0, 0.5, -1.0};
+static constexpr double articleWeights[] = {-2.0, 0.8, 1.0, 0.5, -1.0};
 static constexpr double mobileFriendly =
     2.0;  // check if it has <meta name="viewport"
 static constexpr double titleExists = 2.0;  // does it have title tag
@@ -225,6 +225,12 @@ get_domain_weight(key);
 // computes the static rank of an individual page given the URl and the parser
 // object
 double get_static_rank(cstring_view url, const HtmlParser &parser) {
+  // std::cout << std::endl << "Num images weight: " << parser.img_count << " -> " << get_numImages_weight(parser.img_count) << std::endl;
+  // std::cout << "Num links weight: " << parser.links.size() << " -> " << get_numLinks_weight(parser.links.size()) << std::endl;
+  // std::cout << "Domain weight: " << get_top_level_domain(url) << " -> " << get_domain_weight(get_top_level_domain(url)) << std::endl;
+  // std::cout << "Document length weight: " << parser.words.size() << " -> " << get_document_length_weight(parser.words) << std::endl;
+  // std::cout << "URL length weight: " << url.size() << " -> " << get_url_length_weight(url.size()) << std::endl;
+
   return get_numImages_weight(parser.img_count) +
          get_numLinks_weight(parser.links.size()) +
          get_domain_weight(get_top_level_domain(url)) +
