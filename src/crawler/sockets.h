@@ -103,7 +103,6 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
     return 1;
   }
   freeaddrinfo(address);  // Done with the address info
-  std::cout << req;
   // Initialize SSL
   SSL_library_init();
   SSL_CTX *ctx = SSL_CTX_new(SSLv23_method());
@@ -277,9 +276,6 @@ int getHTML(std::string url_in, std::string &output) {
       "Connection: close\r\n\r\n";
 
     int status = runSocket(req, url_in, output);
-    std::cout << "status:" << status << std::endl;
-
-    std::cout << "output:\n" << output << std::endl;
 
     if (status == 301) {
       ParsedUrl newURL(output.data());
@@ -295,8 +291,6 @@ int getHTML(std::string url_in, std::string &output) {
       std::string newishURL = output;
       output = "";
       status = runSocket(req2, newishURL, output);
-
-      std::cout << "redirected output:\n" << output << std::endl;
     }
     return status;
 

@@ -19,6 +19,11 @@
         margin: 0;
       }
 
+      .form-group {
+        display: flex;
+        justify-content: center;
+      }
+
       .result h4 a {
         font-size: 30px;
         word-break: break-word;
@@ -30,33 +35,56 @@
         margin: 30px 0;
         display: none;
       }
+
+      .text-center {
+        margin-bottom: 2rem;
+      }
+
+      .page-link {
+        margin-bottom: 2px;
+      }
+
+      #stickyHeader {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 1000;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #ddd;
+      }
+
+
     </style>    
   </head>
   <body>
     <div class="container">
-      <h1 class="text-center"><b>404 Found</b></h1>
-      <form id="searchForm" class="form-horizontal" autocomplete="off">
-        <div class="form-group">
-          <label for="queryInput" class="col-sm-2 control-label">Queryous?</label>
-          <div class="col-sm-8">
-            <input type="text" class="form-control" id="queryInput" placeholder="Enter search terms" required>
-          </div>
-          <div class="col-sm-2">
-            <button type="submit" class="btn btn-primary btn-block">Find</button>
-          </div>
-        </div>
-      </form>
 
-      <hr />
+      <!-- Sticky header starts here -->
+      <div id="stickyHeader">
+        <h1 class="text-center"><b>404 Found</b></h1>
+        <form id="searchForm" class="form-horizontal" autocomplete="off">
+          <div class="form-group">
+            <div class="col-sm-8">
+              <input type="text" class="form-control" id="queryInput" placeholder="Search terms" required>
+            </div>
+            <div class="col-sm-2">
+              <button type="submit" class="btn btn-primary btn-block">Find</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    
       <div id="searchResults"></div>
-
+    
       <!-- Pagination Controls -->
       <div id="paginationControls" class="text-center">
-        <button id="prevPage" class="btn btn-default">&laquo; Previous</button>
-        <span id="pageNumber" style="margin: 0 15px; font-size: 18px; font-weight: bold;"></span>
-        <button id="nextPage" class="btn btn-default">Next &raquo;</button>
+        <button id="prevPage" class="btn btn-default">&#8592; <span style="margin-left: 6px"></span>Prev</button>
+        <span id="pageNumber" style="margin: 0 15px; font-size: 18px; font-weight: bold; margin-left: 25px; margin-right:25px"></span>
+        <button id="nextPage" class="btn btn-default">Next <span style="margin-left: 6px"></span> &#8594;</button>
       </div>
+    
     </div>
+    
 
     <script>
       let allResults = [];
@@ -71,6 +99,12 @@
         currentPage = 0;
         allResults = [];
 
+        // 👇 Hide pagination while loading
+        document.getElementById('paginationControls').style.display = 'none';
+
+        // 👇 Show loading message immediately
+        document.getElementById('searchResults').textContent = 'Loading...';
+
         fetch('/api/search/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json; charset=utf-8' },
@@ -83,15 +117,19 @@
         .then(data => {
           if (!data.results || data.results.length === 0) {
             document.getElementById('searchResults').textContent = 'Invalid query';
-            document.getElementById('paginationControls').style.display = 'none';
             return;
           }
           allResults = data.results;
           renderPage(0);
           document.getElementById('paginationControls').style.display = 'block';
         })
-        .catch(err => console.error(err));
+        .catch(err => {
+          document.getElementById('searchResults').textContent = 'An error occurred. Please try again.';
+          console.error(err);
+        });
       });
+
+
 
       function renderPage(page) {
         const container = document.getElementById('searchResults');
@@ -105,9 +143,12 @@
           const div = document.createElement('div');
           div.className = 'result';
           div.innerHTML = `
-            <h4><a href="${doc.url}" target="_blank">${doc.title || doc.url}</a></h4>
-            <p>${doc.snippet || ''}</p>
-            <small>${doc.url}</small>
+            <div style="text-align: left;">
+              <h4 style="margin-bottom: 3px;"><a style="font-size: 1.2em;" href="${doc.url}" target="_blank">${doc.title || doc.url}</a></h4>
+              <small>${doc.url}</small>
+              <p style="margin-top: 4.5px;">${doc.snippet || ''}</p>
+              
+            </div>
           `;
           container.appendChild(div);
         });

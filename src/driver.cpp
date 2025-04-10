@@ -40,12 +40,9 @@ SearchResult get_and_parse_url(const cstring_view& url) {
    int status = getHTML(url_str, html);
    SearchResult result;
    result.url = url_str;
-   std::cout << "Status: " << status << std::endl;
-   std::cout << "HTML length: " << html.length() << std::endl;
 
 
    if (status != 0 || html.empty()) {
-      std::cout << status << std::endl;
        std::cerr << "Failed to fetch HTML from: " << url_str << std::endl;
        result.title = "";
        result.snippet = "";
@@ -90,6 +87,13 @@ std::vector<cstring_view> run_engine(std::string& query) {
    urls.push_back(cstring_view("https://www.wikipedia.org/"));
    urls.push_back(cstring_view("https://www.stackoverflow.com/"));
    urls.push_back(cstring_view("https://www.reddit.com/"));
+   urls.push_back(cstring_view("https://www.google.com/"));
+   urls.push_back(cstring_view("https://www.bing.com/"));
+   urls.push_back(cstring_view("https://www.yahoo.com/"));
+   urls.push_back(cstring_view("https://www.duckduckgo.com/"));
+   urls.push_back(cstring_view("https://www.quora.com/"));
+   urls.push_back(cstring_view("https://www.medium.com/"));
+   urls.push_back(cstring_view("https://www.amazon.com/"));
 
    return urls;
 }
