@@ -163,12 +163,64 @@ void oneDocOneWordLoopTest() {
     std::cout << "oneDocOneWordLoopTest passed." << std::endl;
 }
 
+void seekTableOffsetTest() {
+    IndexChunk indexChunk;
+    std::string url = "http://example.com";
+    size_t rank = 1;
+    indexChunk.add_url(url, rank);
+    
+    std::string wordApple = "apple";
+    std::string word = "word";
+
+    for(int i = 0; i < 8192; ++i)
+    {
+        indexChunk.add_word(wordApple, false); // location from 0 to 8191
+    }
+    indexChunk.add_word(word, false); // location 8192
+    indexChunk.add_word(wordApple, false); // location 8193
+    indexChunk.add_enddoc();
+
+    assert(!indexChunk.get_posting_lists().empty());
+    uint32_t chunkNum = 0;
+    IndexFile indexFile(chunkNum, indexChunk);
+
+    IndexFileReader reader(1);
+
+    auto seekApple = reader.Find("apple", 8191, chunkNum);
+    assert(seekApple->location == 8191);
+    assert(seekApple != nullptr && "apple not found by IndexFileReader");
+    delete seekApple;
+
+    seekApple = reader.Find("apple", 8192, chunkNum);
+    assert(seekApple->location == 8193);
+    assert(seekApple != nullptr && "apple not found by IndexFileReader");
+    delete seekApple;
+
+    seekApple = reader.Find("apple", 8193, chunkNum);
+    assert(seekApple->location == 8193);
+    assert(seekApple != nullptr && "apple not found by IndexFileReader");
+    delete seekApple;
+    
+    char indexFilename[32];
+    snprintf(indexFilename, sizeof(indexFilename), "IndexChunk_%05u", chunkNum);
+    
+    char hashFilename[32];
+    snprintf(hashFilename, sizeof(hashFilename), "HashFile_%05u", chunkNum);
+
+    assert(fileExists(indexFilename) && "Index file not created");
+    assert(fileExists(hashFilename) && "Hash file not created");
+
+    std::remove(indexFilename);
+    std::remove(hashFilename);
+    std::cout << "seekTableOffsetTest passed." << std::endl;
+}
 
 
 int main() {
-    //basicIndexFileTest();
-    //oneDocMultipleWordTest();
-    oneDocOneWordLoopTest();
+    // basicIndexFileTest();
+    // oneDocMultipleWordTest();
+    // oneDocOneWordLoopTest();
+    seekTableOffsetTest();
     std::cout << "All tests passed." << std::endl;
     return 0;
 }

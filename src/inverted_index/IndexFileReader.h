@@ -15,12 +15,14 @@
 #include "../../HashTable/HashTableStarterFiles/HashTable.h"
 #include "../../utils/utf_encoding.h"
 #include "IndexFile.h"
+
 constexpr size_t ENTRY_SIZE = 16;
 typedef size_t Location;
 
 struct SeekObj {
     Location offset;
     Location location;
+    Location index;
 };
 struct MappedFile {
     void * map;
@@ -91,17 +93,23 @@ public:
         auto it = mappedFilemap.find(chunkNum);
         if (it == mappedFilemap.end()) return nullptr;
         const MappedFile& mf = it->second; 
-        Location fileOffset = tup->Value; // How many bytes into posting list this word is
+        Location fileOffset = tup->Value; // Start of posting list
         if (fileOffset >= mf.fileSize) return nullptr; // shouldn't happen
         uint8_t* fileStart = static_cast<uint8_t*>(mf.map);
-        uint8_t numEntries = fileStart[fileOffset];
-        size_t tableIndex = target >> BLOCK_OFFSET_BITS;
-        if (numEntries != 0 && tableIndex != 0)
+        uint8_t numEntriesSize = fileStart[fileOffset];
+        size_t tableIndex = (target + 1) >> BLOCK_OFFSET_BITS;
+        uint64_t numEntries = 0;
+        if (numEntriesSize) 
+        {
+            const uint8_t* temp = fileStart + fileOffset + 1;
+            decodeVarint(temp, numEntries);
+        }
+        if (numEntriesSize && tableIndex != 0)
         {
             // Start of seek table
             const uint8_t* seekTable = fileStart + fileOffset + 1;
             // Gets seek table entry at target index
-            const uint8_t* entryPtr = seekTable + ((tableIndex - 1) * ENTRY_SIZE);
+            const uint8_t* entryPtr = seekTable + ((tableIndex - 1) * ENTRY_SIZE) + numEntriesSize;
 
             uint64_t entryOffset;
             memcpy(&entryOffset, entryPtr, sizeof(uint64_t));
@@ -111,19 +119,20 @@ public:
             memcpy(&entryLocation, entryPtr, sizeof(uint64_t));
             entryPtr += sizeof(uint64_t);
 
-
+            uint64_t index = (tableIndex * BLOCK_SIZE) - 1;
             // Returns if target was an entry in seek table
             if (entryLocation == target) 
             {
                 auto obj = new SeekObj;
                 obj->offset = entryOffset;
                 obj->location = entryLocation;
+                obj->index = index;
                 return obj;
             }
             // Need to linearly scan to find first entry with location >= target
             uint64_t currentLocation = entryLocation;
             uint64_t currentOffset = entryOffset;
-            const uint8_t* postPtr = seekTable + (ENTRY_SIZE * numEntries) + entryOffset;
+            const uint8_t* postPtr = seekTable + (ENTRY_SIZE * numEntries) + entryOffset + numEntriesSize;
             while (currentLocation < target || target == 0)
             {
                 uint64_t delta = 0;
@@ -137,6 +146,7 @@ public:
                     auto obj = new SeekObj;
                     obj->offset = currentOffset;
                     obj->location = currentLocation;
+                    obj->index = index;
                     return obj;
                 }
             }
@@ -145,9 +155,11 @@ public:
         {
             // Linearly scan if we don't have a seek table
             auto fileStart = static_cast<uint8_t*>(mf.map);
-            const uint8_t* varintBuf = fileStart + fileOffset + 1 + (ENTRY_SIZE * numEntries);
+            const uint8_t* varintBuf = fileStart + fileOffset + 1 + (ENTRY_SIZE * numEntries) + numEntriesSize;
             uint64_t currentLocation = 0;
             uint64_t currentOffset = 0;
+            uint64_t index = 0;
+            
             while (currentLocation < target || target == 0)
             {
                 uint64_t delta = 0;
@@ -159,8 +171,10 @@ public:
                     auto obj = new SeekObj;
                     obj->offset = currentOffset;
                     obj->location = currentLocation;
+                    obj->index = index;
                     return obj;
                 }
+                index++;
             }
             }
 

@@ -21,7 +21,12 @@
 constexpr size_t BLOCK_OFFSET_BITS = 13; // 2^13 or 8192
 constexpr size_t BLOCK_SIZE = 1 << BLOCK_OFFSET_BITS;
 
-// Didn't use pushVarint for some of them, because some of the values are only in the range of an unsigned byte.
+// Didn't use pushVarint for some of them, because some of the values are one byte and I want the full range from 0 - 255.
+
+/*
+Setup for Seek Table:
+
+*/
 
 class IndexFile {
     private:
@@ -42,6 +47,7 @@ class IndexFile {
     void serializeUrlList(std::vector<uint8_t>& dataBuffer, const std::vector<Doc> &urlList, uint64_t urlListBytes)
     {
         // Every insert is at the end of the dataBuffer, so should be constant time
+        
         uint8_t size = SizeOf(urlListBytes);
         dataBuffer.push_back(size);
         pushVarint(dataBuffer, urlListBytes);
@@ -72,13 +78,13 @@ class IndexFile {
             {
                 uint32_t numEntries = postingList.size() >> BLOCK_OFFSET_BITS;
                 // One byte to get size
-                // dataBuffer.push_back(SizeOf(numEntries)); 
+                dataBuffer.push_back(SizeOf(numEntries)); 
                 pushVarint(dataBuffer, numEntries);
             }
             uint64_t prev = 0;
             uint32_t index = 0;
             uint64_t pos = 0;
-            uint64_t offset = 0; // offset from start of posting list
+            uint64_t offset = 0; 
             std::vector<uint8_t> tempBuffer;
             tempBuffer.reserve(10000000000UL); // 1 gb
             for (const Post & entry : postingList)
@@ -86,12 +92,15 @@ class IndexFile {
                 uint64_t delta = entry.location - prev;
                 pos += delta;
                 uint8_t deltaSize = SizeOf(delta);
-                offset += deltaSize; 
+                offset += deltaSize;
+                // We're making a seek table entry every BLOCK_SIZE words we encountered
+                // but since index is 0-indexed we have to add 1
                 if (postingList.size() >= BLOCK_SIZE && (index + 1) % BLOCK_SIZE == 0 && index != 0)
                 {
-                    // Adds offset and absolute location
+                    // Offset into posting list
                     uint8_t* bytes = reinterpret_cast<uint8_t*>(&offset);
                     dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(offset));
+                    // absolute location of element at index
                     bytes = reinterpret_cast<uint8_t*>(&pos);
                     dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(pos));
                 }
@@ -108,7 +117,6 @@ class IndexFile {
     {
         dataBuffer.clear();
 
-        // Serialize everything 
         const auto urlList = indexChunk.get_urls();
         const auto listOfPostingList = indexChunk.get_posting_lists();
         serializeUrlList(dataBuffer, urlList, indexChunk.get_url_list_size_bytes());
