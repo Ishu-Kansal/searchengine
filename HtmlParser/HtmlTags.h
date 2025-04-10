@@ -30,6 +30,7 @@ enum class DesiredAction {
    Embed,
    Image,
    Html,
+   Meta
 };
 
 // name points to beginning of the possible HTML tag name.
@@ -167,7 +168,7 @@ const HtmlTag TagsRecognized[] = {
    {"marquee", DesiredAction::Discard},
    {"menu", DesiredAction::Discard},
    {"menuitem", DesiredAction::Discard},
-   {"meta", DesiredAction::Discard},
+   {"meta", DesiredAction::Meta},
    {"meter", DesiredAction::Discard},
    {"nav", DesiredAction::Discard},
    {"navigation-indicator", DesiredAction::Discard},

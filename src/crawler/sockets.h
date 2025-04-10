@@ -83,7 +83,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
 
   if (getaddrinfo(url.Host, (*url.Port ? url.Port : "443"), &hints, &address) !=
       0) {
-    // std::cerr << "Failed to resolve host" << std::endl;
+    std::cerr << "Failed to resolve host" << std::endl;
     return 1;
   }
 
@@ -103,7 +103,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
     return 1;
   }
   freeaddrinfo(address);  // Done with the address info
-  // std::cout << req;
+  std::cout << req;
   // Initialize SSL
   SSL_library_init();
   SSL_CTX *ctx = SSL_CTX_new(SSLv23_method());
@@ -147,9 +147,10 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   }
 
   SSL_set_fd(ssl, socketFD);
+  SSL_set_tlsext_host_name(ssl, url.Host); // needed for umich and espn to work
 
   if (SSL_connect(ssl) <= 0) {
-    // std::cerr << "Failed to establish SSL connection" << std::endl;
+    std::cerr << "Failed to establish SSL connection" << std::endl;
     // ERR_print_errors_fp(stderr);
     SSL_free(ssl);
     SSL_CTX_free(ctx);
@@ -158,7 +159,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   }
 
   if (SSL_write(ssl, req.c_str(), req.length()) <= 0) {
-    // std::cerr << "Failed to send request" << std::endl;
+    std::cerr << "Failed to send request" << std::endl;
     // SSL_shutdown(ssl);
     SSL_free(ssl);
     SSL_CTX_free(ctx);
@@ -194,7 +195,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
         close(socketFD);
         return -1;
       }
-      int code = atoi(header.data() + 9);
+      code = atoi(header.data() + 9);
       if (code == 0) {
         SSL_shutdown(ssl);
         SSL_free(ssl);
@@ -224,16 +225,30 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   }
 
   if (code == 301) {
-    int locPos = header.find("location");
-    int endPos = header.find("\r\n", locPos);
-    std::string newURL = header.substr(locPos + 10, endPos - locPos - 10);
-    // std::cout << "redirecting to " << newURL << std::endl;
-    output = newURL;
-    return code;
+    // Convert to lowercase to find "location:" in a case-insensitive way
+    std::string header_lower = header;
+    std::transform(header_lower.begin(), header_lower.end(), header_lower.begin(), ::tolower);
+
+    size_t locPos = header_lower.find("location:");
+    if (locPos != std::string::npos) {
+        // Use the original header to extract the actual Location value (case preserved)
+        size_t endPos = header.find("\r\n", locPos);
+        std::string newURL = header.substr(locPos + 9, endPos - locPos - 9);
+
+        // Trim whitespace
+        newURL.erase(0, newURL.find_first_not_of(" \t\r\n"));
+        newURL.erase(newURL.find_last_not_of(" \t\r\n") + 1);
+
+        output = newURL;
+        return 301;
+    } else {
+        std::cerr << "Redirect code 301, but no Location header found." << std::endl;
+        return -1;
+    }
   }
 
   if (bytes < 0) {
-    // std::cerr << "Error reading from SSL socket" << std::endl;
+    std::cerr << "Error reading from SSL socket" << std::endl;
   }
 
   // Clean up
@@ -252,39 +267,36 @@ int getHTML(std::string url_in, std::string &output) {
   ParsedUrl url(url_in.data());
 
     // Send the GET request
+    std::string path = (url.Path && *url.Path) ? std::string(url.Path) : "/";
     std::string req =
-    "GET /" + std::string(url.Path) +
-    " HTTP/1.1\r\n"
-    "Host: " +
-    std::string(url.Host) +
-    "\r\n"
-    "User-Agent: SonOfAnton/1.0 404FoundEngine@umich.edu (Linux)\r\n"
-    "Accept: */*\r\n"
-    "Accept-Encoding: identity\r\n"
-    "Connection: close\r\n\r\n";
-
-    int status = runSocket(req, url_in, output);
-    // std::cout << status << std::endl;
-
-    // std::cout << "output:\n" << output << std::endl;
-
-    if (status == 301) {
-    ParsedUrl newURL(output.data());
-    std::string req2 =
-      "GET /" + std::string(newURL.Path) +
-      " HTTP/1.1\r\n"
-      "Host: " +
-      std::string(newURL.Host) +
-      "\r\n"
+      "GET " + path + " HTTP/1.1\r\n"
+      "Host: " + std::string(url.Host) + "\r\n"
       "User-Agent: SonOfAnton/1.0 404FoundEngine@umich.edu (Linux)\r\n"
       "Accept: */*\r\n"
       "Accept-Encoding: identity\r\n"
       "Connection: close\r\n\r\n";
-    std::string newishURL = output;
-    output = "";
-    status = runSocket(req2, newishURL, output);
 
-    // std::cout << "redirected output:\n" << output << std::endl;
+    int status = runSocket(req, url_in, output);
+    std::cout << "status:" << status << std::endl;
+
+    std::cout << "output:\n" << output << std::endl;
+
+    if (status == 301) {
+      ParsedUrl newURL(output.data());
+      std::string path2 = (newURL.Path && *newURL.Path) ? std::string(newURL.Path) : "/";
+      std::string req2 =
+        "GET " + path2 + " HTTP/1.1\r\n"
+        "Host: " + std::string(newURL.Host) + "\r\n"
+        "User-Agent: SonOfAnton/1.0 404FoundEngine@umich.edu (Linux)\r\n"
+        "Accept: */*\r\n"
+        "Accept-Encoding: identity\r\n"
+        "Connection: close\r\n\r\n";
+        
+      std::string newishURL = output;
+      output = "";
+      status = runSocket(req2, newishURL, output);
+
+      std::cout << "redirected output:\n" << output << std::endl;
     }
     return status;
 

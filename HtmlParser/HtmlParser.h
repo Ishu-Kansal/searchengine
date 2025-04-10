@@ -82,7 +82,7 @@ class Link {
 
 class HtmlParser {
  public:
-  std::vector<std::string> words, titleWords;
+  std::vector<std::string> words, titleWords, description;
   std::vector<Link> links;
   std::string base;
   int img_count;
@@ -657,8 +657,86 @@ class HtmlParser {
             }
             index++;
             break;
-        }
-            
+          }
+          
+          case DesiredAction::Meta: {
+            bool in_quotes = false;
+            char quote_type = 0;
+            std::string name_value, content_value;
+            bool has_name_description = false;
+            bool has_content = false;
+          
+            size_t meta_index = index;
+            while (meta_index < length && buffer[meta_index] != '>') {
+              // Skip whitespace
+              while (meta_index < length && (buffer[meta_index] == ' ' || buffer[meta_index] == '\t' || buffer[meta_index] == '\r' || buffer[meta_index] == '\n')) {
+                meta_index++;
+              }
+          
+              // Match `name="description"`
+              if (strncmp(buffer + meta_index, "name", 4) == 0) {
+                meta_index += 4;
+                while (meta_index < length && buffer[meta_index] != '=')
+                  meta_index++;
+                if (meta_index < length && buffer[meta_index] == '=') {
+                  meta_index++;
+                  if (buffer[meta_index] == '"' || buffer[meta_index] == '\'') {
+                    quote_type = buffer[meta_index++];
+                    size_t start = meta_index;
+                    while (meta_index < length && buffer[meta_index] != quote_type)
+                      meta_index++;
+                    name_value = std::string(buffer + start, meta_index - start);
+                    has_name_description = (name_value == "description");
+                    if (meta_index < length)
+                      meta_index++;  // skip closing quote
+                  }
+                }
+              }
+          
+              // Match `content="..."` and extract words
+              if (strncmp(buffer + meta_index, "content", 7) == 0) {
+                meta_index += 7;
+                while (meta_index < length && buffer[meta_index] != '=')
+                  meta_index++;
+                if (meta_index < length && buffer[meta_index] == '=') {
+                  meta_index++;
+                  if (buffer[meta_index] == '"' || buffer[meta_index] == '\'') {
+                    quote_type = buffer[meta_index++];
+                    size_t start = meta_index;
+                    while (meta_index < length && buffer[meta_index] != quote_type)
+                      meta_index++;
+                    content_value = std::string(buffer + start, meta_index - start);
+                    has_content = true;
+                    if (meta_index < length)
+                      meta_index++;  // skip closing quote
+                  }
+                }
+              }
+          
+              meta_index++;
+            }
+          
+            if (has_name_description && has_content) {
+              // Break content_value into words and add to description vector
+              std::string temp_word;
+              for (char c : content_value) {
+                if (std::isspace(c)) {
+                  if (!temp_word.empty()) {
+                    description.push_back(temp_word);
+                    temp_word.clear();
+                  }
+                } else {
+                  temp_word += c;
+                }
+              }
+              if (!temp_word.empty()) {
+                description.push_back(temp_word);
+              }
+            }
+          
+            index = meta_index + 1;  // move index past the end of the tag
+            break;
+          }  
         }
 
       } else {

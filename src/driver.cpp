@@ -40,6 +40,9 @@ SearchResult get_and_parse_url(const cstring_view& url) {
    int status = getHTML(url_str, html);
    SearchResult result;
    result.url = url_str;
+   std::cout << "Status: " << status << std::endl;
+   std::cout << "HTML length: " << html.length() << std::endl;
+
 
    if (status != 0 || html.empty()) {
       std::cout << status << std::endl;
@@ -52,7 +55,7 @@ SearchResult get_and_parse_url(const cstring_view& url) {
    try {
        HtmlParser parser(html.data(), html.size());
        result.title = join_words(parser.titleWords);
-       result.snippet = join_words(parser.words, 30);
+       result.snippet = join_words(parser.description, 30);
    } catch (...) {
        std::cerr << "Parsing failed for: " << url_str << std::endl;
        result.title = "";
@@ -82,9 +85,11 @@ std::vector<cstring_view> run_engine(std::string& query) {
    //    return {};  // Return empty vector on failure
    // }
    std::vector<cstring_view> urls;
-   urls.push_back(cstring_view("https://nicolehamilton.com"));
-   urls.push_back(cstring_view("https://umich.edu"));
-   urls.push_back(cstring_view("https://www.espn.com/mlb/player/_/id/30473/josh-rainwater"));
+   urls.push_back(cstring_view("https://www.github.com/"));
+   urls.push_back(cstring_view("https://www.example.com/"));
+   urls.push_back(cstring_view("https://www.wikipedia.org/"));
+   urls.push_back(cstring_view("https://www.stackoverflow.com/"));
+   urls.push_back(cstring_view("https://www.reddit.com/"));
 
    return urls;
 }
