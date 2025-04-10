@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
+#include <optional>
 #include<memory>
 #include <unordered_map>
 
@@ -119,57 +120,79 @@ public:
         }
     }
 
-    std::unique_ptr<SeekObj> Find(const std::string& word, Location target, uint32_t chunkNum) const {
+    std::optional<SeekObj> Find(const std::string& word, Location target, uint32_t chunkNum) const {
         if (chunkNum >= mappedFiles.size() || !mappedFiles[chunkNum]) 
         {
-           return nullptr;
+            fprintf(stderr, "DEBUG: invalid chunkNum or unmapped chunk: %u\n", chunkNum);
+            return std::nullopt;
         }
         // Finds word offset using HashFile
         char hashFilename[32];
         snprintf(hashFilename, sizeof(hashFilename), "HashFile_%05u", chunkNum);
         HashFile hashFile(hashFilename);
         const HashBlob *hashblob = hashFile.Blob();
-        if (!hashblob) return nullptr;
+        if (!hashblob) 
+        {
+            fprintf(stderr, "DEBUG: HashBlob not found for chunk %u\n", chunkNum);
+            return std::nullopt;
+        }
 
         const SerialTuple * tup = hashblob->Find(word.c_str());
-        if (!tup) return nullptr;
+        if (!tup) 
+        {
+            fprintf(stderr, "DEBUG: '%s' not found in hashblob for chunk %u\n", word.c_str(), chunkNum);
+            return std::nullopt;
+        }
 
         // Get mapped file
-        if (!mappedFiles[chunkNum]) return nullptr;
         const void* mapPtr = mappedFiles[chunkNum]->get();
         size_t fileSize = mappedFiles[chunkNum]->size();
         const uint8_t* fileStart = static_cast<const uint8_t*>(mapPtr);
         const uint8_t* fileEnd = fileStart + fileSize;
 
         Location offsetIntoFile = tup->Value; // Start of posting list
-        if (offsetIntoFile >= fileSize) return nullptr; // shouldn't happen
+        if (offsetIntoFile >= fileSize) 
+        {
+            // shouldn't happen
+            fprintf(stderr, "ERROR: Offset into file (%zu) is out of bounds (%zu) for word '%s' in chunk %u.\n", offsetIntoFile, fileSize, word.c_str(), chunkNum);
+            return std::nullopt;
+        } 
 
         uint8_t numEntriesSize = fileStart[offsetIntoFile];
         size_t tableIndex = (target + 1) >> BLOCK_OFFSET_BITS;
         uint64_t numEntries = 0;
+
+        // Start of seek table
+        const uint8_t* seekTable = fileStart + offsetIntoFile + 1;
+     
         if (numEntriesSize) 
         {
+            if (seekTable + numEntriesSize > fileEnd) 
+            {
+                fprintf(stderr, "ERROR: Not enough space for numEntries varint encoding.\n");
+                return std::nullopt;
+            }
             const uint8_t* temp = fileStart + offsetIntoFile + 1;
             decodeVarint(temp, numEntries);
         }
         if (numEntriesSize && tableIndex != 0)
         {
-            // Start of seek table
-            const uint8_t* seekTable = fileStart + offsetIntoFile + 1;
             // Gets seek table entry at target index
             const uint8_t* entryPtr = seekTable + ((tableIndex - 1) * ENTRY_SIZE) + numEntriesSize;
-            
+
             uint64_t entryOffset;
             uint64_t entryLocation;
             
-            if (!readUint64_t(entryPtr, fileEnd, entryOffset)) { return nullptr; }
-            if (!readUint64_t(entryPtr, fileEnd, entryLocation)) { return nullptr; }
+            if (!readUint64_t(entryPtr, fileEnd, entryOffset)) { std::nullopt; }
+            if (!readUint64_t(entryPtr, fileEnd, entryLocation)) { std::nullopt; }
 
             uint64_t index = (tableIndex * BLOCK_SIZE) - 1;
             // Returns if target was an entry in seek table
             if (entryLocation == target) 
             {
-                auto obj = std::make_unique<SeekObj>();
+
+                auto obj = std::optional<SeekObj>{};
+                obj.emplace();
                 obj->offset = entryOffset;
                 obj->location = entryLocation;
                 obj->index = index;
@@ -190,7 +213,8 @@ public:
                 currentOffset += SizeOf(delta);
                 if (currentLocation >= target)
                 {
-                    auto obj = std::make_unique<SeekObj>();
+                    auto obj = std::optional<SeekObj>{};
+                    obj.emplace();
                     obj->offset = currentOffset;
                     obj->location = currentLocation;
                     obj->index = index;
@@ -214,7 +238,8 @@ public:
                 currentOffset += SizeOf(delta);
                 if (currentLocation >= target)
                 {
-                    auto obj = std::make_unique<SeekObj>();
+                    auto obj = std::optional<SeekObj>{};
+                    obj.emplace();
                     obj->offset = currentOffset;
                     obj->location = currentLocation;
                     obj->index = index;
@@ -224,12 +249,12 @@ public:
             }
             }
 
-        return nullptr;
+        return std::nullopt;;
     }
 
-    std::unique_ptr<Doc> FindUrl(uint32_t index, uint32_t chunkNum)
+    std::optional<Doc> FindUrl(uint32_t index, uint32_t chunkNum)
     {
-        if (!mappedFiles[chunkNum]) return nullptr;
+        if (!mappedFiles[chunkNum]) return std::nullopt;;
 
         const void* mapPtr = mappedFiles[chunkNum]->get();
         size_t fileSize = mappedFiles[chunkNum]->size();
@@ -251,7 +276,7 @@ public:
 
             uint64_t entryOffset;
             
-            if (!readUint64_t(entryPtr, fileEnd, entryOffset)) { return nullptr; }
+            if (!readUint64_t(entryPtr, fileEnd, entryOffset)) { return std::nullopt;; }
 
             const uint8_t* urlPtr = seekTable + (URL_ENTRY_SIZE * numEntries) + entryOffset + numEntriesSize;
             uint64_t urlIndex = (tableIndex * BLOCK_SIZE) - 1;
@@ -263,7 +288,8 @@ public:
             }
             if (urlIndex == index)
             {
-                auto obj = std::make_unique<Doc>();
+                auto obj = std::optional<Doc>();
+                obj.emplace();
                 uint8_t urlLen = *urlPtr;
                 obj->url = std::string(reinterpret_cast<const char*>(urlPtr + 1), urlLen);
                 urlPtr += urlLen + 1;
@@ -285,7 +311,8 @@ public:
             }
             if (urlIndex == index)
             {
-                auto obj = std::make_unique<Doc>();
+                auto obj = std::optional<Doc>();
+                obj.emplace();
                 uint8_t urlLen = *urlPtr;
                 obj->url = std::string(reinterpret_cast<const char*>(urlPtr + 1), urlLen);
                 urlPtr += urlLen + 1;
@@ -294,6 +321,6 @@ public:
                 return obj;
             }
         }
-        return nullptr;
+        return std::nullopt;;
     }
 };
