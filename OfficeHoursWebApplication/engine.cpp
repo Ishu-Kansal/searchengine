@@ -3,14 +3,43 @@
 #include "Mutex.h"
 #include "json.hpp"   // Download from https://github.com/nlohmann/json"
 #include "../src/driver.h"
+#include <pthread.h>
 
+//#include <chrono>
+//#include <thread>
 
 using json = nlohmann::json;
 
+json result;
+pthread_mutex_t result_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+// Struct to pass data to each thread
+struct ThreadData {
+  cstring_view url;
+  int idx;
+};
+
+// Thread function
+void* thread_worker(void* arg) {
+    ThreadData* data = static_cast<ThreadData*>(arg);
+    SearchResult parsed = get_and_parse_url(data->url);
+
+    // Lock before modifying shared data
+    pthread_mutex_lock(&result_mutex);
+    result["results"][data->idx] = {
+        {"url", parsed.url},
+        {"title", parsed.title},
+        {"snippet", parsed.snippet}
+    };
+    pthread_mutex_unlock(&result_mutex);
+
+    delete data; // Clean up dynamically allocated memory
+    return nullptr;
+}
+
 // Forward‑declare your search routine. Implement it elsewhere.
 json run_query(std::string &query) {
-  json result;
-
+  //json result
 
   // call driver and return dict of results
   std::vector<cstring_view> urls = run_engine(query);
@@ -22,16 +51,36 @@ json run_query(std::string &query) {
 
   result["results"] = json::array();
 
-  for (const auto &url : urls) {
-    SearchResult parsed = get_and_parse_url(url);
+  // for (const auto &url : urls) {
+  //   SearchResult parsed = get_and_parse_url(url);
 
-    result["results"].push_back({
-      {"url", parsed.url},
-      {"title", parsed.title},
-      {"snippet", parsed.snippet}
-    });
+  //   result["results"].push_back({
+  //     {"url", parsed.url},
+  //     {"title", parsed.title},
+  //     {"snippet", parsed.snippet}
+  //   });
+  // }
+
+  std::vector<pthread_t> threads;
+
+  for (int i = 0; i < urls.size(); i++) {
+      pthread_t thread;
+      ThreadData* data = new ThreadData{urls[i], i}; // Allocate thread-specific data
+
+      if (pthread_create(&thread, nullptr, thread_worker, data) != 0) {
+          std::cerr << "Failed to create thread for URL: " << urls[i] << std::endl;
+          delete data; // Clean up if failed
+      } else {
+          threads.push_back(thread);
+      }
   }
 
+  // Join all threads
+  for (pthread_t& thread : threads) {
+      pthread_join(thread, nullptr);
+  }
+
+  //std::this_thread::sleep_for(std::chrono::seconds(8));
 
   return result;
 }
