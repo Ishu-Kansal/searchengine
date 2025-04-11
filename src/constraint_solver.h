@@ -93,13 +93,13 @@ std::vector<UrlRank> constraint_solver(ISR* queryISR, vector<vector<ISRWord*>> o
         int docEndLoc = queryISR->getDocEndLoc(); 
 
         // use the index to get relevant doc data
-        auto doc = READER.FindUrl(docObj.index, 0);
+        auto doc = READER.FindUrl(docObj->index, 0);
         
         int dynamic_score = get_dynamic_rank(orderedQueryTerms[anchorOuterIndex][anchorInnerIndex], orderedQueryTerms, docStartLoc, 
                             docEndLoc);
         
         // TO DO: get static rank and add it to the dynamic rank
-        pair<cstring_view, int> urlPair = {doc.url, dynamic_score + doc.staticRank}; 
+        pair<cstring_view, int> urlPair = {doc->url, dynamic_score + doc->staticRank}; 
 
         docObj = queryISR->NextDocument(); 
     }

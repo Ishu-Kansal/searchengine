@@ -52,7 +52,7 @@ int get_rank_score(int shortSpans, int orderedSpans, int phraseMatches, int topS
     int phraseMatchesResult = phraseMatches * PHRASEMATCHESWEIGHT;
     int topSpansResult = topSpans * TOPSPANSWEIGHT;
     // multiply by the type weight and the added up weights of the spans
-    return sectionWeight * (shortSpansResult + orderedSpansResult + phraseMatchesResult + topSpansResult); 
+    return  shortSpansResult + orderedSpansResult + phraseMatchesResult + topSpansResult; 
 }
 
 // computes all of the variables that is needed for the rank score function using a variety of ISR'S pertaining to a SPECIFIC document
@@ -146,6 +146,6 @@ int get_dynamic_rank(ISRWord* anchorTerm, vector<vector<ISRWord*>> phraseTerms, 
         anchorTerm->Next(); 
     }
     // return the finalized dynamic ranking
-    return get_rank_score(shortSpans, orderedSpans, phraseMatches, topSpans, type); 
+    return get_rank_score(shortSpans, orderedSpans, phraseMatches, topSpans); 
 }
 
