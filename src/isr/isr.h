@@ -22,13 +22,13 @@ public:
     }
     virtual SeekObj * GetCurrentPost()
     {
-        return currPost;
+        return currPost.get();
     }
     ISR() = default;
     virtual ~ISR() = default;
 
 protected:
-    SeekObj * currPost = nullptr;
+    unique_ptr<SeekObj> currPost = nullptr;
     Location currDocStartLocation = NULL_LOCATION;
     Location currDocEndLocation = NULL_LOCATION;
 };
@@ -40,9 +40,8 @@ public:
         : reader_(reader), word(std::move(word_in)) {}
     
     SeekObj* Seek(Location target) {
-        std::unique_ptr<SeekObj> found = reader_.Find(word, target, 0);
-        currPost = found.release();
-        return currPost;
+        currPost = reader_.Find(word, target, 0);
+        return currPost.get();
     }
     /*
     unsigned GetDocumentCount() {
@@ -58,12 +57,13 @@ public:
         return Seek(getDocEndLoc() + 1);
     }
     SeekObj* Next() {
-        if (!GetCurrentPost()) return Seek(0);
-        return Seek(GetCurrentPost()->location + 1);
+        auto post = GetCurrentPost();
+        if (!post) return Seek(0);
+        return Seek(post->location + 1);
     }
 protected:
     const IndexFileReader& reader_;
-    string word;
+    std::string word;
 };
 
 class ISREndDoc : public ISRWord {

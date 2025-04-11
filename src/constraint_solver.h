@@ -72,7 +72,6 @@ anchorTermIndex get_anchor_ISR(vector<vector<ISRWord*>> orderedQueryTerms) {
      assert(anchorOuterIndex != -1);
      assert(anchorInnerIndex != -1);
      return {anchorOuterIndex, anchorInnerIndex}; 
-    
 }
 
 // actual constraint solver function
@@ -84,24 +83,27 @@ std::vector<UrlRank> constraint_solver(ISR* queryISR, vector<vector<ISRWord*>> o
     auto indices = get_anchor_ISR(orderedQueryTerms);
     int anchorOuterIndex = indices.outerIndex;
     int anchorInnerIndex = indices.innerIndex;
-    int currElements = 0; 
     // seek to the first occurence
-    auto docObj = queryISR->NextDocument(); 
-    while (docObj) {
-
-        int docStartLoc = queryISR->getDocStartLoc(); 
-        int docEndLoc = queryISR->getDocEndLoc(); 
-
-        // use the index to get relevant doc data
-        auto doc = READER.FindUrl(docObj->index, 0);
-        
-        int dynamic_score = get_dynamic_rank(orderedQueryTerms[anchorOuterIndex][anchorInnerIndex], orderedQueryTerms, docStartLoc, 
-                            docEndLoc);
-        
-        // TO DO: get static rank and add it to the dynamic rank
-        pair<cstring_view, int> urlPair = {doc->url, dynamic_score + doc->staticRank}; 
-
-        docObj = queryISR->NextDocument(); 
+    IndexFileReader reader(numChunks);
+    for (int i = 0; i < numChunks; ++i)
+    {
+      auto docObj = queryISR->NextDocument(); 
+      while (docObj) {
+  
+          int docStartLoc = queryISR->getDocStartLoc(); 
+          int docEndLoc = queryISR->getDocEndLoc(); 
+  
+          // use the index to get relevant doc data
+          auto doc = reader.FindUrl(docObj->index, i);
+          
+          int dynamic_score = get_dynamic_rank(orderedQueryTerms[anchorOuterIndex][anchorInnerIndex], orderedQueryTerms, docStartLoc, 
+                              docEndLoc);
+          
+          // TO DO: get static rank and add it to the dynamic rank
+          UrlRank urlRank = {doc->url, dynamic_score + doc->staticRank}; 
+  
+          docObj = queryISR->NextDocument(); 
+      }
     }
     return topNdocs; 
 }

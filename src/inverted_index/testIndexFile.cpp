@@ -271,7 +271,10 @@ void isrTest() {
     
     auto appleISR = ISRWord(wordApple, reader);
     auto wordISR = ISRWord(word, reader);
-    appleISR.Next();
+    for (int i = 0; i < 8193; ++i) 
+    {
+        auto apple = appleISR.Next();
+    }
     char indexFilename[32];
     snprintf(indexFilename, sizeof(indexFilename), "IndexChunk_%05u", chunkNum);
     
