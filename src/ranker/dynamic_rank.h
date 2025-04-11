@@ -34,18 +34,18 @@ enum Requirements: int {
 // Requires: The number of short spans, ordered spans, phrase matches, top spans, and the type of section this is being scored on
 // Modifies: Nothing
 // Effect: Scores a given rank of the document using weights with the given numbers above.
-int get_rank_score(int shortSpans, int orderedSpans, int phraseMatches, int topSpans, cstring_view type) {
+int get_rank_score(int shortSpans, int orderedSpans, int phraseMatches, int topSpans) {
     // TO DO: make a hashtable/array for the type weights
-    int sectionWeight = -1;
-    // assign the weights based on what we are running the ranker on
-    // urls will get higher weights than titles, titles will get higher weights than body, and body gets a normal weight
-    if (type == "body") {
-        sectionWeight =  BODYWEIGHT;
-    }
-    else if (type == "title") {
-        sectionWeight = TITLEWEIGHT;
-    }
-    assert(sectionWeight != -1); 
+    // int sectionWeight = -1;
+    // // assign the weights based on what we are running the ranker on
+    // // urls will get higher weights than titles, titles will get higher weights than body, and body gets a normal weight
+    // if (type == "body") {
+    //     sectionWeight =  BODYWEIGHT;
+    // }
+    // else if (type == "title") {
+    //     sectionWeight = TITLEWEIGHT;
+    // }
+    // assert(sectionWeight != -1); 
     // declare individual ints below for debugging purposes
     int shortSpansResult = shortSpans * SHORTSPANSWEIGHT;
     int orderedSpansResult = orderedSpans * ORDEREDSPANSWEIGHT;
@@ -63,7 +63,7 @@ int get_rank_score(int shortSpans, int orderedSpans, int phraseMatches, int topS
 //           Needs a start location so we can seek to that location
 // Modifies: Nothing.
 // Effect: Returns the dynamic rank score for a single document.
-int get_dynamic_rank(ISRWord* anchorTerm, vector<vector<ISRWord*>> phraseTerms, uint64_t startLocation, uint64_t endLoc, cstring_view type) {
+int get_dynamic_rank(ISRWord* anchorTerm, vector<vector<ISRWord*>> phraseTerms, uint64_t startLocation, uint64_t endLoc) {
     // declare the variables that we will be passing onto rank_score()
     int shortSpans = 0;
     int orderedSpans = 0;
