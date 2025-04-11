@@ -6,10 +6,18 @@
 #include "ranker/dynamic_rank.h"
 
 constexpr size_t TOTAL_DOCS_TO_RETURN = 100;
+
+struct anchorTermIndex
+{
+  int outerIndex;
+  int innerIndex;
+
+  anchorTermIndex(int o, int i) : outerIndex(o), innerIndex(i) {} 
+};
 struct UrlRank 
 {
-  std::string_view url;
   int rank;
+  std::string_view url;
 
   bool operator<(const UrlRank& other) const { return rank < other.rank; }
   bool operator>(const UrlRank& other) const { return rank > other.rank; }
@@ -47,18 +55,19 @@ void insertionSort(vector<UrlRank> & topRankedDocs, UrlRank & rankedDoc)
 }
 
 // returns outer index as the first element of the pair and the inner index as the second element of the pair
-pair<int, int> get_anchor_ISR(vector<vector<ISRWord*>> orderedQueryTerms) {
+anchorTermIndex get_anchor_ISR(vector<vector<ISRWord*>> orderedQueryTerms) {
      // Loop over ISR words vector to get the anchor term
      int anchorOuterIndex = -1;
      int anchorInnerIndex = -1; 
      int minOccurences = INT_MAX; 
      for (int i = 0; i < orderedQueryTerms.size(); i++) {
          for (int j = 0; j < orderedQueryTerms[i].size(); j++) {
-             if (orderedQueryTerms[i][j]->GetNumberOfOccurrences() < minOccurences) {
-                 anchorOuterIndex = i;
-                 anchorInnerIndex = j;
-                 minOccurences = orderedQueryTerms[i][j]->GetNumberOfOccurrences();
-             }
+            int occurences = orderedQueryTerms[i][j]->GetNumberOfOccurrences();
+            if (occurences < minOccurences) {
+                anchorOuterIndex = i;
+                anchorInnerIndex = j;
+                minOccurences = occurences;
+            }
          }
      }
      assert(anchorOuterIndex != -1);
@@ -68,7 +77,7 @@ pair<int, int> get_anchor_ISR(vector<vector<ISRWord*>> orderedQueryTerms) {
 }
 
 // actual constraint solver function
-std::vector<pair<cstring_view, int>> constraint_solver(ISR* queryISR, vector<vector<ISRWord*>> orderedQueryTerms) {
+std::vector<UrlRank> constraint_solver(ISR* queryISR, vector<vector<ISRWord*>> orderedQueryTerms) {
     // create an ISR for document seeking
     vector<pair<cstring_view, int>> returnedResults;
     auto indices = get_anchor_ISR(orderedQueryTerms);
