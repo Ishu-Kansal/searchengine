@@ -162,6 +162,7 @@ public:
         uint64_t numEntries = 0;
         uint64_t numElements = 0;
         // Start of seek table
+        // const uint8_t * x =fileStart + offsetIntoFile;
         const uint8_t* seekTable = fileStart + offsetIntoFile + 1;
      
         if (numEntriesSize) 
@@ -171,7 +172,7 @@ public:
                 fprintf(stderr, "ERROR: Not enough space for numEntries varint encoding.\n");
                 return nullptr;
             }
-            decodeVarint(seekTable, numEntries);
+            seekTable = decodeVarint(seekTable, numEntries);
             decodeVarint(seekTable, numElements);
         }
         else 

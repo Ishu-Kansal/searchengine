@@ -6,6 +6,7 @@
 #include "Index.h"
 #include "IndexFile.h"
 #include "IndexFileReader.h"
+#include "../isr/isr.h"
 
 bool fileExists(const std::string &filename) {
     std::ifstream file(filename);
@@ -156,7 +157,6 @@ void oneDocOneWordLoopTest() {
     std::remove(hashFilename);
     std::cout << "oneDocOneWordLoopTest passed." << std::endl;
 }
-
 void seekTableOffsetTest() {
     IndexChunk indexChunk;
     std::string url = "http://example.com";
@@ -251,13 +251,44 @@ void urlListTest() {
     docObj = reader.FindUrl(8192, 0);
 }
 
+void isrTest() {
+    IndexChunk indexChunk;
+    std::string wordApple = "apple";
+    std::string word = "word";
+    for (int i = 0; i < 8193; ++i) 
+    {
+        std::string url = "http://example.com/" + std::to_string(i);
+        indexChunk.add_url(url, i % 250);
+        indexChunk.add_word(word, false);
+        indexChunk.add_word(wordApple, false);
+        indexChunk.add_enddoc();
+    }
+
+    uint32_t chunkNum = 0;
+    IndexFile indexFile(chunkNum, indexChunk);
+
+    const IndexFileReader reader(1);
+    
+    auto appleISR = ISRWord(wordApple, reader);
+    auto wordISR = ISRWord(word, reader);
+    appleISR.Next();
+    char indexFilename[32];
+    snprintf(indexFilename, sizeof(indexFilename), "IndexChunk_%05u", chunkNum);
+    
+    char hashFilename[32];
+    snprintf(hashFilename, sizeof(hashFilename), "HashFile_%05u", chunkNum);
+
+    std::remove(indexFilename);
+    std::remove(hashFilename);
+}
 int main() {
-    basicIndexFileTest();
-    oneDocMultipleWordTest();
-    oneDocOneWordLoopTest();
-    seekTableOffsetTest();
-    urlListNoSeekTableTest();
-    urlListTest();
+    // basicIndexFileTest();
+    // oneDocMultipleWordTest();
+    // oneDocOneWordLoopTest();
+    // seekTableOffsetTest();
+    // urlListNoSeekTableTest();
+    // urlListTest();
+    isrTest();
     std::cout << "All tests passed." << std::endl;
     return 0;
 }

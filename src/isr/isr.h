@@ -1,17 +1,16 @@
 #pragma once
 
 #include <memory>
-#include <../utils/cstring_view.h>
-#include "IndexFileReader.h"
+#include "../inverted_index/IndexFileReader.h"
 
 typedef size_t Location; // Location 0 is the null location.
 typedef size_t FileOffset;
 
 constexpr Location NULL_LOCATION = 0;
-static IndexFileReader READER(1);
-
+static std::string endDoc = "!#$%!#13513sfas";
 class ISR {
 public:
+
     virtual SeekObj* Seek(Location target) = 0;
     virtual SeekObj* NextDocument() = 0;
     virtual SeekObj* Next() = 0;
@@ -25,6 +24,8 @@ public:
     {
         return currPost;
     }
+    ISR() = default;
+    virtual ~ISR() = default;
 
 protected:
     SeekObj * currPost = nullptr;
@@ -34,24 +35,34 @@ protected:
 
 class ISRWord : public ISR {
 public:
-    // TO DO: Maybe fix the constructor, stub for query processor
-    ISRWord(std::string & word_in) {
-        word = std::move(word_in);
-    }
+    ISRWord() = default;
+    ISRWord(std::string word_in, const IndexFileReader& reader)
+        : reader_(reader), word(std::move(word_in)) {}
     
     SeekObj* Seek(Location target) {
-        return READER.Find(word, target, 1).get();
+        std::unique_ptr<SeekObj> found = reader_.Find(word, target, 0);
+        currPost = found.release();
+        return currPost;
     }
-    
+    /*
     unsigned GetDocumentCount() {
-        return; // Get from index file
+    return;
     } 
-
+    */
     unsigned GetNumberOfOccurrences() {
-        return GetCurrentPost()->numOccurrences;
+        auto post = GetCurrentPost();
+        if (!post) return 0;
+        return post->numOccurrences;
     }
-
-private:
+    SeekObj* NextDocument() {
+        return Seek(getDocEndLoc() + 1);
+    }
+    SeekObj* Next() {
+        if (!GetCurrentPost()) return Seek(0);
+        return Seek(GetCurrentPost()->location + 1);
+    }
+protected:
+    const IndexFileReader& reader_;
     string word;
 };
 
@@ -60,6 +71,12 @@ public:
     unsigned GetDocumentLength() const { return currDocumentLength; }
     unsigned GetTitleLength() const { return currTitleLength; }
     unsigned GetUrlLength() const { return currUrlLength; }
+
+    ISREndDoc(const IndexFileReader& reader)
+    : ISRWord(endDoc, reader),
+      currDocumentLength(0),
+      currTitleLength(0),
+      currUrlLength(0) {}
 private:
     unsigned currDocumentLength;
     unsigned currTitleLength;
@@ -71,8 +88,9 @@ public:
     std::vector<std::unique_ptr<ISR>> terms;
     std::unique_ptr<ISREndDoc> docEndISR;
 
-    ISROr(std::vector<std::unique_ptr<ISR>> childISRs) : terms(std::move(childISRs)) {
-        docEndISR = std::make_unique<ISREndDoc>();
+    ISROr(std::vector<std::unique_ptr<ISR>> childISRs, const IndexFileReader& reader)
+    : terms(std::move(childISRs)) {
+    docEndISR = std::make_unique<ISREndDoc>(reader);
     }
 
     SeekObj* Seek(Location target) override {
@@ -121,10 +139,10 @@ public:
     std::vector<std::unique_ptr<ISR>> terms;
     std::unique_ptr<ISREndDoc> docEndISR;
     bool anotherOne = false;
-    ISRAnd(std::vector<std::unique_ptr<ISR>> childISRs) : terms(std::move(childISRs)) {
-        docEndISR = std::make_unique<ISREndDoc>();
+    ISRAnd(std::vector<std::unique_ptr<ISR>> childISRs, const IndexFileReader& reader)
+        : terms(std::move(childISRs)) {
+        docEndISR = std::make_unique<ISREndDoc>(reader);
     }
-    
     SeekObj * Seek(Location target) {
         if (terms.empty() || target == NULL_LOCATION) return nullptr;
         farthestTerm = 0;
@@ -191,8 +209,9 @@ public:
     std::unique_ptr<ISREndDoc> docEndISR;
     bool anotherOne = false; // Need to know if we need return to step 2
 
-    ISRPhrase(std::vector<std::unique_ptr<ISR>> childISRs) : terms(std::move(childISRs)) {
-        docEndISR = std::make_unique<ISREndDoc>();
+    ISRPhrase(std::vector<std::unique_ptr<ISR>> childISRs, const IndexFileReader& reader)
+        : terms(std::move(childISRs)) {
+        docEndISR = std::make_unique<ISREndDoc>(reader);
     }
     SeekObj * Seek(Location target) {
         if (terms.empty()) return nullptr;
@@ -257,8 +276,9 @@ public:
     std::unique_ptr<ISREndDoc> docEndISR;
     bool anotherOne = false;
     bool excludedNotFound = true;
-    ISRContainer(std::vector<std::unique_ptr<ISR>> childISRs, std::vector<std::unique_ptr<ISR>>  excluded) : terms(std::move(childISRs)), excluded(std::move(excluded)) {
-        docEndISR = std::make_unique<ISREndDoc>();
+    ISRContainer(std::vector<std::unique_ptr<ISR>> childISRs, std::vector<std::unique_ptr<ISR>> excludedISRs, const IndexFileReader& reader)
+        : terms(std::move(childISRs)), excluded(std::move(excludedISRs)) {
+        docEndISR = std::make_unique<ISREndDoc>(reader);
     }
     unsigned CountContained, CountExcluded;
 
