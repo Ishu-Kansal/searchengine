@@ -73,7 +73,7 @@ class IndexFile {
                 //bytes = reinterpret_cast<uint8_t*>(&index);
                 //dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(index));
             }
-
+        
             offset += doc.url.size() + 2;
             index++;
 
@@ -106,10 +106,13 @@ class IndexFile {
                 dataBuffer.push_back(SizeOf(numEntries)); 
                 pushVarint(dataBuffer, numEntries);
             }
+            
+            // # of elements in posting list
+            pushVarint(dataBuffer, postingList.size());
             uint64_t prev = 0;
             uint32_t index = 0;
             uint64_t pos = 0;
-            uint64_t offset = 0; 
+            uint64_t offset = 0;
             std::vector<uint8_t> tempBuffer;
             tempBuffer.reserve(1000000000UL); // 1 gb
             for (const Post & entry : postingList)

@@ -48,7 +48,7 @@ public:
     } 
 
     unsigned GetNumberOfOccurrences() {
-        return; // Get from index file
+        return GetCurrentPost()->numOccurrences;
     }
 
 private:
