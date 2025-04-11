@@ -54,7 +54,6 @@ void insertionSort(vector<UrlRank> & topRankedDocs, UrlRank & rankedDoc)
   topRankedDocs[pos] = std::move(docToInsert);
 }
 
-// returns outer index as the first element of the pair and the inner index as the second element of the pair
 anchorTermIndex get_anchor_ISR(vector<vector<ISRWord*>> orderedQueryTerms) {
      // Loop over ISR words vector to get the anchor term
      int anchorOuterIndex = -1;
@@ -79,37 +78,30 @@ anchorTermIndex get_anchor_ISR(vector<vector<ISRWord*>> orderedQueryTerms) {
 // actual constraint solver function
 std::vector<UrlRank> constraint_solver(ISR* queryISR, vector<vector<ISRWord*>> orderedQueryTerms) {
     // create an ISR for document seeking
-    vector<pair<cstring_view, int>> returnedResults;
+    std::vector<UrlRank> topNdocs;
+    topNdocs.reserve(TOTAL_DOCS_TO_RETURN);
+
     auto indices = get_anchor_ISR(orderedQueryTerms);
-    int anchorOuterIndex = indices.first;
-    int anchorInnerIndex = indices.second;
+    int anchorOuterIndex = indices.outerIndex;
+    int anchorInnerIndex = indices.innerIndex;
     int currElements = 0; 
     // seek to the first occurence
-    Post* currPost = queryISR->NextDocument(); 
-    while (currPost) {
+    auto docObj = queryISR->NextDocument(); 
+    while (docObj) {
+
         int docStartLoc = queryISR->getDocStartLoc(); 
         int docEndLoc = queryISR->getDocEndLoc(); 
-        // TO DO use the relative loc to get relevant doc data
-        int relativeLoc = queryISR->GetCurrentPost()->location;
-        assert(false);
 
-        // TO DO: Figure out how to get the document URL
-        assert(false); 
-        cstring_view documentURL; 
-
-        // TO DO: Update this function call with actual values and figure out how to determine if its in the title or body
-        assert(false); 
+        // use the index to get relevant doc data
+        auto doc = READER.FindUrl(docObj.index, 0);
+        
         int dynamic_score = get_dynamic_rank(orderedQueryTerms[anchorOuterIndex][anchorInnerIndex], orderedQueryTerms, docStartLoc, 
-                            docEndLoc, "\0");
+                            docEndLoc);
         
         // TO DO: get static rank and add it to the dynamic rank
-        pair<cstring_view, int> urlPair = {documentURL, dynamic_score + static_score}; 
+        pair<cstring_view, int> urlPair = {doc.url, dynamic_score + doc.staticRank}; 
 
-        TopN(returnedResults, urlPair, 10, currElements); 
-        currPost = queryISR->NextDocument(); 
+        docObj = queryISR->NextDocument(); 
     }
-    return returnedResults; 
+    return topNdocs; 
 }
-
-    
-    
