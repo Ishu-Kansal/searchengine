@@ -40,7 +40,7 @@ public:
     }
     
     SeekObj* Seek(Location target) {
-        return READER.Find(word, target, 1);
+        return READER.Find(word, target, 1).get();
     }
     
     unsigned GetDocumentCount() {

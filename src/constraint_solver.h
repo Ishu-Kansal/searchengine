@@ -1,5 +1,47 @@
+#pragma once
+
+#include <string_view>
+
 #include "isr.h"
 #include "ranker/dynamic_rank.h"
+
+constexpr size_t TOTAL_DOCS_TO_RETURN = 100;
+struct UrlRank 
+{
+  std::string_view url;
+  int rank;
+
+  bool operator<(const UrlRank& other) const { return rank < other.rank; }
+  bool operator>(const UrlRank& other) const { return rank > other.rank; }
+  bool operator>=(const UrlRank& other) const { return rank >= other.rank; }
+
+};
+
+void insertionSort(vector<UrlRank> & topRankedDocs, UrlRank & rankedDoc) 
+{
+  if (topRankedDocs.size() == TOTAL_DOCS_TO_RETURN && topRankedDocs.back() >= rankedDoc)
+  {
+    return;
+  }
+  if (topRankedDocs.size() < TOTAL_DOCS_TO_RETURN) 
+  {
+    topRankedDocs.push_back(rankedDoc);
+  }
+  else
+  {
+    topRankedDocs.back() = rankedDoc;
+  }
+
+  if (topRankedDocs.size() > 1)
+  {
+    int i = topRankedDocs.size() - 1;
+    while (i > 0 && topRankedDocs[i] > topRankedDocs[i - 1])
+    {
+        std::swap(topRankedDocs[i], topRankedDocs[i - 1]);
+        i--;
+    }
+  }
+}
 
 // returns outer index as the first element of the pair and the inner index as the second element of the pair
 pair<int, int> get_anchor_ISR(vector<vector<ISRWord*>> orderedQueryTerms) {
@@ -20,34 +62,6 @@ pair<int, int> get_anchor_ISR(vector<vector<ISRWord*>> orderedQueryTerms) {
      assert(anchorInnerIndex != -1);
      return {anchorOuterIndex, anchorInnerIndex}; 
     
-}
-// TO DO: Convert to STL
-void insertionSort(std::pair<cstring_view, int> *first, std::pair<cstring_view, int> *last, std::pair<cstring_view, int> current, int N)
-{
-  if (last - first == N && current.second <= (last - 1)->second)
-    return;
-  auto marker = first;
-  while (marker != last && marker->second >= current.second)
-    ++marker;
-  for (auto it = last < first + N - 1 ? last : first + N - 1; it > marker; --it)
-  {
-    *it = *(it - 1);
-  }
-  *marker = current;
-}
-
-// For the constraint solver
-void TopN(vector<pair<cstring_view, int>> &rankedDocs, pair<cstring_view, int> rankedDoc, int N, int &currElements)
-{
-  // Find the top N pairs based on the values and return
-  // as a dynamically-allocated array of pointers.  If there
-  // are less than N pairs in the hash, remaining pointers
-  // will be null.
-
-  // Your code here.
-  const auto last = rankedDocs.end();
-  insertionSort(rankedDocs.data(), rankedDocs.data() + currElements, rankedDoc, N);
-  if (currElements < N) ++currElements;
 }
 
 // actual constraint solver function
