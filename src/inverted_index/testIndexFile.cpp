@@ -69,25 +69,25 @@ void oneDocMultipleWordTest() {
 
     auto seekApple = reader.Find("apple", 0, chunkNum);
     assert(seekApple->location == 0);
-    assert(seekApple.has_value() && "apple not found by IndexFileReader");
+    assert(seekApple!=nullptr && "apple not found by IndexFileReader");
 
     seekApple = reader.Find("apple", 1, chunkNum);
     assert(seekApple->location == 2);
-    assert(seekApple.has_value() && "apple not found by IndexFileReader");
+    assert(seekApple!=nullptr && "apple not found by IndexFileReader");
 
 
     seekApple = reader.Find("apple", 2, chunkNum);
     assert(seekApple->location == 2);
-    assert(seekApple.has_value() && "apple not found by IndexFileReader");
+    assert(seekApple!=nullptr && "apple not found by IndexFileReader");
 
 
     seekApple = reader.Find("apple", 3, chunkNum);
     assert(seekApple->location == 3);
-    assert(seekApple.has_value() && "apple not found by IndexFileReader");
+    assert(seekApple!=nullptr && "apple not found by IndexFileReader");
 
 
     auto seekBanana = reader.Find("banana", 0, chunkNum);
-    assert(seekBanana.has_value() && "banana not found by IndexFileReader");
+    assert(seekBanana!=nullptr && "banana not found by IndexFileReader");
 
     
     char indexFilename[32];
@@ -126,19 +126,19 @@ void oneDocOneWordLoopTest() {
 
     auto seekApple = reader.Find("apple", 0, chunkNum);
     assert(seekApple->location == 0);
-    assert(seekApple.has_value() && "apple not found by IndexFileReader");
+    assert(seekApple!=nullptr && "apple not found by IndexFileReader");
 
     seekApple = reader.Find("apple", 8192, chunkNum);
     assert(seekApple->location == 8192);
-    assert(seekApple.has_value() && "apple not found by IndexFileReader");
+    assert(seekApple!=nullptr && "apple not found by IndexFileReader");
 
     seekApple = reader.Find("apple", 8193, chunkNum);
     assert(seekApple->location == 8193);
-    assert(seekApple.has_value() && "apple not found by IndexFileReader");
+    assert(seekApple!=nullptr && "apple not found by IndexFileReader");
 
     seekApple = reader.Find("apple", 3, chunkNum);
     assert(seekApple->location == 3);
-    assert(seekApple.has_value() && "apple not found by IndexFileReader");
+    assert(seekApple!=nullptr && "apple not found by IndexFileReader");
 
     auto seekBanana = reader.Find("banana", 0, chunkNum);
     assert(!seekBanana);
@@ -184,13 +184,13 @@ void seekTableOffsetTest() {
         auto seekApple = reader.Find("apple", i, chunkNum);
         assert(seekApple->location == i);
         assert(seekApple->index == i);
-        assert(seekApple.has_value() && "apple not found by IndexFileReader");
+        assert(seekApple!=nullptr && "apple not found by IndexFileReader");
 
     }
     auto seekApple = reader.Find("apple", 8191, chunkNum);
     assert(seekApple->location == 8191);
     assert(seekApple->index == 8191);
-    assert(seekApple.has_value() && "apple not found by IndexFileReader");
+    assert(seekApple!=nullptr && "apple not found by IndexFileReader");
 
 
     seekApple = reader.Find("apple", 8192, chunkNum);
