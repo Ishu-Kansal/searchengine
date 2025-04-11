@@ -15,32 +15,35 @@ struct UrlRank
   bool operator>(const UrlRank& other) const { return rank > other.rank; }
   bool operator>=(const UrlRank& other) const { return rank >= other.rank; }
 
+  UrlRank() : url(""), rank(0) {}
+  UrlRank(std::string_view u, int r) : url(u), rank(r) {}
+
 };
 
 void insertionSort(vector<UrlRank> & topRankedDocs, UrlRank & rankedDoc) 
 {
-  if (topRankedDocs.size() == TOTAL_DOCS_TO_RETURN && topRankedDocs.back() >= rankedDoc)
+  const size_t maxSize = TOTAL_DOCS_TO_RETURN;
+  size_t curSize = topRankedDocs.size();
+  if (curSize == TOTAL_DOCS_TO_RETURN && topRankedDocs.back() >= rankedDoc)
   {
     return;
   }
-  if (topRankedDocs.size() < TOTAL_DOCS_TO_RETURN) 
+  UrlRank docToInsert = rankedDoc;
+  size_t pos;
+  if (curSize < maxSize) 
+  { 
+    topRankedDocs.emplace_back();
+    pos = curSize;
+  } else 
   {
-    topRankedDocs.push_back(rankedDoc);
+    pos = curSize - 1;
   }
-  else
+  while (pos > 0 && topRankedDocs[pos - 1] < docToInsert) 
   {
-    topRankedDocs.back() = rankedDoc;
+    topRankedDocs[pos] = std::move(topRankedDocs[pos - 1]);
+    pos--;
   }
-
-  if (topRankedDocs.size() > 1)
-  {
-    int i = topRankedDocs.size() - 1;
-    while (i > 0 && topRankedDocs[i] > topRankedDocs[i - 1])
-    {
-        std::swap(topRankedDocs[i], topRankedDocs[i - 1]);
-        i--;
-    }
-  }
+  topRankedDocs[pos] = std::move(docToInsert);
 }
 
 // returns outer index as the first element of the pair and the inner index as the second element of the pair
