@@ -59,6 +59,7 @@ struct SeekObj {
     Location offset;
     Location location;
     Location index;
+    unsigned numOccurrences;
 };
 struct MappedFile {
     void * map;
@@ -142,7 +143,6 @@ public:
             fprintf(stderr, "DEBUG: '%s' not found in hashblob for chunk %u\n", word.c_str(), chunkNum);
             return nullptr;
         }
-
         // Get mapped file
         const void* mapPtr = mappedFiles[chunkNum]->get();
         size_t fileSize = mappedFiles[chunkNum]->size();
@@ -160,7 +160,7 @@ public:
         uint8_t numEntriesSize = fileStart[offsetIntoFile];
         size_t tableIndex = (target + 1) >> BLOCK_OFFSET_BITS;
         uint64_t numEntries = 0;
-
+        uint64_t numElements = 0;
         // Start of seek table
         const uint8_t* seekTable = fileStart + offsetIntoFile + 1;
      
@@ -171,13 +171,17 @@ public:
                 fprintf(stderr, "ERROR: Not enough space for numEntries varint encoding.\n");
                 return nullptr;
             }
-            const uint8_t* temp = fileStart + offsetIntoFile + 1;
-            decodeVarint(temp, numEntries);
+            decodeVarint(seekTable, numEntries);
+            decodeVarint(seekTable, numElements);
+        }
+        else 
+        {
+            decodeVarint(seekTable, numElements);
         }
         if (numEntriesSize && tableIndex != 0)
         {
             // Gets seek table entry at target index
-            const uint8_t* entryPtr = seekTable + ((tableIndex - 1) * ENTRY_SIZE) + numEntriesSize;
+            const uint8_t* entryPtr = seekTable + ((tableIndex - 1) * ENTRY_SIZE) + numEntriesSize + 1;
 
             uint64_t entryOffset;
             uint64_t entryLocation;
@@ -194,12 +198,13 @@ public:
                 obj->offset = entryOffset;
                 obj->location = entryLocation;
                 obj->index = index;
+                obj->numOccurrences = numElements;
                 return obj;
             }
             // Need to linearly scan to find first entry with location >= target
             uint64_t currentLocation = entryLocation;
             uint64_t currentOffset = entryOffset;
-            const uint8_t* postPtr = seekTable + (ENTRY_SIZE * numEntries) + entryOffset + numEntriesSize;
+            const uint8_t* postPtr = seekTable + (ENTRY_SIZE * numEntries) + entryOffset + numEntriesSize + 1;
             while (currentLocation < target || target == 0)
             {
                 ++index;
@@ -215,6 +220,7 @@ public:
                     obj->offset = currentOffset;
                     obj->location = currentLocation;
                     obj->index = index;
+                    obj->numOccurrences = numElements;
                     return obj;
                 }
             }
@@ -222,7 +228,7 @@ public:
         else
         {
             // Linearly scan if we don't have a seek table
-            const uint8_t* varintBuf = fileStart + offsetIntoFile + 1 + (ENTRY_SIZE * numEntries) + numEntriesSize;
+            const uint8_t* varintBuf = fileStart + offsetIntoFile + 1 + (ENTRY_SIZE * numEntries) + numEntriesSize + 1;
             uint64_t currentLocation = 0;
             uint64_t currentOffset = 0;
             uint64_t index = 0;
@@ -239,6 +245,7 @@ public:
                     obj->offset = currentOffset;
                     obj->location = currentLocation;
                     obj->index = index;
+                    obj->numOccurrences = numElements;
                     return obj;
                 }
                 index++;
