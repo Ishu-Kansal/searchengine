@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
-#include<memory>
+#include <memory>
 #include <unordered_map>
 
 #include "../../HashTable/HashTableStarterFiles/HashBlob.h"
@@ -59,8 +59,11 @@ class MappedMemory {
 struct SeekObj {
     Location offset;
     Location location;
+    Location delta;
     Location index;
     unsigned numOccurrences;
+    SeekObj(Location off, Location loc, Location idx, Location d, unsigned num) 
+    : offset(off), location(loc), index(idx), delta(d), numOccurrences(num) {}
 };
 struct MappedFile {
     void * map;
@@ -206,16 +209,19 @@ public:
 
             uint64_t index = (tableIndex * BLOCK_SIZE) - 1;
             // Returns if target was an entry in seek table
+            /*
             if (entryLocation == target) 
             {
 
                 auto obj = std::make_unique<SeekObj>();
                 obj->offset = entryOffset;
                 obj->location = entryLocation;
-                obj->index = index;
+                obj->index = index; 
                 obj->numOccurrences = numPosts;
                 return obj;
             }
+            */
+      
             // Need to linearly scan to find first entry with location >= target
             uint64_t currentLocation = entryLocation;
             uint64_t currentOffset = entryOffset;
@@ -223,27 +229,22 @@ public:
 
             while (currentLocation < target || target == 0)
             {
-                ++index;
                 uint64_t delta = 0;
                 // decode varint automatically moves the buffer ahead
                 postingListBuf = decodeVarint(postingListBuf, delta);
                 currentLocation += delta;
-
                 currentOffset += SizeOf(delta);
                 if (currentLocation >= target)
                 {
-                    auto obj = std::make_unique<SeekObj>();
-                    obj->offset = currentOffset;
-                    obj->location = currentLocation;
-                    obj->index = index;
-                    obj->numOccurrences = numPosts;
-                    return obj;
+                    return std::make_unique<SeekObj>(currentOffset, currentLocation, index, delta, numPosts);
                 }
+                ++index;
             }
         }
         else
         {
             // Linearly scan if we don't have a seek table
+            // Or if index is 0 (means element is within the first 8192 entries)
             postingListBuf += (ENTRY_SIZE * numSeekTableEntries);
             uint64_t currentLocation = 0;
             uint64_t currentOffset = 0;
@@ -257,16 +258,11 @@ public:
                 currentOffset += SizeOf(delta);
                 if (currentLocation >= target)
                 {
-                    auto obj = std::make_unique<SeekObj>();
-                    obj->offset = currentOffset;
-                    obj->location = currentLocation;
-                    obj->index = index;
-                    obj->numOccurrences = numPosts;
-                    return obj;
+                    return std::make_unique<SeekObj>(currentOffset, currentLocation, index, delta, numPosts);
                 }
                 index++;
             }
-            }
+        }
 
         return nullptr;;
     }

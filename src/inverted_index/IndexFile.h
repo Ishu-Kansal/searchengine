@@ -20,13 +20,8 @@
 
 constexpr size_t BLOCK_OFFSET_BITS = 13; // 2^13 or 8192
 constexpr size_t BLOCK_SIZE = 1 << BLOCK_OFFSET_BITS;
-
+constexpr size_t URL_HEADER_BYTES = 2;
 // Didn't use pushVarint for some of them, because some of the values are one byte and I want the full range from 0 - 255.
-
-/*
-Setup for Seek Table:
-
-*/
 
 class IndexFile {
     private:
@@ -74,7 +69,7 @@ class IndexFile {
                 //dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(index));
             }
         
-            offset += doc.url.size() + 2;
+            offset += doc.url.size() + URL_HEADER_BYTES;
             index++;
 
             tempBuffer.push_back(uint8_t(doc.url.size()));
@@ -117,10 +112,6 @@ class IndexFile {
             tempBuffer.reserve(1000000000UL); // 1 gb
             for (const Post & entry : postingList)
             {
-                uint64_t delta = entry.location - prev;
-                pos += delta;
-                uint8_t deltaSize = SizeOf(delta);
-                offset += deltaSize;
                 // We're making a seek table entry every BLOCK_SIZE words we encountered
                 // but since index is 0-indexed we have to add 1
                 if (postingList.size() >= BLOCK_SIZE && (index + 1) % BLOCK_SIZE == 0 && index != 0)
@@ -132,6 +123,12 @@ class IndexFile {
                     bytes = reinterpret_cast<uint8_t*>(&pos);
                     dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(pos));
                 }
+
+                uint64_t delta = entry.location - prev;
+                pos += delta;
+                uint8_t deltaSize = SizeOf(delta);
+       
+                offset += deltaSize;
                 pushVarint(tempBuffer, delta);
                 prev = entry.location;
                 ++index;
