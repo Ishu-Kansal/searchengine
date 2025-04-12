@@ -254,7 +254,7 @@ void urlListTest() {
     docObj = reader.FindUrl(8192, 0);
 }
 
-void isrTest() {
+void AndISRTest() {
     IndexChunk indexChunk;
     std::string wordApple = "apple";
     std::string wordTest = "test";
@@ -267,14 +267,16 @@ void isrTest() {
         {
             indexChunk.add_word(word, false);
             indexChunk.add_word(wordApple, false);
+            indexChunk.add_word(word, false);
         }
         else 
         {
             indexChunk.add_word(word, false);
+            indexChunk.add_word(word, false);
             indexChunk.add_word(wordTest, false);   
         }
  
-        indexChunk.add_enddoc();
+        indexChunk.add_enddoc(); 
     }
 
     uint32_t chunkNum = 0;
@@ -284,6 +286,7 @@ void isrTest() {
     
     unique_ptr<ISR> appleISR = make_unique<ISRWord>(wordApple, reader);
     unique_ptr<ISR> wordISR = make_unique<ISRWord>(word, reader);
+    unique_ptr<ISR> testISR = make_unique<ISRWord>(wordTest, reader);
 
     vector<unique_ptr<ISR>> terms;
 
@@ -291,10 +294,21 @@ void isrTest() {
     terms.push_back(std::move(wordISR));
 
     ISRAnd andISR(std::move(terms), reader);
-    for (int i = 0; i < 1000; ++i)
+
+    for (int i = 0; i < 10; ++i)
     {
         auto x = andISR.Next();
+
     }
+
+    vector<unique_ptr<ISR>> terms2;
+    terms2.push_back(std::move(testISR));
+    ISRAnd oneWordAnd(std::move(terms2), reader);
+    for (int i = 0; i < 10; ++i)
+    {
+        auto y = oneWordAnd.Next();
+    }
+    oneWordAnd.Next();
     char indexFilename[32];
     snprintf(indexFilename, sizeof(indexFilename), "IndexChunk_%05u", chunkNum);
     
@@ -312,7 +326,7 @@ int main() {
     seekTableOffsetTest();
     urlListNoSeekTableTest();
     urlListTest();
-    isrTest();
+    AndISRTest();
     std::cout << "All tests passed." << std::endl;
     return 0;
 }

@@ -13,25 +13,23 @@ public:
 
     virtual SeekObj* Seek(Location target) = 0;
     virtual SeekObj* NextDocument() = 0;
-    virtual SeekObj* Next() = 0;
+   
+    virtual Location getStartLocation() {}
+    virtual Location getEndLocation() {}
     
-    virtual Location getDocStartLoc() {
-        return currDocStartLocation;
-    }
-    virtual Location getDocEndLoc() {
-        return currDocEndLocation;
-    }
     virtual SeekObj * GetCurrentPost() const
     {
         return currPost.get();
     }
+
+    virtual SeekObj* Next() {}
     ISR() = default;
     virtual ~ISR() = default;
 
 protected:
     unique_ptr<SeekObj> currPost = nullptr;
-    Location currDocStartLocation = NULL_LOCATION;
-    Location currDocEndLocation = NULL_LOCATION;
+    Location nearestStartLocation = NULL_LOCATION;
+    Location nearestEndLocation = NULL_LOCATION;
 };
 
 class ISRWord : public ISR {
@@ -44,24 +42,24 @@ public:
         currPost = reader_.Find(word, target, 0);
         return currPost.get();
     }
-    /*
-    unsigned GetDocumentCount() {
-    return;
-    } 
-    */
     unsigned GetNumberOfOccurrences() {
         auto post = GetCurrentPost();
         if (!post) return 0;
         return post->numOccurrences;
     }
     SeekObj* NextDocument() {
-        return Seek(getDocEndLoc() + 1);
+        return Seek(getEndLocation() + 1);
     }
     SeekObj* Next() {
         auto post = GetCurrentPost();
         if (!post) return Seek(0);
         return Seek(post->location + 1);
     }
+    /*
+        unsigned GetDocumentCount() {
+        return;
+        } 
+    */
 protected:
     const IndexFileReader& reader_;
     std::string word;
@@ -92,8 +90,17 @@ public:
     std::unique_ptr<ISREndDoc> docEndISR;
 
     ISROr(std::vector<std::unique_ptr<ISR>> childISRs, const IndexFileReader& reader)
-    : terms(std::move(childISRs)) {
+    : terms(std::move(childISRs)), nearestTerm(0), nearestStartLocation(0), nearestEndLocation(0) {
     docEndISR = std::make_unique<ISREndDoc>(reader);
+    }
+
+    Location getStartLocation() override
+    {
+        return nearestStartLocation;
+    }
+    Location getEndLocation() override
+    {
+        return nearestEndLocation;
     }
 
     SeekObj* Seek(Location target) override {
@@ -114,23 +121,23 @@ public:
                 nearestEndLocation = docEnd->location;
             }
         }
-        return docEndISR->Seek(nearestEndLocation);
+        return terms[nearestTerm]->GetCurrentPost();
     }
 
     SeekObj* Next() override {
         // Do a next on the nearest term, then return
         // the new nearest match.
-        SeekObj * post = terms[nearestTerm]->GetCurrentPost();
-        return Seek(post->location + 1);
+        SeekObj * seekObj = terms[nearestTerm]->GetCurrentPost();
+        if (!seekObj) return Seek(0);
+        return Seek(seekObj->location + 1);
     }
     SeekObj* NextDocument() override {
         // Seek all the ISRs to the first occurrence just past
         // the end of this document.
-        Location currEnd = getDocEndLoc();
+        Location currEnd = getEndLocation();
         return Seek(currEnd + 1);
     }
 
-public:
 private:
     unsigned nearestTerm;
     // nearStartLocation and nearestEndLocation are the start and end of the nearestTerm.
@@ -145,6 +152,14 @@ public:
         : terms(std::move(childISRs)), nearestTerm(0), farthestTerm(0), nearestStartLocation(0), nearestEndLocation(0) {
         docEndISR = std::make_unique<ISREndDoc>(reader);
     }
+    Location getStartLocation() override
+    {
+        return nearestStartLocation;
+    }
+    Location getEndLocation() override
+    {
+        return nearestEndLocation;
+    }
     SeekObj * Seek(Location target) {
         if (terms.empty()) return nullptr;
         bool anotherOne = false;
@@ -154,8 +169,14 @@ public:
             SeekObj * seekObj = terms[i]->Seek(target);
             // 5. If any ISR reaches the end, there is no match.
             if (!seekObj) return nullptr;
-            SeekObj * farthestPost = terms[farthestTerm]->GetCurrentPost();
-            SeekObj * nearestPost = terms[nearestTerm]->GetCurrentPost();
+            SeekObj * farthestPost = nullptr;
+            SeekObj * nearestPost = nullptr;
+            if (i != 0)
+            {
+                farthestPost = terms[farthestTerm]->GetCurrentPost();
+                nearestPost = terms[nearestTerm]->GetCurrentPost();
+            }
+            
             if (!farthestPost || seekObj->location > farthestPost->location)
             {
                 farthestTerm = i;
@@ -170,7 +191,7 @@ public:
             // 2. Move the document end ISR to just past the furthest word, then calculate the document begin location.
             anotherOne = false;
             SeekObj * farthestPost = terms[farthestTerm]->GetCurrentPost();
-            SeekObj * docEnd = docEndISR->Seek(farthestPost->location + 1);
+            SeekObj * docEnd = docEndISR->Seek(farthestPost->location);
             if (!docEnd) return nullptr;
             unsigned len = docEndISR->GetDocumentLength();
             nearestStartLocation = docEnd->location - docEndISR->GetDocumentLength();
@@ -178,7 +199,7 @@ public:
             // 3. Seek all the other terms to past the document begin.
             for (size_t i = 0; i < terms.size(); ++i)
             {                                       
-                SeekObj * seekObj = terms[i]->Seek(nearestStartLocation+ 1);
+                SeekObj * seekObj = terms[i]->Seek(nearestStartLocation);
                 // 5. If any ISR reaches the end, there is no match.
                 if (!seekObj) return nullptr; 
                  // 4. If any term is past the document end, return to step 2.
@@ -194,7 +215,9 @@ public:
             }
             if (!anotherOne) break;
         }
-        return docEndISR->Seek(nearestStartLocation);
+
+        return terms[nearestTerm]->GetCurrentPost();
+    
     }
     SeekObj * Next() override 
     {
@@ -207,6 +230,7 @@ public:
         return Seek(nearestEndLocation + 1);
     }
 private:
+
     unsigned nearestTerm, farthestTerm;
     Location nearestStartLocation, nearestEndLocation;
 };
@@ -218,7 +242,7 @@ public:
     bool anotherOne = false; // Need to know if we need return to step 2
 
     ISRPhrase(std::vector<std::unique_ptr<ISR>> childISRs, const IndexFileReader& reader)
-        : terms(std::move(childISRs)) {
+        : terms(std::move(childISRs)), farthestTerm(0), farthestTermLocation(0),nearestStartLocation(0), nearestEndLocation(0) {
         docEndISR = std::make_unique<ISREndDoc>(reader);
     }
     SeekObj * Seek(Location target) {
@@ -262,13 +286,21 @@ public:
         }
         SeekObj * docEnd = docEndISR->Seek(farthestTermLocation);
         if (!docEnd) return nullptr;
+
         nearestStartLocation = docEnd->location - docEndISR->GetDocumentLength();
         nearestEndLocation = docEnd->location;
-        return docEnd;
+
+        return terms[farthestTerm]->GetCurrentPost();
     }   
     SeekObj * Next() {
         // Finds overlapping phrase matches.
-        return Seek(terms[0]->GetCurrentPost()->location + 1);
+        auto firstPost =  terms[0]->GetCurrentPost();
+        if (!firstPost) return Seek(0);
+        return Seek(firstPost->location + 1);
+    }
+    SeekObj * NextDocument() 
+    {
+        return Seek(nearestEndLocation + 1);
     }
 
 private:
@@ -285,7 +317,7 @@ public:
     bool anotherOne = false;
     bool excludedNotFound = true;
     ISRContainer(std::vector<std::unique_ptr<ISR>> childISRs, std::vector<std::unique_ptr<ISR>> excludedISRs, const IndexFileReader& reader)
-        : terms(std::move(childISRs)), excluded(std::move(excludedISRs)) {
+        : terms(std::move(childISRs)), excluded(std::move(excludedISRs)), nearestTerm(0), farthestTerm(0), nearestStartLocation(0), nearestEndLocation(0) {
         docEndISR = std::make_unique<ISREndDoc>(reader);
     }
     unsigned CountContained, CountExcluded;
@@ -293,7 +325,6 @@ public:
     SeekObj * Seek(Location target) {
         //1. Seek all the included ISRs to the first occurrence beginning at the target location.
         if (terms.empty()) return nullptr;
-        farthestTerm = 0;
         while(true)
         {
             excludedNotFound = true;
@@ -301,11 +332,20 @@ public:
             {
                 SeekObj * seekObj = terms[i]->Seek(target);
                 if (!seekObj) return nullptr;
-                if (seekObj->location > terms[farthestTerm]->GetCurrentPost()->location)
+
+                SeekObj * farthestPost = nullptr;
+                SeekObj * nearestPost = nullptr;
+
+                if (i != 0)
+                {
+                    farthestPost = terms[farthestTerm]->GetCurrentPost();
+                    nearestPost = terms[nearestTerm]->GetCurrentPost();
+                }
+                if (!farthestPost || seekObj->location > farthestPost->location)
                 {
                     farthestTerm = i;
                 }
-                if (seekObj->location < terms[nearestTerm]->GetCurrentPost()->location)
+                if (!nearestPost || seekObj->location < nearestPost->location)
                 {
                     nearestTerm = i;
                 }
@@ -356,13 +396,15 @@ public:
             }
             if (excludedNotFound) break;
         }
-        return docEndISR->Seek(nearestStartLocation);
+        return terms[nearestTerm]->GetCurrentPost();
     }
     SeekObj * Next() override 
     {
-        return Seek(terms[nearestTerm]->GetCurrentPost()->location + 1);
+        SeekObj * seekObj = terms[nearestTerm]->GetCurrentPost();
+        if (!seekObj) return Seek(0);
+        return Seek(seekObj->location + 1);
     }
-    SeekObj * NextDocument() 
+    SeekObj * NextDocument() override
     {
         return Seek(nearestEndLocation + 1);
     }
