@@ -55,10 +55,10 @@ class IndexFile {
         }
         else
         {
-            uint32_t numEntries = urlList.size() >> BLOCK_OFFSET_BITS;
+            uint32_t numSeekTableEntries = urlList.size() >> BLOCK_OFFSET_BITS;
             // One byte to get size
-            dataBuffer.push_back(SizeOf(numEntries)); 
-            pushVarint(dataBuffer, numEntries);
+            dataBuffer.push_back(SizeOf(numSeekTableEntries)); 
+            pushVarint(dataBuffer, numSeekTableEntries);
         }
         uint32_t index = 0;
         uint64_t offset = 0;
@@ -101,10 +101,10 @@ class IndexFile {
             }
             else
             {
-                uint32_t numEntries = postingList.size() >> BLOCK_OFFSET_BITS;
+                uint32_t numSeekTableEntries = postingList.size() >> BLOCK_OFFSET_BITS;
                 // One byte to get size
-                dataBuffer.push_back(SizeOf(numEntries)); 
-                pushVarint(dataBuffer, numEntries);
+                dataBuffer.push_back(SizeOf(numSeekTableEntries)); 
+                pushVarint(dataBuffer, numSeekTableEntries);
             }
             
             // # of elements in posting list
