@@ -7,12 +7,12 @@
 
 constexpr size_t TOTAL_DOCS_TO_RETURN = 100;
 
-struct anchorTermIndex
+struct AnchorTermIndex
 {
   int outerIndex;
   int innerIndex;
 
-  anchorTermIndex(int o, int i) : outerIndex(o), innerIndex(i) {} 
+  AnchorTermIndex(int o, int i) : outerIndex(o), innerIndex(i) {} 
 };
 struct UrlRank 
 {
@@ -54,7 +54,7 @@ void insertionSort(vector<UrlRank> & topRankedDocs, UrlRank & rankedDoc)
   topRankedDocs[pos] = std::move(docToInsert);
 }
 
-anchorTermIndex get_anchor_ISR(vector<vector<ISRWord*>> orderedQueryTerms) {
+AnchorTermIndex get_anchor_ISR(vector<vector<ISRWord*>> orderedQueryTerms) {
      // Loop over ISR words vector to get the anchor term
      int anchorOuterIndex = -1;
      int anchorInnerIndex = -1; 
@@ -75,26 +75,26 @@ anchorTermIndex get_anchor_ISR(vector<vector<ISRWord*>> orderedQueryTerms) {
 }
 
 // actual constraint solver function
-std::vector<UrlRank> constraint_solver(ISR* queryISR, vector<vector<ISRWord*>> orderedQueryTerms) {
+std::vector<UrlRank> constraint_solver(ISR* queryISR, vector<vector<ISRWord*>> orderedQueryTerms, uint32_t numChunks) {
     // create an ISR for document seeking
     std::vector<UrlRank> topNdocs;
     topNdocs.reserve(TOTAL_DOCS_TO_RETURN);
 
-    auto indices = get_anchor_ISR(orderedQueryTerms);
+    AnchorTermIndex indices = get_anchor_ISR(orderedQueryTerms);
     int anchorOuterIndex = indices.outerIndex;
     int anchorInnerIndex = indices.innerIndex;
     // seek to the first occurence
     IndexFileReader reader(numChunks);
     for (int i = 0; i < numChunks; ++i)
     {
-      auto docObj = queryISR->NextDocument(); 
+      SeekObj * docObj = queryISR->NextDocument(); 
       while (docObj) {
   
           int docStartLoc = queryISR->getDocStartLoc(); 
           int docEndLoc = queryISR->getDocEndLoc(); 
   
           // use the index to get relevant doc data
-          auto doc = reader.FindUrl(docObj->index, i);
+          unique_ptr<Doc> doc = reader.FindUrl(docObj->index, i);
           
           int dynamic_score = get_dynamic_rank(orderedQueryTerms[anchorOuterIndex][anchorInnerIndex], orderedQueryTerms, docStartLoc, 
                               docEndLoc);
