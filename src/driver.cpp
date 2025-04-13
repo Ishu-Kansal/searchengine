@@ -6,6 +6,7 @@
 #include <sstream>
 #include <vector>
 #include <cstring>
+#include "isr/isr.h"
 #include <algorithm>
 
 // #include "query_parser/parser.h"
@@ -13,7 +14,7 @@
 #include "../HtmlParser/HtmlParser.h"
 #include "./crawler/sockets.h"
 
-//std::vector<vector<ISRWord*>> sequences;
+extern std::vector<vector<ISRWord*>> sequences;
 
 struct SearchResult {
    std::string url;
@@ -47,7 +48,7 @@ SearchResult get_and_parse_url(const cstring_view& url) {
        result.title = "";
        result.snippet = "";
        return result;
-   }
+     }
 
    try {
        HtmlParser parser(html.data(), html.size());
@@ -64,23 +65,23 @@ SearchResult get_and_parse_url(const cstring_view& url) {
 
 // driver function for the search engine
 std::vector<cstring_view> run_engine(std::string& query) {
-   // QueryParser parser(query);
-   // Constraint *c = parser.Parse();
+    // QueryParser parser(query);
+    // Constraint *c = parser.Parse();
 
-   // if (c) {
-   //    ISR* isrs = c->Eval();
-   //    std::vector<std::pair<cstring_view, int>> raw_results = constraint_solver(isrs, sequences);
+    // if (c) {
+    // ISR* isrs = c->Eval();
+    // std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, 1);
 
-   //    std::vector<cstring_view> urls;
-   //    urls.reserve(raw_results.size());
-   //    std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(urls),
-   //                   [](const std::pair<cstring_view, int>& p) { return p.first; });
+    // std::vector<std::string_view> urls;
+    // urls.reserve(raw_results.size());
+    // std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(urls),
+    //                 [](const UrlRank& p) { return p.url; });
 
-   //    return urls;
 
-   // } else {
-   //    return {};  // Return empty vector on failure
-   // }
+    // return urls;
+
+    // } 
+    // return {}; 
    std::vector<cstring_view> urls;
    urls.push_back(cstring_view("https://www.github.com/"));
    urls.push_back(cstring_view("https://www.example.com/"));
