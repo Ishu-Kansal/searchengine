@@ -1,9 +1,10 @@
 #include "expression.h"
 #include "../isr/isr.h"
-#include "driver.cpp"
 #include <iostream>
 #include <vector>
 #include <string>
+
+extern std::vector<vector<ISRWord*>> sequences;
 
 // ---------- Base Constraint ----------
 

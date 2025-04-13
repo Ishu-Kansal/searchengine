@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-#include "isr.h"
+#include "isr/isr.h"
 #include "ranker/dynamic_rank.h"
 
 constexpr size_t TOTAL_DOCS_TO_RETURN = 100;
@@ -99,8 +99,10 @@ std::vector<UrlRank> constraint_solver(ISR* queryISR, vector<vector<ISRWord*>> o
           int dynamic_score = get_dynamic_rank(orderedQueryTerms[anchorOuterIndex][anchorInnerIndex], orderedQueryTerms, docStartLoc, 
                               docEndLoc);
           
-          // TO DO: get static rank and add it to the dynamic rank
+
           UrlRank urlRank = {doc->url, dynamic_score + doc->staticRank}; 
+
+          insertionSort(topNdocs,urlRank); 
   
           docObj = queryISR->NextDocument(); 
       }
