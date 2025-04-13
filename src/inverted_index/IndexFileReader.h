@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
-#include<memory>
+#include <memory>
 #include <unordered_map>
 
 #include "../../HashTable/HashTableStarterFiles/HashBlob.h"
@@ -22,6 +22,7 @@
 constexpr size_t ENTRY_SIZE = 16;
 constexpr size_t URL_ENTRY_SIZE = 8;
 constexpr size_t NUM_ENTRIES_SIZE_BYTES = 1;
+constexpr size_t NUM_POSTS_BYTES = 1;
 constexpr size_t URL_ENTRY_HEADER_BYTES = 1;
 constexpr size_t URL_ENTRY_RANK_BYTES = 1;
 typedef size_t Location;
@@ -58,8 +59,11 @@ class MappedMemory {
 struct SeekObj {
     Location offset;
     Location location;
+    Location delta;
     Location index;
     unsigned numOccurrences;
+    SeekObj(Location off, Location loc, Location idx, Location d, unsigned num) 
+    : offset(off), location(loc), index(idx), delta(d), numOccurrences(num) {}
 };
 struct MappedFile {
     void * map;
@@ -146,90 +150,102 @@ public:
         // Get mapped file
         const void* mapPtr = mappedFiles[chunkNum]->get();
         size_t fileSize = mappedFiles[chunkNum]->size();
+
         const uint8_t* fileStart = static_cast<const uint8_t*>(mapPtr);
         const uint8_t* fileEnd = fileStart + fileSize;
 
-        Location offsetIntoFile = tup->Value; // Start of posting list
-        if (offsetIntoFile >= fileSize) 
+        Location postingListOffset = tup->Value; // Start of posting list
+        if (postingListOffset >= fileSize) 
         {
             // shouldn't happen
-            fprintf(stderr, "ERROR: Offset into file (%zu) is out of bounds (%zu) for word '%s' in chunk %u.\n", offsetIntoFile, fileSize, word.c_str(), chunkNum);
+            fprintf(stderr, "ERROR: Offset into file (%zu) is out of bounds (%zu) for word '%s' in chunk %u.\n", postingListOffset, fileSize, word.c_str(), chunkNum);
             return nullptr;
         } 
 
-        uint8_t numEntriesSize = fileStart[offsetIntoFile];
-        size_t tableIndex = (target + 1) >> BLOCK_OFFSET_BITS;
-        uint64_t numEntries = 0;
-        uint64_t numElements = 0;
-        // Start of seek table
-        // const uint8_t * x =fileStart + offsetIntoFile;
-        const uint8_t* seekTable = fileStart + offsetIntoFile + 1;
+        /*
+            Format for Posting List:
+            [ numSeekEntriesVarintSizeBytes (1 byte)]
+            [ varint: numSeekTableEntries           ] (optional, only if size byte > 0)
+            [ varint: numTotalElements              ]
+            [ seekTable (numSeekTableEntries * ENTRY_SIZE bytes) ] (optional) 8 bytes for offset and 8 bytes for location
+            [ postingListData (varint deltas)       ]
+        */
+
+        const uint8_t * postingListBuf = fileStart + postingListOffset;
+        uint8_t numSeekTableEntriesSize = *postingListBuf;
+        postingListBuf += NUM_ENTRIES_SIZE_BYTES;
+
+        uint64_t numSeekTableEntries = 0;
+        uint64_t numPosts = 0;
      
-        if (numEntriesSize) 
+        if (numSeekTableEntriesSize) 
         {
-            if (seekTable + numEntriesSize > fileEnd) 
+            if (postingListBuf + numSeekTableEntriesSize > fileEnd) 
             {
-                fprintf(stderr, "ERROR: Not enough space for numEntries varint encoding.\n");
+                fprintf(stderr, "ERROR: Not enough space for numSeekTableEntries varint encoding.\n");
                 return nullptr;
             }
-            seekTable = decodeVarint(seekTable, numEntries);
-            decodeVarint(seekTable, numElements);
+            postingListBuf = decodeVarint(postingListBuf, numSeekTableEntries);
+            postingListBuf = decodeVarint(postingListBuf, numPosts);
         }
         else 
         {
-            decodeVarint(seekTable, numElements);
+            postingListBuf = decodeVarint(postingListBuf, numPosts);
         }
-        if (numEntriesSize && tableIndex != 0)
+
+        if (numPosts == 0) return nullptr;
+
+        size_t tableIndex = (target + 1) >> BLOCK_OFFSET_BITS;
+        if (numSeekTableEntriesSize && tableIndex != 0)
         {
             // Gets seek table entry at target index
-            const uint8_t* entryPtr = seekTable + ((tableIndex - 1) * ENTRY_SIZE) + numEntriesSize + 1;
+            const uint8_t * seekEntry = postingListBuf + ((tableIndex - 1) * ENTRY_SIZE);
 
             uint64_t entryOffset;
             uint64_t entryLocation;
             
-            if (!readUint64_t(entryPtr, fileEnd, entryOffset)) { nullptr; }
-            if (!readUint64_t(entryPtr, fileEnd, entryLocation)) { nullptr; }
+            if (!readUint64_t(seekEntry, fileEnd, entryOffset)) { nullptr; }
+            if (!readUint64_t(seekEntry, fileEnd, entryLocation)) { nullptr; }
 
             uint64_t index = (tableIndex * BLOCK_SIZE) - 1;
             // Returns if target was an entry in seek table
+            /*
             if (entryLocation == target) 
             {
 
                 auto obj = std::make_unique<SeekObj>();
                 obj->offset = entryOffset;
                 obj->location = entryLocation;
-                obj->index = index;
-                obj->numOccurrences = numElements;
+                obj->index = index; 
+                obj->numOccurrences = numPosts;
                 return obj;
             }
+            */
+      
             // Need to linearly scan to find first entry with location >= target
             uint64_t currentLocation = entryLocation;
             uint64_t currentOffset = entryOffset;
-            const uint8_t* postPtr = seekTable + (ENTRY_SIZE * numEntries) + entryOffset + numEntriesSize + 1;
+            postingListBuf += ((ENTRY_SIZE * numSeekTableEntries) + entryOffset);
+
             while (currentLocation < target || target == 0)
             {
-                ++index;
                 uint64_t delta = 0;
                 // decode varint automatically moves the buffer ahead
-                postPtr = decodeVarint(postPtr, delta);
+                postingListBuf = decodeVarint(postingListBuf, delta);
                 currentLocation += delta;
-                // current offset is the number of bytes into this posting list we are. I think
                 currentOffset += SizeOf(delta);
                 if (currentLocation >= target)
                 {
-                    auto obj = std::make_unique<SeekObj>();
-                    obj->offset = currentOffset;
-                    obj->location = currentLocation;
-                    obj->index = index;
-                    obj->numOccurrences = numElements;
-                    return obj;
+                    return std::make_unique<SeekObj>(currentOffset, currentLocation, index, delta, numPosts);
                 }
+                ++index;
             }
         }
         else
         {
             // Linearly scan if we don't have a seek table
-            const uint8_t* varintBuf = fileStart + offsetIntoFile + 1 + (ENTRY_SIZE * numEntries) + numEntriesSize + 1;
+            // Or if index is 0 (means element is within the first 8192 entries)
+            postingListBuf += (ENTRY_SIZE * numSeekTableEntries);
             uint64_t currentLocation = 0;
             uint64_t currentOffset = 0;
             uint64_t index = 0;
@@ -237,21 +253,16 @@ public:
             while (currentLocation < target || target == 0)
             {
                 uint64_t delta = 0;
-                varintBuf = decodeVarint(varintBuf, delta);
+                postingListBuf = decodeVarint(postingListBuf, delta);
                 currentLocation += delta;
                 currentOffset += SizeOf(delta);
                 if (currentLocation >= target)
                 {
-                    auto obj = std::make_unique<SeekObj>();
-                    obj->offset = currentOffset;
-                    obj->location = currentLocation;
-                    obj->index = index;
-                    obj->numOccurrences = numElements;
-                    return obj;
+                    return std::make_unique<SeekObj>(currentOffset, currentLocation, index, delta, numPosts);
                 }
                 index++;
             }
-            }
+        }
 
         return nullptr;;
     }
@@ -265,24 +276,24 @@ public:
         const uint8_t* fileStart = static_cast<const uint8_t*>(mapPtr);
         const uint8_t* fileEnd = fileStart + fileSize;
 
-        uint8_t numEntriesSize = fileStart[0];
+        uint8_t numSeekTableEntriesSize = fileStart[0];
         size_t tableIndex = (index + 1) >> BLOCK_OFFSET_BITS;
-        uint64_t numEntries = 0;
-        if (numEntriesSize) 
+        uint64_t numSeekTableEntries = 0;
+        if (numSeekTableEntriesSize) 
         {
             const uint8_t* temp = fileStart + 1;
-            decodeVarint(temp, numEntries);
+            decodeVarint(temp, numSeekTableEntries);
         }
-        if (numEntriesSize && tableIndex != 0)
+        if (numSeekTableEntriesSize && tableIndex != 0)
         {
             const uint8_t* seekTable = fileStart + 1;
-            const uint8_t* entryPtr = seekTable + ((tableIndex - 1) * URL_ENTRY_SIZE)+ numEntriesSize;
+            const uint8_t* entryPtr = seekTable + ((tableIndex - 1) * URL_ENTRY_SIZE)+ numSeekTableEntriesSize;
 
             uint64_t entryOffset;
             
             if (!readUint64_t(entryPtr, fileEnd, entryOffset)) { return nullptr;; }
 
-            const uint8_t* urlPtr = seekTable + (URL_ENTRY_SIZE * numEntries) + entryOffset + numEntriesSize;
+            const uint8_t* urlPtr = seekTable + (URL_ENTRY_SIZE * numSeekTableEntries) + entryOffset + numSeekTableEntriesSize;
             uint64_t urlIndex = (tableIndex * BLOCK_SIZE) - 1;
             while (urlIndex < index)
             {
@@ -304,7 +315,7 @@ public:
         else
         {
             uint64_t urlIndex = 0;
-            const uint8_t* urlPtr = fileStart + (URL_ENTRY_SIZE * numEntries) + 1 + numEntriesSize;
+            const uint8_t* urlPtr = fileStart + (URL_ENTRY_SIZE * numSeekTableEntries) + 1 + numSeekTableEntriesSize;
             
             while (urlIndex < index)
             {

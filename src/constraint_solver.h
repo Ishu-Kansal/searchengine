@@ -75,7 +75,7 @@ AnchorTermIndex get_anchor_ISR(vector<vector<ISRWord*>> orderedQueryTerms) {
 }
 
 // actual constraint solver function
-std::vector<UrlRank> constraint_solver(ISR* queryISR, vector<vector<ISRWord*>> orderedQueryTerms, uint32_t numChunks) {
+std::vector<UrlRank> constraint_solver(ISROr* queryISR, vector<vector<ISRWord*>> orderedQueryTerms, uint32_t numChunks) {
     // create an ISR for document seeking
     std::vector<UrlRank> topNdocs;
     topNdocs.reserve(TOTAL_DOCS_TO_RETURN);
@@ -90,8 +90,8 @@ std::vector<UrlRank> constraint_solver(ISR* queryISR, vector<vector<ISRWord*>> o
       SeekObj * docObj = queryISR->NextDocument(); 
       while (docObj) {
   
-          int docStartLoc = queryISR->getDocStartLoc(); 
-          int docEndLoc = queryISR->getDocEndLoc(); 
+          int docStartLoc = queryISR->getStartLocation(); 
+          int docEndLoc = queryISR->getEndLocation(); 
   
           // use the index to get relevant doc data
           unique_ptr<Doc> doc = reader.FindUrl(docObj->index, i);
