@@ -4,313 +4,56 @@
 <head>
   <meta charset="utf-8" />
   <title>404 Found Search Engine</title>
+  <!-- External CSS Libraries -->
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
-  <style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
 
-    .heading-background {
-      background-image: url('https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExd2N5cGR2dTBoMWVlMXM4MWRkcnAxMnA1ZWRkZ3JhdHNmbDI0bTM2dCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/IM3vbu2o4FeOQ/giphy.gif');
-      background-size: cover;
-      background-position: center;
-      color: white;
-      padding: 30px 0;
-      width: 300px;
-      justify-content: center;
-      align-items: center;
-      margin: 0 auto;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
-    }
-
-    body {
-      font-family: 'Muli', sans-serif;
-      margin-top: 40px;
-    }
-
-    .heading-background {
-      font-family: 'Poppins', sans-serif;
-      font-size: 50px;
-      color: #f6d8d5;
-      position: relative;
-      background: none;
-      text-align: center;
-    }
-
-    .heading-background {
-      text-shadow: 0.05em 0 0 #ec2225, -0.025em -0.05em 0 #313f97,
-        0.025em 0.05em 0 #50c878;
-      color: rgba(0, 194, 203, 0.2);
-    }
-
-    .heading-background::before,
-    .heading-background::after {
-      content: attr(data-text);
-      position: absolute;
-      top: 0;
-      left: 0;
-      opacity: 0.8;
-    }
-
-    .heading-background:before {
-      animation: glitch 500ms infinite;
-      transform: translate(-0.025em, -0.0125em);
-    }
-
-    .heading-background:after {
-      animation: glitch 600ms infinite;
-      transform: translate(0.0125em, 0.025em);
-    }
-
-    @keyframes glitch {
-      0% {
-        color: rgba(236, 34, 37, 0.2);
-        text-shadow: 0.05em 0 0 #ec2225, -0.025em -0.05em 0 #313f97,
-          0.025em 0.05em 0 #50c878;
-      }
-
-      14% {
-        text-shadow: 0.05em 0 0 #ec2225, -0.025em -0.05em 0 #313f97,
-          0.025em 0.05em 0 #50c878;
-      }
-
-      15% {
-        color: #50c878;
-        text-shadow: -0.05em -0.025em 0 #ec2225, 0.025em -0.025em 0 #313f97,
-          -0.05em -0.05em 0 #50c878;
-      }
-
-      49% {
-        text-shadow: -0.05em -0.025em 0 #ec2225, 0.025em -0.025em 0 #313f97,
-          -0.05em -0.05em 0 #50c878;
-      }
-
-      50% {
-        text-shadow: 0.025em 0.05em 0 #ec2225, -0.025em 0.05em 0 #313f97,
-          0 -0.05em 0 #50c878;
-      }
-
-      99% {
-        color: #313f97;
-        text-shadow: 0.025em 0.05em 0 #ec2225, -0.025em 0.05em 0 #313f97,
-          0 -0.05em 0 #50c878;
-      }
-
-      100% {
-        text-shadow: -0.025em 0 0 #ec2225, -0.025em -0.025em 0 #313f97,
-          -0.025em -0.05em 0 #50c878;
-      }
-    }
-
-    .result {
-      margin: 3rem 0;
-      text-align: center;
-    }
-
-    .form-group {
-      display: flex;
-      justify-content: center;
-    }
-
-    .result h4 {
-      margin: 0;
-    }
-
-    .result h4 a {
-      font-size: 30px;
-      word-break: break-word;
-      display: inline-block;
-      max-width: 90%;
-    }
-
-    #paginationControls {
-      margin: 30px 0;
-      display: none;
-    }
-
-    .text-center {
-      margin-bottom: 2rem;
-    }
-
-    .page-link {
-      margin-bottom: 2px;
-    }
-
-    #stickyHeader {
-      position: sticky;
-      top: 0;
-      background: white;
-      z-index: 1000;
-      padding: 15px 0 10px;
-      border-bottom: 1px solid #ddd;
-    }
-
-    .loading-gif {
-      text-align: center;
-      margin-top: 30px;
-    }
-
-    .loading-gif img {
-      width: 50%; /* Or larger */
-      height: auto;
-      margin: 20px 10px;
-    }
-
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
   <div class="container">
+    <h1 data-text="404 Found">404 Found</h1>
 
     <!-- Sticky header -->
     <div id="stickyHeader">
-      <h1 class="text-center heading-background" data-text="404 Found"></h1>
       <form id="searchForm" class="form-horizontal" autocomplete="off">
         <div class="form-group">
-          <div class="col-sm-8">
-            <input type="text" class="form-control" id="queryInput" placeholder="Search here" required>
-          </div>
-          <div class="col-sm-2">
-            <button type="submit" class="btn btn-primary btn-block">Find</button>
+          <div class="searchBarContainer">
+            <input type="text" class="searchBar" id="queryInput" required placeholder="Search the void..." />
+            <button type="submit" class="searchBtn">
+              <i class="fas fa-search"></i>
+              <div class="loading-spinner"></div>
+            </button>
           </div>
         </div>
       </form>
     </div>
 
-    <div id="searchResults"></div>
-    <!-- Display loading GIFs while searching -->
-    <div id="loading" class="loading-gif" style="display:none;">
-      <p style="font-size: 18px; font-weight: bold; color: #333;">Please wait for our search engine...</p>
+    <!-- Search Results Area -->
+    <div id="searchResults">
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading" class="loading-indicator" style="display:none;">
+      <p>Please wait while we search the void...</p>
       <img src="https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTY0MmUxMHlpN3dycmt0cWl4aWJ2NTJ6ZG50c3B5Zzk3eWNyZHdydyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/A53vF9xNk7AKnQPLDs/giphy.gif" alt="Loading..." id="loadingGif">
     </div>
 
     <!-- Pagination Controls -->
-    <div id="paginationControls" class="text-center">
-      <button id="prevPage" class="btn btn-default">&#8592; <span style="margin-left: 6px"></span>Prev</button>
-      <span id="pageNumber"
-        style="margin: 0 15px; font-size: 18px; font-weight: bold; margin-left: 25px; margin-right:25px"></span>
-      <button id="nextPage" class="btn btn-default">Next <span style="margin-left: 6px"></span> &#8594;</button>
+    <div id="paginationControls" class="text-center" style="display: none;">
+      <button id="prevPage" class="btn" disabled>←<span style="margin-left: 6px"></span>Prev</button>
+      <span id="pageNumber" style="margin: 0 15px; font-size: 18px; font-weight: bold; color: #212529;"></span>
+      <button id="nextPage" class="btn" disabled>Next<span style="margin-left: 6px"></span>→</button>
     </div>
 
-  </div>
+  </div> <!-- /.container -->
 
-
-  <script>
-    let allResults = [];
-    let currentPage = 0;
-    const pageSize = 10;
-
-    // Set up an array of GIFs for the loading animation
-    const gifs = [
-      'https://tenor.com/view/evan-peters-ip-ip-address-google-computer-gif-16211954443149729959.gif', // IP
-      'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMzZ4ZnpjdDVoOHlueW1kbmRtdG55NDIzcjA1aHdzaXlnam9tanp4MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/FArgGzk7KO14k/giphy.gif', // Bears
-      'https://tenor.com/view/kerfuffle-fox-gif-18270783.gif', // fox
-      'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWcwM3U1dGl1aGIyamgzbWNqcDE1MXRkenM0OTBudHRuNnF5NGl0NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/E6jscXfv3AkWQ/giphy.gif', // Cat
-      'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbjBuMHI2b3dpZWpzbzF1eGF0enhvcWwzM2duZHh2b3FnYzZhbXNhNiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/42wQXwITfQbDGKqUP7/giphy.gif', // Pikachu
-      'https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTY0MmUxMHlpN3dycmt0cWl4aWJ2NTJ6ZG50c3B5Zzk3eWNyZHdydyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/A53vF9xNk7AKnQPLDs/giphy.gif' // Cookie monster
-    ];
-
-    document.getElementById('searchForm').addEventListener('submit', function (e) {
-      e.preventDefault();
-
-      const query = document.getElementById('queryInput').value.trim();
-      if (!query) return;
-
-      currentPage = 0;
-      allResults = [];
-
-      // Button reference
-      const submitButton = this.querySelector('button[type="submit"]');
-      const originalText = submitButton.textContent;
-      submitButton.textContent = 'Loading...';
-      submitButton.disabled = true;
-
-      // Hide pagination while loading
-      document.getElementById('paginationControls').style.display = 'none';
-
-      // Show loading GIFs
-      document.getElementById('loading').style.display = 'block';
-      let gifIndex = -1;
-      const loadingGif = document.getElementById('loadingGif');
-
-      // Change the GIF every 2 seconds
-      const gifInterval = setInterval(() => {
-        gifIndex = (gifIndex + 1) % gifs.length;
-        loadingGif.src = gifs[gifIndex];
-      }, 2000);
-
-      // Optional: clear previous results or show loading message
-      document.getElementById('searchResults').textContent = '';
-
-      fetch('/api/search/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json; charset=utf-8' },
-        body: JSON.stringify({ query })
-      })
-        .then(r => {
-          if (!r.ok) throw new Error(r.statusText);
-          return r.json();
-        })
-        .then(data => {
-          if (!data.results || data.results.length === 0) {
-            document.getElementById('searchResults').textContent = 'Invalid query';
-          } else {
-            allResults = data.results;
-            renderPage(0);
-            document.getElementById('paginationControls').style.display = 'block';
-          }
-        })
-        .catch(err => {
-          document.getElementById('searchResults').textContent = 'An error occurred. Please try again.';
-          console.error(err);
-        })
-        .finally(() => {
-          // Clear the GIF interval and hide the GIFs after loading is complete
-          clearInterval(gifInterval);
-          document.getElementById('loading').style.display = 'none';
-          submitButton.textContent = originalText;
-          submitButton.disabled = false;
-        });
-    });
-
-    function renderPage(page) {
-      const container = document.getElementById('searchResults');
-      container.innerHTML = '';
-
-      const start = page * pageSize;
-      const end = start + pageSize;
-      const pageResults = allResults.slice(start, end);
-
-      pageResults.forEach(doc => {
-        const div = document.createElement('div');
-        div.className = 'result';
-        div.innerHTML = `
-            <div style="text-align: left;">
-              <h4 style="margin-bottom: 3px;"><a style="font-size: 1.2em;" href="${doc.url}" target="_blank">${doc.title || doc.url}</a></h4>
-              <small>${doc.url}</small>
-              <p style="margin-top: 4.5px;">${doc.snippet || ''}</p>
-            </div>
-          `;
-        container.appendChild(div);
-      });
-
-      currentPage = page;
-      updatePaginationButtons();
-    }
-
-    function updatePaginationButtons() {
-      document.getElementById('pageNumber').textContent = `Page ${currentPage + 1}`;
-      document.getElementById('prevPage').disabled = currentPage === 0;
-      document.getElementById('nextPage').disabled = (currentPage + 1) * pageSize >= allResults.length;
-    }
-
-    document.getElementById('prevPage').addEventListener('click', () => {
-      if (currentPage > 0) renderPage(currentPage - 1);
-    });
-
-    document.getElementById('nextPage').addEventListener('click', () => {
-      if ((currentPage + 1) * pageSize < allResults.length) renderPage(currentPage + 1);
-    });
-  </script>
+  <script src="script.js"></script>
 </body>
 
 </html>
