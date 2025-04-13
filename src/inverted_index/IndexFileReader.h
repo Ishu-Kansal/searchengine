@@ -19,36 +19,79 @@
 #include "IndexFile.h"
 #include "Index.h"
 
+/** @brief Size in bytes of a seek table entry for posting list (offset + location) */
 constexpr size_t ENTRY_SIZE = 16;
+/** @brief Size in bytes of a seek table entry for URL lists (offset) */
 constexpr size_t URL_ENTRY_SIZE = 8;
+/** @brief Size in bytes used to store the size (in bytes) of the varint encoding the number of seek table entries */
 constexpr size_t NUM_ENTRIES_SIZE_BYTES = 1;
-constexpr size_t NUM_POSTS_BYTES = 1;
+/** @brief Size in bytes for the URL length within a URL entry. */
 constexpr size_t URL_ENTRY_HEADER_BYTES = 1;
+/** @brief Size in bytes for the static rank within a URL entry. */
 constexpr size_t URL_ENTRY_RANK_BYTES = 1;
 typedef size_t Location;
 
+
+/**
+* @class FileDescriptor
+* @brief RAII wrapper for a file descriptor
+* Automatically closes the file descriptor when the object goes out of scope
+*/
 class FileDescriptor {
     public:
+        /**
+         * @brief Constructs a FileDescriptor, taking ownership of the provided file descriptor
+         * @param fd The file descriptor to manage
+         */
         explicit FileDescriptor(int fd) : fd_(fd) {}
+        /**
+         * @brief Destructor that closes the managed file descriptor if it's valid
+         */
         ~FileDescriptor() { 
             if (fd_ != -1) 
                 close(fd_); 
         }
+        /**
+         * @brief Gets the raw file descriptor value
+         * @return The managed file descriptor
+         */
         int get() const { return fd_; }
         FileDescriptor(const FileDescriptor&) = delete;
         FileDescriptor& operator=(const FileDescriptor&) = delete;
     private:
+    
         int fd_ = -1;
 };
 
+/**
+ * @class MappedMemory
+ * @brief RAII wrapper for memory mapped using mmap
+ * Automatically unmaps the memory region when the object goes out of scope
+ */
 class MappedMemory {
     public:
+        /**
+         * @brief Constructs a MappedMemory object, taking ownership of the mapped region
+         * @param ptr Pointer to the start of the mapped memory region
+         * @param size The size of the mapped memory region in bytes
+         */
         MappedMemory(void* ptr, size_t size) : ptr_(ptr), size_(size) {}
+        /**
+         * @brief Destructor that unmaps the memory region if it's valid
+         */
         ~MappedMemory() { 
             if (ptr_ && ptr_ != MAP_FAILED) 
                 munmap(ptr_, size_); 
         }
+        /**
+         * @brief Gets the pointer to the start of the mapped memory region
+         * @return Void pointer to the mapped memory
+         */
         void* get() const { return ptr_; }
+        /**
+         * @brief Gets the size of the mapped memory region
+         * @return The size in bytes
+         */
         size_t size() const { return size_; }
         MappedMemory(const MappedMemory&) = delete;
         MappedMemory& operator=(const MappedMemory&) = delete;
@@ -56,6 +99,12 @@ class MappedMemory {
         void* ptr_;
         size_t size_;
 };
+/**
+ * @struct SeekObj
+ * @brief Struct to hold the results of a search within a posting list
+ * Contains information about the found posting, including its offset, location
+ * delta, index, and total postings count
+ */
 struct SeekObj {
     Location offset;
     Location location;
@@ -65,15 +114,15 @@ struct SeekObj {
     SeekObj(Location off, Location loc, Location idx, Location d, unsigned num) 
     : offset(off), location(loc), index(idx), delta(d), numOccurrences(num) {}
 };
-struct MappedFile {
-    void * map;
-    size_t fileSize;
-    MappedFile(void * map_, size_t fileSize_) : map(map_), fileSize(fileSize_) {}
-};
-
+/**
+ * @class IndexFileReader
+ * @brief Reads data from serialized index chunk files ("IndexChunk_XXXXX") and hash files ("HashFile_XXXXX")
+ * Uses memory mapping to accessindex chunk data. Allows searching for postings
+ * and retrieving URL information based on location/index
+ */
 class IndexFileReader {
 private:
-
+    /** @brief Vector holding unique pointers to memory-mapped regions for each index chunk file */
     std::vector<std::unique_ptr<MappedMemory>> mappedFiles;
     size_t FileSize(int f)
     {
@@ -83,6 +132,14 @@ private:
         }
         return fileInfo.st_size;
     }
+    /**
+     * @brief Safely reads a uint64_t value from a memory buffer
+     * Advances the pointer past the read value. Checks for buffer boundaries
+     * @param currentPtr Reference to the pointer indicating the current read position in the buffer
+     * @param endPtr Pointer to the end of the valid buffer region
+     * @param value Reference to a uint64_t where the read value will be stored
+     * @return True if the read was successful, false if there was not enough space in the buffer
+     */
     static bool readUint64_t(const uint8_t*& currentPtr, const uint8_t* endPtr, uint64_t& value) 
     {
         if (currentPtr == nullptr || endPtr == nullptr || currentPtr + sizeof(uint64_t) > endPtr) {
@@ -93,7 +150,14 @@ private:
         return true;
     }
 public:
+    /** @brief Deleted default constructor. An IndexFileReader requires the number of chunks */
     IndexFileReader() = delete;
+    /**
+     * @brief Constructs an IndexFileReader and memory-maps the specified number of index chunk files
+     * Attempts to open and mmap IndexChunk_00000, IndexChunk_00001, ..., up to numChunks-1
+     * Warnings are printed for files that cannot be opened or mapped, but construction continues
+     * @param numChunks The total number of index chunk files to manage
+     */
     IndexFileReader(uint32_t numChunks) : mappedFiles() 
     {
         mappedFiles.resize(numChunks);
@@ -124,6 +188,20 @@ public:
         }
     }
 
+    /**
+      * @brief Finds the first posting in a specific chunk's posting list for a given word whose location is >= target
+      * Uses the corresponding "HashFile_XXXXX" to find the offset of the word's posting list within the
+      * memory-mapped "IndexChunk_XXXXX" file. Then searches for posts
+      *
+      * @param word The word whose posting list to search
+      * @param target The target location to search for. The function finds the first posting with location >= target
+      * @param chunkNum The index of the chunk file (e.g., 0 for "IndexChunk_00000") to search within
+      * @return A unique_ptr to a SeekObj containing details of the found posting, or nullptr if:
+      *         - The chunk number is invalid or the chunk file wasn't mapped
+      *         - The word is not found in the hash file for that chunk
+      *         - An error occurs during parsing (e.g., offset out of bounds, read error)
+      *         - No posting with location >= target exists in the list
+      */
     std::unique_ptr<SeekObj> Find(const std::string& word, Location target, uint32_t chunkNum) const {
         if (chunkNum >= mappedFiles.size() || !mappedFiles[chunkNum]) 
         {
@@ -208,19 +286,6 @@ public:
             if (!readUint64_t(seekEntry, fileEnd, entryLocation)) { nullptr; }
 
             uint64_t index = (tableIndex * BLOCK_SIZE) - 1;
-            // Returns if target was an entry in seek table
-            /*
-            if (entryLocation == target) 
-            {
-
-                auto obj = std::make_unique<SeekObj>();
-                obj->offset = entryOffset;
-                obj->location = entryLocation;
-                obj->index = index; 
-                obj->numOccurrences = numPosts;
-                return obj;
-            }
-            */
       
             // Need to linearly scan to find first entry with location >= target
             uint64_t currentLocation = entryLocation;
@@ -267,6 +332,16 @@ public:
         return nullptr;;
     }
 
+    /**
+     * @brief Retrieves URL and static rank information for a document by its index within a chunk
+     *
+     * @param index The zero-based index of the doc to retrieve within the chunk's URL list.
+     * @param chunkNum The index of the chunk file (e.g., 0 for "IndexChunk_00000") to search within
+     * @return A unique_ptr to a Doc object containing the URL and static rank, or nullptr if:
+     *         - The chunk number is invalid or the chunk file wasn't mapped
+     *         - The requested index is out of bounds for the URL list in that chunk
+     *         - An error occurs during parsing (e.g., offset out of bounds, read error)
+     */
     std::unique_ptr<Doc> FindUrl(uint32_t index, uint32_t chunkNum)
     {
         if (!mappedFiles[chunkNum]) return nullptr;;

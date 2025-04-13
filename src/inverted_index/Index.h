@@ -11,14 +11,24 @@
 
 constexpr unsigned char TITLE_FLAG = 0x01;
 constexpr unsigned char BOLD_FLAG = 0x02;
-constexpr char TITLE_MARKER = '!';
 
+constexpr char TITLE_MARKER = '!';
+/**
+ * @struct Post
+ * @brief Represents a single posting of a word within the indexed content
+ * Stores the location of the post
+ */
 struct Post {
   uint64_t location{};
   Post() = default;
   Post(uint64_t pos) : location{pos} {}
 };
 
+/**
+ * @struct Doc
+ * @brief Represents metadata for a single document in the index
+ * Stores the document's URL and its pre-calculated static rank
+ */
 struct Doc {
   std::string url;
   uint8_t staticRank;
@@ -29,6 +39,11 @@ struct Doc {
       : url(c1, c2), staticRank(staticRank_) {}
 };
 
+/**
+ * @class PostingList
+ * @brief Stores the list of posts for a single word
+ * Holds the word itself and a list of Post objects indicating where the word appeared
+ */
 class PostingList {
  public:
   friend uint8_t *encode_posting_list(uint8_t *, const PostingList &);
@@ -60,13 +75,30 @@ class PostingList {
   std::string word;
 };
 
+/**
+ * @class InvertedIndex
+ * @brief Manages the core inverted index structure: a dictionary mapping words to their posting lists
+ */
 class InvertedIndex {
  public:
+   /**
+   * @brief Adds a special marker indicating the end of a document at the given position.
+   * Uses a unique internal string "!#$%!#13513sfas" to represent this marker
+   * @param pos The position immediately following the last word of the document
+   */
   void add_enddoc(size_t pos) {
     static std::string endDoc = "!#$%!#13513sfas";
     add_word(endDoc, pos, false);
   }
-
+  /**
+   * @brief Adds a word occurrence at a specific position to the inverted index
+   * If the word is new, creates a new PostingList. Otherwise, adds the position to the existing list
+   * Appends TITLE_MARKER ('!') to the word if it appeared in a title
+   *
+   * @param word The word to add (will be modified if title is true)
+   * @param pos The position (location) where the word occurred
+   * @param title If true, indicates the word appeared in a title, and TITLE_MARKER is appended
+   */
   void add_word(std::string &word, size_t pos, bool title = true) {
     if (title) word.push_back('!');
     // Check if the word exists in the dictionary
@@ -102,6 +134,11 @@ class InvertedIndex {
   std::vector<PostingList> lists_of_posting_lists;
 };
 
+/**
+ * @class IndexChunk
+ * @brief Represents a portion (chunk) of the overall index being built
+ * Contains a list of documents (URLs and ranks) and an InvertedIndex for the words within those documents
+ */
 class IndexChunk {
  public:
   IndexChunk() : pos(0), url_list_size(0) 
