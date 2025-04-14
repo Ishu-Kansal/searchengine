@@ -34,7 +34,7 @@ protected:
 
 class ISRWord : public ISR {
 public:
-    ISRWord() = default;
+    ISRWord() = delete;
     ISRWord(std::string word_in, const IndexFileReader& reader)
         : reader_(reader), word(std::move(word_in)) {}
     
@@ -230,14 +230,6 @@ public:
         return Seek(nearestEndLocation + 1);
     }
 
-    Location getStartLocation() override
-    {
-        return nearestStartLocation;
-    }
-    Location getEndLocation() override
-    {
-        return nearestEndLocation;
-    }
 private:
 
     unsigned nearestTerm, farthestTerm;

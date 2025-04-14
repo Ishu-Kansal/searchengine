@@ -72,6 +72,8 @@
 //     be
 //          added to the links with no anchor text.
 
+
+// Struct representing an extracted hyperlink and its anchor text
 class Link {
  public:
   std::string URL;
@@ -80,6 +82,16 @@ class Link {
   Link(std::string URL) : URL(URL) {}
 };
 
+
+// The main HTML parser class.
+// Parses an input HTML buffer and extracts:
+// - all words (body text),
+// - words in the <title>,
+// - outgoing links (with associated anchor text),
+// - a base URL if present (<base>),
+// - a short description from <meta name="description">,
+// - image count from <img> tags,
+// - language flag (isEnglish).
 class HtmlParser {
  public:
   std::vector<std::string> words, titleWords, description;
@@ -93,11 +105,15 @@ class HtmlParser {
 
   bool found = false;
 
+  // Helper function to determine if a character marks the end of an HTML tag name.
   bool is_tag_ending(const char c) {
     return c == ' ' || c == '\n' || c == '/' || c == '>' || c == '\r' ||
            c == '\f' || c == '\t';
   }
 
+  // Parses an <a href="..."> tag and extracts the target URL and the anchor text.
+  // Words are pushed to `words` or `titleWords` depending on the `in_title` flag.
+  // Returns the index just after the closing </a> tag.
   size_t extract_anchor(const char *buffer, size_t length, size_t index,
                         bool in_title) {
     // move past the first href
@@ -291,6 +307,8 @@ class HtmlParser {
     return index;
   }
 
+  // Parses a <base href="..."> tag and extracts the base URL used for resolving relative links.
+  // Only the first base tag is considered.
   size_t extract_base(const char *buffer, size_t length, size_t i) {
     // <base href="url" />
     bool in_quotes = false;
@@ -337,6 +355,8 @@ class HtmlParser {
     return i;
   }
 
+  // Parses an <embed src="..."> tag and extracts the embedded media source URL.
+  // Adds it to the `links` vector.
   size_t extract_embed(const char *buffer, size_t length, size_t i) {
     // <base href="url" />
     bool in_quotes = false;
@@ -391,6 +411,9 @@ class HtmlParser {
   // all the HTML tags and producing the list of words in body,
   // words in title, and links found on the page.
 
+  // Main constructor that accepts an HTML buffer and its length.
+  // Parses the HTML to populate words, titleWords, links, base URL, language flag, etc.
+  // Handles tag actions like discarding content, extracting metadata, handling special tags, etc.
   HtmlParser(const char *buffer, size_t length)  // Your code here
   {
     /*words.reserve(160000);
