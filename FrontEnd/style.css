@@ -6,7 +6,7 @@
 }
 
 html {
-  overflow-y: scroll;
+  /* overflow-y: scroll; */
 }
 
 body {
@@ -14,7 +14,7 @@ body {
   background-color: #f8f9fa;
   min-height: 100vh;
   width: 100%;
-  overflow-x: hidden;
+  /* overflow-x: hidden; */
   color: #212529;
 }
 
@@ -29,7 +29,7 @@ h1 {
   color: #212529;
   font-size: clamp(30px, 10vw, 60px);
   text-align: center;
-  margin-top: 20px;
+  margin-top: 10px;
   margin-bottom: 20px;
   font-weight: 600;
   text-shadow: 0.05em 0 0 #ec2225, -0.025em -0.05em 0 #313f97, 0.025em 0.05em 0 #50c878;
@@ -42,7 +42,7 @@ h1::before, h1::after {
   width: 100%;
   height: 100%;
   opacity: 0.8;
-  overflow: hidden;
+  /* overflow: hidden; */
   color: inherit;
   background-color: #f8f9fa;
 }
@@ -85,10 +85,11 @@ h1::after {
 #stickyHeader {
   position: sticky;
   top: 0;
-  -webkit-backdrop-filter: blur(5px);
-          backdrop-filter: blur(5px);
+  /* -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px); */
+  background-color: rgba(248, 249, 250, 1);
   z-index: 1000;
-  padding: 15px 0 10px;
+  padding: 10px 0 25px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   width: 100%;
 }
@@ -155,7 +156,7 @@ h1::after {
   justify-content: center;
   transition: all 0.3s ease;
   position: relative;
-  overflow: hidden;
+  /* overflow: hidden; */
   background: #212529;
   border: none;
   flex-shrink: 0;
@@ -253,8 +254,7 @@ h1::after {
   color: #212529;
 }
 .loading-indicator img#loadingGif {
-  max-width: 250px;
-  width: 60%;
+  width: 40%;
   height: auto;
   margin: 0 auto;
   border-radius: 5px;

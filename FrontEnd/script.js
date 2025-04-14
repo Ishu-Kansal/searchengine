@@ -6,7 +6,7 @@ const pageSize = 10;
 const gifs = [
   'https://tenor.com/view/evan-peters-ip-ip-address-google-computer-gif-16211954443149729959.gif', // IP
   'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMzZ4ZnpjdDVoOHlueW1kbmRtdG55NDIzcjA1aHdzaXlnam9tanp4MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/FArgGzk7KO14k/giphy.gif', // Bears
-  'https://tenor.com/view/kerfuffle-fox-gif-18270783.gif', // fox
+  'https://tenor.com/view/kerfuffle-fox-gif-18270783.gif', // Fox
   'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWcwM3U1dGl1aGIyamgzbWNqcDE1MXRkenM0OTBudHRuNnF5NGl0NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/E6jscXfv3AkWQ/giphy.gif', // Cat
   'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbjBuMHI2b3dpZWpzbzF1eGF0enhvcWwzM2duZHh2b3FnYzZhbXNhNiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/42wQXwITfQbDGKqUP7/giphy.gif', // Pikachu
   'https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTY0MmUxMHlpN3dycmt0cWl4aWJ2NTJ6ZG50c3B5Zzk3eWNyZHdydyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/A53vF9xNk7AKnQPLDs/giphy.gif' // Cookie monster
@@ -133,7 +133,7 @@ function renderPage(page) {
     titleLink.textContent = title;
 
     const titleHeader = document.createElement('h4');
-    titleHeader.style.marginBottom = '3px';
+    titleHeader.style.marginBottom = '5px';
     titleHeader.appendChild(titleLink);
 
     const urlSmall = document.createElement('small');
@@ -158,7 +158,7 @@ function renderPage(page) {
   updatePaginationButtons();
 
   // Scroll to top of results after rendering new page
-  searchResultsContainer.scrollIntoView({ behavior: 'smooth' });
+  // searchResultsContainer.scrollIntoView({ behavior: 'smooth' });
 }
 
 function updatePaginationButtons() {
@@ -170,8 +170,8 @@ function updatePaginationButtons() {
   // Disable/enable Next button
   nextButton.disabled = ((currentPage + 1) * pageSize >= allResults.length);
 
-   // Show/hide pagination controls based on total results
-   paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
+  // Show/hide pagination controls based on total results
+  paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
 }
 
 // Pagination Event Listeners
