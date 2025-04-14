@@ -13,104 +13,113 @@ protected:
     const IndexFileReader& reader_;
 public:
     Constraint(const IndexFileReader& reader) : reader_(reader) {}
-    virtual ~Constraint() {}
-    virtual ISR* Eval() const = 0;
+    virtual ~Constraint() = default;
+    virtual std::unique_ptr<ISR> Eval() const = 0;
 };
 
 // ---------- Sequence Constraint -----
+class SequenceConstraint : public Constraint {
+    std::vector<std::string> words;
+public:
+    SequenceConstraint(const std::vector<std::string> &words, const IndexFileReader& reader)
+        : Constraint(reader), words(words) {}
 
-SequenceConstraint::SequenceConstraint(const std::vector<std::string> &words, const IndexFileReader& reader) 
-    : Constraint(reader), words(words) {}
+    ~SequenceConstraint() override = default;
 
-SequenceConstraint::~SequenceConstraint() {}
+    std::unique_ptr<ISR> Eval() const override {
 
-ISR* SequenceConstraint::Eval() const {
-    sequences.emplace_back();
+        if (words.size() == 1) {
+            std::cout << "Run ISR on word: ";
+            std::cout << words[0] << std::endl;
 
-    if (words.size() == 1) {
-        std::cout << "Run ISR on word: ";
-        std::cout << words[0] << std::endl;
+            auto wordIsr = std::make_unique<ISRWord>(words[0], reader_);
 
-        auto wordIsr = new ISRWord(words[0], reader_);
-        sequences.back().push_back(wordIsr);
-        return wordIsr;
-    }
-    else {
-        // Call sequence ISR on the sequence of words
-        std::cout << "Run ISR on sequence: ";
-
-        std::vector<std::unique_ptr<ISR>> terms;
-        for (const std::string& word : words) {
-            std::cout << word << " ";
-            auto wordIsr = std::make_unique<ISRWord>(word, reader_);
-            sequences.back().push_back(new ISRWord(word, reader_));
-            terms.push_back(std::move(wordIsr));
+            return wordIsr; // Ownership transferred out
         }
-        std::cout << std::endl;
-        
-        // build isr 
-        return ISROr(std::move(terms), reader_);
+        else {
+            std::cout << "Run ISR on sequence (as OR): ";
+
+            std::vector<std::unique_ptr<ISR>> terms;
+            for (const std::string& word : words) {
+                std::cout << word << " ";
+                auto wordIsr = std::make_unique<ISRWord>(word, reader_);
+
+                terms.push_back(std::move(wordIsr)); // Move ownership into vector
+            }
+            std::cout << std::endl;
+
+            return std::make_unique<ISROr>(std::move(terms), reader_);
+        }
     }
-}
+};
 
 // ---------- AND Constraint ----------
 
-AndConstraint::AndConstraint(Constraint *l, Constraint *r, const IndexFileReader& reader) 
-    : Constraint(reader), left(l), right(r) {}
+class AndConstraint : public Constraint {
+    std::unique_ptr<Constraint> left;
+    std::unique_ptr<Constraint> right;
+public:
+    AndConstraint(std::unique_ptr<Constraint> l, std::unique_ptr<Constraint> r, const IndexFileReader& reader)
+        : Constraint(reader), left(std::move(l)), right(std::move(r)) {}
 
-AndConstraint::~AndConstraint() {
-    delete left;
-    delete right;
-}
+    ~AndConstraint() override = default;
 
-ISR* AndConstraint::Eval() const {
-    std::cout << "Evaluating AND" << std::endl;
-    
-    std::vector<std::unique_ptr<ISR>> terms;
-    terms.push_back(std::unique_ptr<ISR>(left->Eval()));
-    terms.push_back(std::unique_ptr<ISR>(right->Eval()));
-    return new ISRAnd(std::move(terms), reader_);
-}
+    std::unique_ptr<ISR> Eval() const override {
+        std::cout << "Evaluating AND" << std::endl;
+
+        std::vector<std::unique_ptr<ISR>> terms;
+        terms.push_back(left->Eval());
+        terms.push_back(right->Eval());
+
+        return std::make_unique<ISRAnd>(std::move(terms), reader_);
+    }
+};
 
 // ---------- OR Constraint ----------
 
-OrConstraint::OrConstraint(Constraint *l, Constraint *r, const IndexFileReader& reader) 
-    : Constraint(reader), left(l), right(r) {}
+class OrConstraint : public Constraint {
+    std::unique_ptr<Constraint> left;
+    std::unique_ptr<Constraint> right;
+public:
+    OrConstraint(std::unique_ptr<Constraint> l, std::unique_ptr<Constraint> r, const IndexFileReader& reader)
+        : Constraint(reader), left(std::move(l)), right(std::move(r)) {}
 
-OrConstraint::~OrConstraint() {
-    delete left;
-    delete right;
-}
+    ~OrConstraint() override = default;
 
-ISR* OrConstraint::Eval() const {
-    std::cout << "Evaluating OR" << std::endl;
-    
-    std::vector<std::unique_ptr<ISR>> terms;
-    terms.push_back(std::unique_ptr<ISR>(left->Eval()));
-    terms.push_back(std::unique_ptr<ISR>(right->Eval()));
-    return new ISROr(std::move(terms), reader_);
-}
+    std::unique_ptr<ISR> Eval() const override {
+        std::cout << "Evaluating OR" << std::endl;
+
+        std::vector<std::unique_ptr<ISR>> terms;
+        terms.push_back(left->Eval());
+        terms.push_back(right->Eval());
+
+        return std::make_unique<ISROr>(std::move(terms), reader_);
+    }
+};
+
 
 // ---------- Phrase Constraint ----------
 
-PhraseConstraint::PhraseConstraint(const std::vector<std::string> &w, const IndexFileReader& reader) 
-    : Constraint(reader), words(w) {}
+class PhraseConstraint : public Constraint {
+    std::vector<std::string> words;
+public:
+    PhraseConstraint(const std::vector<std::string> &w, const IndexFileReader& reader)
+        : Constraint(reader), words(w) {}
 
-PhraseConstraint::~PhraseConstraint() {}
+    ~PhraseConstraint() override = default;
 
-ISR* PhraseConstraint::Eval() const {
-    std::cout << "Run ISR on phrase: ";
+    std::unique_ptr<ISR> Eval() const override {
+        std::cout << "Run ISR on phrase: ";
 
-    sequences.emplace_back();
+        std::vector<std::unique_ptr<ISR>> terms;
+        for (const std::string &word : words) {
+            std::cout << word << " ";
+            auto wordIsr = std::make_unique<ISRWord>(word, reader_);
 
-    std::vector<std::unique_ptr<ISR>> terms;
-    for (const std::string &word : words) {
-        std::cout << word << " ";
-        auto wordIsr = std::make_unique<ISRWord>(word, reader_);
-        sequences.back().push_back(new ISRWord(word, reader_));
-        terms.push_back(std::move(wordIsr));
+            terms.push_back(std::move(wordIsr)); 
+        }
+        std::cout << std::endl;
+
+        return std::make_unique<ISRPhrase>(std::move(terms), reader_);
     }
-    std::cout << std::endl;
-
-    return new ISRPhrase(std::move(terms), reader_);
-}
+};
