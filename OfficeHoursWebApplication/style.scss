@@ -161,7 +161,7 @@ h1 {
   background-color: $search-bar-bg;
   color: $dark-text-primary;
   font-family: $font-stack;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   height: 35px;
   box-sizing: border-box;
 
@@ -310,8 +310,10 @@ h1 {
     transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
     font-family: inherit;
     padding: 6px 12px;
+    transition: all 0.3s ease;
 
     &:hover:not(:disabled) {
+      transform: scale(1.1);
       background-color: $pagination-btn-hover-bg;
       border-color: $pagination-btn-hover-border;
       color: $dark-text-primary;
