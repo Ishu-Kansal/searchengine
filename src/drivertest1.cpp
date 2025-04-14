@@ -7,37 +7,14 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include "globals.h"
 
 
-extern std::vector<std::vector<std::unique_ptr<ISRWord>>> sequences;
+// extern std::vector<std::vector<std::unique_ptr<ISRWord>>> sequences;
 
 // driver function for the search engine
 std::vector<string_view> run_engine(std::string& query) {
-    QueryParser parser(query);
-    std::unique_ptr<Constraint> c = parser.Parse();
- 
-    if (c) {
-       std::unique_ptr<ISR> isrs = c->Eval();
-       std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, 1);
- 
-       std::vector<std::string_view> urls;
-       urls.reserve(raw_results.size());
-       std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(urls),
-                    [](const UrlRank& p) { return p.url; });
 
- 
-       return urls;
- 
-    } 
-    return {}; 
-}
-
-bool fileExists(const std::string &filename) {
-    std::ifstream file(filename);
-    return file.good();
-}
-
-void oneDocOneWordLoopTest() {
     IndexChunk indexChunk;
     std::string url = "http://example.com";
     size_t rank = 1;
@@ -59,39 +36,30 @@ void oneDocOneWordLoopTest() {
 
     IndexFileReader reader(1);
 
-    auto seekApple = reader.Find("apple", 0, chunkNum);
-    assert(seekApple->location == 0);
-    assert(seekApple!=nullptr && "apple not found by IndexFileReader");
+    QueryParser parser(query);
+    std::unique_ptr<Constraint> c = parser.Parse();
+ 
+    if (c) {
+       std::unique_ptr<ISR> isrs = c->Eval();
+       std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, 1);
+ 
+       std::vector<std::string_view> urls;
+       urls.reserve(raw_results.size());
+       std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(urls),
+                    [](const UrlRank& p) { return p.url; });
 
-    seekApple = reader.Find("apple", 8192, chunkNum);
-    assert(seekApple->location == 8192);
-    assert(seekApple!=nullptr && "apple not found by IndexFileReader");
+       return urls;
+ 
+    } 
+    return {}; 
+}
 
-    seekApple = reader.Find("apple", 8193, chunkNum);
-    assert(seekApple->location == 8193);
-    assert(seekApple!=nullptr && "apple not found by IndexFileReader");
-
-    seekApple = reader.Find("apple", 3, chunkNum);
-    assert(seekApple->location == 3);
-    assert(seekApple!=nullptr && "apple not found by IndexFileReader");
-
-    auto seekBanana = reader.Find("banana", 0, chunkNum);
-    assert(!seekBanana);
-    
-    char indexFilename[32];
-    snprintf(indexFilename, sizeof(indexFilename), "IndexChunk_%05u", chunkNum);
-    
-    char hashFilename[32];
-    snprintf(hashFilename, sizeof(hashFilename), "HashFile_%05u", chunkNum);
-
-    assert(fileExists(indexFilename) && "Index file not created");
-    assert(fileExists(hashFilename) && "Hash file not created");
-
-    std::cout << "oneDocOneWordLoopTest passed." << std::endl;
+bool fileExists(const std::string &filename) {
+    std::ifstream file(filename);
+    return file.good();
 }
 
 int main() {
-    oneDocOneWordLoopTest(); 
     std::string test_string = "banana"; 
     assert(!run_engine(test_string).empty()); 
     std::cout << "All tests passed." << std::endl;

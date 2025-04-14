@@ -1,5 +1,7 @@
 CXX = g++
-CXXFLAGS = -Wall -Wextra -std=c++17 -O2
+CXXFLAGS = -std=c++20 -Wall -pedantic -O0 -I/opt/homebrew/opt/openssl@3/include
+LDFLAGS = -L/opt/homebrew/opt/openssl@3/lib
+LIBS = -ldl -lssl -lcrypto
 
 # Common source files used by all driver*.cpp targets
 COMMON_SRC = \
@@ -17,7 +19,11 @@ all: $(TARGETS)
 
 # Each driver target depends on its .cpp file and common code
 $(TARGETS): %: %.cpp $(COMMON_SRC)
-	$(CXX) $(CXXFLAGS) $^ -o $@ -lssl -lcrypto
+	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) $(LIBS) -o $@ 
 
 clean:
 	rm -f $(TARGETS)
+
+debug: CXXFLAGS += -g3 -DDEBUG -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG
+debug: drivertest1.cpp $(COMMON_SRC)
+	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) $(LIBS) -o debug

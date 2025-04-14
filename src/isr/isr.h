@@ -14,8 +14,12 @@ public:
     virtual SeekObj* Seek(Location target) = 0;
     virtual SeekObj* NextDocument() = 0;
    
-    virtual Location getStartLocation() {}
-    virtual Location getEndLocation() {}
+    virtual Location getStartLocation() {
+        return nearestStartLocation;
+    }
+    virtual Location getEndLocation() {
+        return nearestEndLocation;
+    }
     
     virtual SeekObj * GetCurrentPost() const
     {
@@ -55,6 +59,12 @@ public:
         if (!post) return Seek(0);
         return Seek(post->location + 1);
     }
+    Location getStartLocation() {
+        return nearestStartLocation;
+    }
+    Location getEndLocation() {
+        return nearestEndLocation;
+    }
     /*
         unsigned GetDocumentCount() {
         return;
@@ -63,6 +73,8 @@ public:
 protected:
     const IndexFileReader& reader_;
     std::string word;
+    Location nearestStartLocation = NULL_LOCATION;
+    Location nearestEndLocation = NULL_LOCATION;
 };
 
 class ISREndDoc : public ISRWord {
