@@ -6,9 +6,9 @@
  * - Fetches and parses web pages using an HTML parser.
  *
  * Dependencies:
- * - ISR (Intermediate Search Representation)
+ * - ISR
  * - QueryParser: for parsing queries
- * - ConstraintSolver: for evaluating constraints
+ * - ConstraintSolver: Find matching documents
  * - HtmlParser: for parsing HTML titles and snippets
  * - sockets.h: for SSL-based HTML fetching using getHTML()
  * 

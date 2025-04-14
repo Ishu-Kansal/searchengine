@@ -157,8 +157,6 @@ function renderPage(page) {
   currentPage = page;
   updatePaginationButtons();
 
-  // Scroll to top of results after rendering new page
-  // searchResultsContainer.scrollIntoView({ behavior: 'smooth' });
 }
 
 function updatePaginationButtons() {
