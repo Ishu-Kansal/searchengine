@@ -177,7 +177,7 @@ class IndexChunk {
   uint64_t pos;
 };
 
-uint8_t *encode_url_list(uint8_t *buf, const std::vector<Doc> &url_list) {
+inline uint8_t *encode_url_list(uint8_t *buf, const std::vector<Doc> &url_list) {
   buf = encodeVarint(url_list.size(), buf);
   for (const auto &url : url_list) {
     buf = encodeVarint(url.staticRank, buf);
@@ -187,7 +187,7 @@ uint8_t *encode_url_list(uint8_t *buf, const std::vector<Doc> &url_list) {
   return buf;
 }
 
-size_t doc_list_required_size(const std::vector<Doc> &doc_list) {
+inline size_t doc_list_required_size(const std::vector<Doc> &doc_list) {
   size_t ans = SizeOf(doc_list.size());
   for (const auto &url : doc_list) {
     ans += SizeOf(url.staticRank);

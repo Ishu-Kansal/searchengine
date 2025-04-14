@@ -1,4 +1,5 @@
 // HtmlTags.h
+#include <cstddef>
 
 #pragma once
 
