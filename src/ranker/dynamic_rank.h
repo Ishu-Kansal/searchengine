@@ -63,7 +63,7 @@ int get_rank_score(int shortSpans, int orderedSpans, int phraseMatches, int topS
 //           Needs a start location so we can seek to that location
 // Modifies: Nothing.
 // Effect: Returns the dynamic rank score for a single document.
-int get_dynamic_rank(ISRWord* anchorTerm, vector<vector<ISRWord*>> phraseTerms, uint64_t startLocation, uint64_t endLoc) {
+int get_dynamic_rank(std::unique_ptr<ISRWord> &anchorTerm, vector<vector<std::unique_ptr<ISRWord>>> &phraseTerms, uint64_t startLocation, uint64_t endLoc) {
     // declare the variables that we will be passing onto rank_score()
     int shortSpans = 0;
     int orderedSpans = 0;

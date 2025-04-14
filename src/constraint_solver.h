@@ -54,7 +54,7 @@ void insertionSort(vector<UrlRank> & topRankedDocs, UrlRank & rankedDoc)
   topRankedDocs[pos] = std::move(docToInsert);
 }
 
-AnchorTermIndex get_anchor_ISR(vector<vector<ISRWord*>> orderedQueryTerms) {
+AnchorTermIndex get_anchor_ISR(vector<vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms) {
      // Loop over ISR words vector to get the anchor term
      int anchorOuterIndex = -1;
      int anchorInnerIndex = -1; 
@@ -75,7 +75,7 @@ AnchorTermIndex get_anchor_ISR(vector<vector<ISRWord*>> orderedQueryTerms) {
 }
 
 // actual constraint solver function
-std::vector<UrlRank> constraint_solver(ISROr* queryISR, vector<vector<ISRWord*>> orderedQueryTerms, uint32_t numChunks) {
+std::vector<UrlRank> constraint_solver(std::unique_ptr<ISR> &queryISR, vector<vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms, uint32_t numChunks) {
     // create an ISR for document seeking
     std::vector<UrlRank> topNdocs;
     topNdocs.reserve(TOTAL_DOCS_TO_RETURN);

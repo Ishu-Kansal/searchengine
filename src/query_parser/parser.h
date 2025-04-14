@@ -3,6 +3,7 @@
 
 #include "tokenstream.h"
 #include "expression.h"
+#include <memory>
 #include <string>
 
 class QueryParser {
@@ -12,17 +13,17 @@ private:
 public:
    explicit QueryParser(std::string &query);
 
-   Constraint *Parse();
+   std::unique_ptr<Constraint> Parse();
 
    std::string FindNextToken();
-   Constraint *FindConstraint();
+   std::unique_ptr<Constraint> FindConstraint();
    bool FindOrOp();
-   Constraint *FindBaseConstraint();
+   std::unique_ptr<Constraint> FindBaseConstraint();
    bool FindAndOp();
-   Constraint *FindSimpleConstraint();
-   Constraint *FindPhrase();
-   Constraint *FindNestedConstraint();
-   Constraint *FindSearchWord();
+   std::unique_ptr<Constraint> FindSimpleConstraint();
+   std::unique_ptr<Constraint> FindPhrase();
+   std::unique_ptr<Constraint> FindNestedConstraint();
+   // std::unique_ptr<Constraint> FindSearchWord(); 
 };
 
 #endif // PARSER_H_
