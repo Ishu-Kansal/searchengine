@@ -240,15 +240,6 @@ public:
             return nullptr;
         } 
 
-        /*
-            Format for Posting List:
-            [ numSeekEntriesVarintSizeBytes (1 byte)]
-            [ varint: numSeekTableEntries           ] (optional, only if size byte > 0)
-            [ varint: numTotalElements              ]
-            [ seekTable (numSeekTableEntries * ENTRY_SIZE bytes) ] (optional) 8 bytes for offset and 8 bytes for location
-            [ postingListData (varint deltas)       ]
-        */
-
         const uint8_t * postingListBuf = fileStart + postingListOffset;
         uint8_t numSeekTableEntriesSize = *postingListBuf;
         postingListBuf += NUM_ENTRIES_SIZE_BYTES;

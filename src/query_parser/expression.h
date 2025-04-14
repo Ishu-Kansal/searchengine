@@ -5,21 +5,25 @@
 #include <string>
 #include <vector>
 #include "../isr/isr.h" // Include ISR definitions for compilation and evaluation
+#include "../inverted_index/IndexFileReader.h"
+
+class ISR;
 
 /**
  * Base class for all query constraints
  */
 class Constraint {
 public:
-   virtual ~Constraint();
+   virtual ~Constraint() {}
    virtual ISR* Eval() const = 0;
-
-   // ISR *Compile( );
+protected:
+   const IndexFileReader& reader_;
+   Constraint(const IndexFileReader& reader) : reader_(reader) {}
 };
 
 class SequenceConstraint : public Constraint {
 public:
-    SequenceConstraint(const std::vector<std::string>& words);
+    SequenceConstraint(const std::vector<std::string>& words, const IndexFileReader& reader);
 
     virtual ~SequenceConstraint();
 
@@ -36,7 +40,7 @@ private:
    Constraint *right;
 
 public:
-   AndConstraint(Constraint *l, Constraint *r);
+   AndConstraint(Constraint *l, Constraint *r, const IndexFileReader& reader);
    ~AndConstraint();
    ISR* Eval() const override;
 };
@@ -48,7 +52,7 @@ private:
    Constraint *right;
 
 public:
-   OrConstraint(Constraint *l, Constraint *r);
+   OrConstraint(Constraint *l, Constraint *r, const IndexFileReader& reader);
    ~OrConstraint();
    ISR* Eval() const override;
 };
@@ -81,7 +85,7 @@ private:
    std::vector<std::string> words;
 
 public:
-   PhraseConstraint(const std::vector<std::string> &w);
+   PhraseConstraint(const std::vector<std::string> &w, const IndexFileReader& reader);
    ~PhraseConstraint();
    ISR* Eval() const override;
 };
