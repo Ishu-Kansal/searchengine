@@ -229,6 +229,15 @@ public:
     {
         return Seek(nearestEndLocation + 1);
     }
+
+    Location getStartLocation() override
+    {
+        return nearestStartLocation;
+    }
+    Location getEndLocation() override
+    {
+        return nearestEndLocation;
+    }
 private:
 
     unsigned nearestTerm, farthestTerm;
@@ -301,6 +310,15 @@ public:
     SeekObj * NextDocument() 
     {
         return Seek(nearestEndLocation + 1);
+    }
+
+    Location getStartLocation() override
+    {
+        return nearestStartLocation;
+    }
+    Location getEndLocation() override
+    {
+        return nearestEndLocation;
     }
 
 private:
@@ -409,6 +427,15 @@ public:
         return Seek(nearestEndLocation + 1);
     }
 
+
+    Location getStartLocation() override
+    {
+        return nearestStartLocation;
+    }
+    Location getEndLocation() override
+    {
+        return nearestEndLocation;
+    }
  private:
      unsigned nearestTerm, farthestTerm;
      Location nearestStartLocation, nearestEndLocation;
