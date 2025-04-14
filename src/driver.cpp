@@ -152,6 +152,6 @@ std::vector<cstring_view> run_engine(std::string& query) {
 }
 
 // TO DO: Wrap everything in a main function
-int main() {
-   return -1;
-}
+// int main() {
+//    return -1;
+// }

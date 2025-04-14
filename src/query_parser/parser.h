@@ -8,7 +8,7 @@
 class QueryParser {
 private:
    TokenStream stream;
-   IndexFileReader
+   //IndexFileReader queryReader;
 
 public:
    explicit QueryParser(std::string &query);

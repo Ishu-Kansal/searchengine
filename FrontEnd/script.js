@@ -1,3 +1,6 @@
+// import OpenAI from "openai";
+// const client = new OpenAI();
+
 let allResults = [];
 let currentPage = 0;
 const pageSize = 10;
@@ -97,7 +100,42 @@ searchForm.addEventListener('submit', function (e) {
       loadingIndicator.style.display = 'none'; // Hide loading section
       submitButton.classList.remove('loading');
       submitButton.disabled = false;
+
+      fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer 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" 
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: "You are a non-interactive information assistant. When given a search query, respond with one clear, neutral, and self-contained paragraph that explains the topic. Do not include links. Do not ask questions. Do not invite further interaction."
+            },
+            {
+              role: "user",
+              content: "Search engine query: " + query
+            }
+          ]
+        })
+      })
+      .then(res => res.json())
+      .then(data => console.log(data.choices?.[0]?.message?.content));
+
+
+      // console.log("here");
+      // const response = client.responses.create({
+      //   model: "gpt-4o-mini",
+      //   input: "Here is a search engine query, return a one paragraph response to this query, do not provide any links, do not ask any follow up questions. Search engine query: " + query
+      // });
+
+      // console.log(response.output_text);
+
+
     });
+
 });
 
 function renderPage(page) {
