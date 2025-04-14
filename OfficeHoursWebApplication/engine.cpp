@@ -1,3 +1,18 @@
+/*
+ * engine.cpp
+ * 
+ * Implements a multithreaded search API endpoint using a plugin-based architecture.
+ * The module handles HTTP requests to `/api/search/`, extracts a search query from JSON,
+ * runs a search engine, fetches and parses the result pages in parallel using POSIX threads,
+ * and responds with a formatted JSON payload.
+ * 
+ * Dependencies:
+ * - nlohmann::json (https://github.com/nlohmann/json)
+ * - pthread (POSIX threads)
+ * - driver.h: Contains `run_engine` and `get_and_parse_url`
+ * - Plugin.h, Mutex.h: Used for request handling and thread safety
+ */
+
 #include <string>
 #include "Plugin.h"
 #include "Mutex.h"
@@ -13,13 +28,21 @@ using json = nlohmann::json;
 json result;
 pthread_mutex_t result_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-// Struct to pass data to each thread
+// Struct passed to each thread, containing the URL to process and its index in the result list.
 struct ThreadData {
   cstring_view url;
   int idx;
 };
 
-// Thread function
+/**
+ * @brief Worker function executed by each thread.
+ * 
+ * Fetches and parses the URL assigned to this thread, then writes the result into
+ * the global `result` object at the appropriate index.
+ * 
+ * @param arg Pointer to a ThreadData struct.
+ * @return void* Always returns nullptr.
+ */
 void* thread_worker(void* arg) {
     ThreadData* data = static_cast<ThreadData*>(arg);
     SearchResult parsed = get_and_parse_url(data->url);
@@ -37,9 +60,16 @@ void* thread_worker(void* arg) {
     return nullptr;
 }
 
-// Forward‑declare your search routine. Implement it elsewhere.
+/**
+ * @brief Executes the main search query logic.
+ * 
+ * Given a search string, it calls the `run_engine` backend, then creates a thread
+ * for each resulting URL to fetch and parse the page content concurrently.
+ * 
+ * @param query The user's search query string.
+ * @return json JSON object containing an array of result objects (with URL, title, snippet).
+ */
 json run_query(std::string &query) {
-  //json result
 
   // call driver and return dict of results
   std::vector<cstring_view> urls = run_engine(query);
@@ -50,16 +80,6 @@ json run_query(std::string &query) {
   }
 
   result["results"] = json::array();
-
-  // for (const auto &url : urls) {
-  //   SearchResult parsed = get_and_parse_url(url);
-
-  //   result["results"].push_back({
-  //     {"url", parsed.url},
-  //     {"title", parsed.title},
-  //     {"snippet", parsed.snippet}
-  //   });
-  // }
 
   std::vector<pthread_t> threads;
 
@@ -80,16 +100,28 @@ json run_query(std::string &query) {
       pthread_join(thread, nullptr);
   }
 
-  //std::this_thread::sleep_for(std::chrono::seconds(8));
-
   return result;
 }
 
+/**
+ * @brief SearchAPI class implementing PluginObject interface.
+ * 
+ * Registers a custom handler for the `/api/search/` path and ensures thread-safe
+ * processing of search requests using an internal Mutex lock.
+ */
 class SearchAPI : public PluginObject {
 private:
   Mutex lock;
   const std::string endpoint = "/api/search/";
 
+  /**
+   * @brief Handles an HTTP request string and returns a JSON response.
+   * 
+   * Parses the request body, extracts the query field, and runs the search engine.
+   * 
+   * @param req Full HTTP request string.
+   * @return std::string HTTP response string.
+   */
   std::string handle(const std::string &req) {
     size_t pos = req.find("\r\n\r\n");
     if (pos == std::string::npos) return error(400);
@@ -105,6 +137,14 @@ private:
     return response(200, "OK", payload);
   }
 
+  /**
+   * @brief Constructs a full HTTP response string.
+   * 
+   * @param code HTTP status code.
+   * @param msg Status message (e.g., "OK", "Bad Request").
+   * @param body Response body content.
+   * @return std::string Fully formatted HTTP response.
+   */
   std::string response(int code, const char *msg, const std::string &body) {
     std::string hdr = "HTTP/1.1 " + std::to_string(code) + " " + msg;
     hdr += "\r\nContent-Type: application/json; charset=utf-8";
@@ -113,6 +153,7 @@ private:
     return hdr + body;
   }
 
+  // Error response for bad requests
   std::string error(int code) {
     return response(code, "Bad Request", "{}");
   }
@@ -126,6 +167,14 @@ public:
     return path == endpoint;
   }
 
+  /**
+   * @brief Processes an incoming request in a thread-safe manner.
+   * 
+   * Locks the mutex, handles the request, then unlocks it.
+   * 
+   * @param request The raw HTTP request string.
+   * @return std::string The formatted HTTP response string.
+   */
   std::string ProcessRequest(std::string request) override {
     lock.Lock();
     std::string out = handle(request);
