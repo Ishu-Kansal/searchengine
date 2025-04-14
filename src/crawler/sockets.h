@@ -135,7 +135,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   }
 
   int val = 1;
-  ret = setsockopt(socketFD, SOL_SOCKET, SO_NOSIGPIPE, &val, sizeof(val));
+  ret = setsockopt(socketFD, SOL_SOCKET, MSG_NOSIGNAL, &val, sizeof(val));
 
   if (ret != 0) {
     std::cerr << "Failed to set socket timeout" << std::endl;

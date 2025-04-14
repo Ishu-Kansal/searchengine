@@ -9,15 +9,15 @@
 #include <fstream>
 
 
-extern std::vector<vector<ISRWord*>> sequences;
+extern std::vector<std::vector<std::unique_ptr<ISRWord>>> sequences;
 
 // driver function for the search engine
 std::vector<string_view> run_engine(std::string& query) {
     QueryParser parser(query);
-    Constraint *c = parser.Parse();
+    std::unique_ptr<Constraint> c = parser.Parse();
  
     if (c) {
-       ISR* isrs = c->Eval();
+       std::unique_ptr<ISR> isrs = c->Eval();
        std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, 1);
  
        std::vector<std::string_view> urls;

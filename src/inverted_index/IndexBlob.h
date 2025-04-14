@@ -21,7 +21,7 @@ using PostIndex = uint64_t;
 
 static const size_t Unknown = 0;
 
-[[nodiscard]] size_t RoundUp(size_t length, size_t boundary)
+[[nodiscard]] inline size_t RoundUp(size_t length, size_t boundary)
 {
    // Round up to the next multiple of the boundary, which
    // must be a power of 2.

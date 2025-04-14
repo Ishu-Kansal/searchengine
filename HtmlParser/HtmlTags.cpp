@@ -2,6 +2,7 @@
 #include <cstring>
 #include <cassert>
 #include "HtmlTags.h"
+#include <cstddef>
 
 #include <iostream>
 
