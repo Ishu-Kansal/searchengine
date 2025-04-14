@@ -1,5 +1,4 @@
-#ifndef PARSER_H_
-#define PARSER_H_
+#pragma once
 
 #include "tokenstream.h"
 #include "expression.h"
@@ -9,6 +8,7 @@
 class QueryParser {
 private:
    TokenStream stream;
+   IndexFileReader
 
 public:
    explicit QueryParser(std::string &query);
@@ -26,4 +26,3 @@ public:
    // std::unique_ptr<Constraint> FindSearchWord(); 
 };
 
-#endif // PARSER_H_

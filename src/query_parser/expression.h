@@ -1,11 +1,11 @@
 #pragma once
-#include "expression.h"
 #include "../isr/isr.h"
+#include "../globals.h"
 #include <iostream>
 #include <vector>
 #include <string>
 
-extern std::vector<std::vector<std::unique_ptr<ISRWord>>> sequences;
+// extern std::vector<std::vector<std::unique_ptr<ISRWord>>> sequences;
 
 // ---------- Base Constraint ----------
 
@@ -29,23 +29,28 @@ public:
 
     std::unique_ptr<ISR> Eval() const override {
 
+        sequences.emplace_back();
         if (words.size() == 1) {
             std::cout << "Run ISR on word: ";
             std::cout << words[0] << std::endl;
 
             auto wordIsr = std::make_unique<ISRWord>(words[0], reader_);
+            auto wordIsr2 = std::make_unique<ISRWord>(words[0], reader_);
+
+            sequences.back().push_back(std::move(wordIsr2));
 
             return wordIsr; // Ownership transferred out
         }
         else {
             std::cout << "Run ISR on sequence (as OR): ";
-
             std::vector<std::unique_ptr<ISR>> terms;
             for (const std::string& word : words) {
                 std::cout << word << " ";
                 auto wordIsr = std::make_unique<ISRWord>(word, reader_);
+                auto wordIsr2 = std::make_unique<ISRWord>(word, reader_);
 
                 terms.push_back(std::move(wordIsr)); // Move ownership into vector
+                sequences.back().push_back(std::move(wordIsr2));
             }
             std::cout << std::endl;
 
@@ -112,12 +117,16 @@ public:
     std::unique_ptr<ISR> Eval() const override {
         std::cout << "Run ISR on phrase: ";
 
+        sequences.emplace_back();
+
         std::vector<std::unique_ptr<ISR>> terms;
         for (const std::string &word : words) {
             std::cout << word << " ";
             auto wordIsr = std::make_unique<ISRWord>(word, reader_);
+            auto wordIsr2 = std::make_unique<ISRWord>(word, reader_);
 
-            terms.push_back(std::move(wordIsr)); 
+            terms.push_back(std::move(wordIsr));
+            sequences.back().push_back(std::move(wordIsr2));
         }
         std::cout << std::endl;
 
