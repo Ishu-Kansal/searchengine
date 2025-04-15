@@ -34,8 +34,6 @@
 #include "../HtmlParser/HtmlParser.h"
 #include "./crawler/sockets.h"
 
-extern std::vector<vector<ISRWord*>> sequences;
-
 /**
  * @brief Struct to represent a single search result.
  * 
@@ -152,6 +150,6 @@ std::vector<cstring_view> run_engine(std::string& query) {
 }
 
 // TO DO: Wrap everything in a main function
-int main() {
-   return -1;
-}
+// int main() {
+//    return -1;
+// }

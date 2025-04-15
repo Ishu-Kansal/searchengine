@@ -14,12 +14,13 @@
 #include <cstring>
 
 #include "../../HashTable/HashTableStarterFiles/HashBlob.h"
-#include "Index.h"
 #include "../../HashTable/HashTableStarterFiles/HashTable.h"
 #include "../../utils/utf_encoding.h"
+#include "Index.h"
+#include "RAII_utils.h"
 
 /**
- * @brief Number of bits used for offset within block
+ * @brief Number of bits used for byteOffset within block
  * Determines size of a block (2^BLOCK_OFFSET_BITS)
  */
 constexpr size_t BLOCK_OFFSET_BITS = 13;
@@ -33,7 +34,56 @@ constexpr size_t BLOCK_SIZE = 1 << BLOCK_OFFSET_BITS;
  * (size byte + static rank byte)
  */
 constexpr size_t URL_HEADER_BYTES = 2;
+
+/**
+ * @brief Initial capacity reservation for chunk data buffer (8 GB)
+ */
+constexpr size_t CHUNK_BUFFER_INITIAL_RESERVE = 8'000'000'000ULL;
+
+/**
+ * @brief Capacity reservation for temporary posting list buffer
+ */
+constexpr size_t POSTING_LIST_BUFFER_INITIAL_RESERVE = 1'000'000'000ULL;
+
+/**
+ * @brief Maximum chunk number allowed for filename (ensures %05u fits)
+ */
+constexpr uint32_t MAX_CHUNK_NUM = 99999;
+
+/**
+ * @brief Marker indicating no seek table is present
+ */
+constexpr uint8_t NO_SEEK_TABLE_MARKER = 0;
+
 // Didn't use pushVarint for some of them, because some of the values are one byte and I want the full range from 0 - 255.
+
+
+/**
+ * @brief Helper function to open the index file and check for errors
+ *        Exits on failure. Returns a valid file descriptor on success
+ * @param chunkNum The chunk number to use in the filename
+ * @param outFilename Buffer to store the generated filename (for error messages)
+ * @param filenameBufferSize Size of the outFilename buffer
+ * @return A valid file descriptor. Exits program on failure
+ */
+static int openIndexChunkFile(
+    uint32_t chunkNum, 
+    char* outFilename, 
+    size_t filenameBufferSize) 
+{
+    if (chunkNum > MAX_CHUNK_NUM) {
+        std::cerr << "Error: Chunk number " << chunkNum << " exceeds maximum " << MAX_CHUNK_NUM << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    snprintf(outFilename, filenameBufferSize, "IndexChunk_%05u", chunkNum);
+
+    int fd = open(outFilename, O_RDWR | O_CREAT | O_TRUNC, 0666);
+    if (fd == -1) {
+        std::cerr << "Error: Could not open or create file '" << outFilename << "': " << strerror(errno) << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return fd;
+}
 
 /**
  * @class IndexFile
@@ -47,9 +97,9 @@ class IndexFile {
     private:
 
     /**
-    * @brief File descriptor for the main index chunk data file ("IndexChunk_XXXXX").
+    * @brief File descriptor for the main postingIndex chunk data file ("IndexChunk_XXXXX").
     */
-    int fileDescrip;
+   FileDescriptor fileDescrip_;
 
     /**
     * @brief Encodes a uint64_t value using variable-length encoding (Varint) and appends it to a data buffer
@@ -71,7 +121,7 @@ class IndexFile {
     * [Seek Table Size (Varint Size Byte)]  // 1 byte for size of next field, 0 if no seek table
     * [Number of Seek Table Entries (Varint)] // Only if Seek Table Size > 0
     * [Seek Table Entries...]             // Only if Seek Table Size > 0
-    * [Offset (uint64_t)]               // Byte offset of the start of the block
+    * [Offset (uint64_t)]               // Byte byteOffset of the start of the block
     * [URL Data...]
     * [URL Length (uint8_t)]            // Length of the URL string
     * [URL String (bytes)]              // URL characters
@@ -84,11 +134,13 @@ class IndexFile {
     * @param urlList The vector of Doc objects to serialize
     */
 
-    void serializeUrlList(std::vector<uint8_t>& dataBuffer, const std::vector<Doc> &urlList)
+    void serializeUrlList(
+        std::vector<uint8_t>& dataBuffer,
+        const std::vector<Doc> &urlList)
     {
         if (urlList.size() < BLOCK_SIZE) 
         {
-            dataBuffer.push_back(uint8_t(0)); // No seek table
+            dataBuffer.push_back(NO_SEEK_TABLE_MARKER); // No seek table
         }
         else
         {
@@ -97,22 +149,22 @@ class IndexFile {
             dataBuffer.push_back(SizeOf(numSeekTableEntries)); 
             pushVarint(dataBuffer, numSeekTableEntries);
         }
-        uint32_t index = 0;
-        uint64_t offset = 0;
+        uint32_t postingIndex = 0;
+        uint64_t byteOffset = 0;
         std::vector<uint8_t> tempBuffer;
-        tempBuffer.reserve(1000000000UL);
+        tempBuffer.reserve(POSTING_LIST_BUFFER_INITIAL_RESERVE);
         for (auto & doc : urlList)
         {
-            if (urlList.size() >= BLOCK_SIZE && (index + 1) % BLOCK_SIZE == 0 && index != 0)
+            if (urlList.size() >= BLOCK_SIZE && (postingIndex + 1) % BLOCK_SIZE == 0 && postingIndex != 0)
             {
-                uint8_t* bytes = reinterpret_cast<uint8_t*>(&offset);
-                dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(offset));
-                //bytes = reinterpret_cast<uint8_t*>(&index);
-                //dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(index));
+                uint8_t* bytes = reinterpret_cast<uint8_t*>(&byteOffset);
+                dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(byteOffset));
+                //bytes = reinterpret_cast<uint8_t*>(&postingIndex);
+                //dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(postingIndex));
             }
         
-            offset += doc.url.size() + URL_HEADER_BYTES;
-            index++;
+            byteOffset += doc.url.size() + URL_HEADER_BYTES;
+            postingIndex++;
 
             tempBuffer.push_back(uint8_t(doc.url.size()));
             tempBuffer.insert(tempBuffer.end(), doc.url.begin(), doc.url.end());
@@ -125,17 +177,17 @@ class IndexFile {
     * @brief Serializes the list of PostingLists into the data buffer and updates the dictionary.
     *
     * For each PostingList:
-    * 1. Updates the corresponding word's entry in the dictionary with the current byte offset in the data buffer. This offset marks the start of the serialized data for this posting list.
+    * 1. Updates the corresponding word's entry in the dictionary with the current byte byteOffset in the data buffer. This byteOffset marks the start of the serialized data for this posting list.
     * 2. Serializes the PostingList data:
     *    Format:
     *    [Seek Table Size (Varint Size Byte)]    // 1 byte for size of next field, 0 if no seek table
     *    [Number of Seek Table Entries (Varint)] // Only if Seek Table Size > 0
     *    [Number of Postings (Varint)]           // Total number of postings in the list
     *    [Seek Table Entries...]                 // Only if Seek Table Size > 0
-    *    [Offset (uint64_t)]                     // Byte offset within the posting data (after headers/seek table)
+    *    [Offset (uint64_t)]                     // Byte byteOffset within the posting data (after headers/seek table)
     *    [Absolute Location (uint64_t)]
     *    [Posting Data...]
-    *    [Delta (Varint)]                        // Difference from the previous post's location
+    *    [Delta (Varint)]                        // Difference from the prevLocationious post's location
     *
     * A seek table is included if the number of postings is >= BLOCK_SIZE
     * Each seek table entry points to the start of a block containing BLOCK_SIZE postings
@@ -145,12 +197,16 @@ class IndexFile {
     * @param dictionary The HashTable mapping words to offsets, which will be updated
     */
 
-    void serializePostingLists(std::vector<uint8_t>& dataBuffer, const vector<PostingList> &listOfPostingList, HashTable<const std::string, size_t> & dictionary)
+    void serializePostingLists(
+        std::vector<uint8_t>& dataBuffer,
+        const vector<PostingList> &listOfPostingList,
+        HashTable<const std::string, size_t> & dictionary)
     {   
         for (const PostingList & postingList : listOfPostingList)
         {
             const std::string & word = postingList.get_word();
-            // dataBuffer.size() is the byte offset for the start of this posting list
+
+            // dataBuffer.size() is the byte byteOffset for the start of this posting list
             bool success = dictionary.Update(word, dataBuffer.size());
             if (!success) [[unlikely]]
             {
@@ -159,7 +215,7 @@ class IndexFile {
             }
             if (postingList.size() < BLOCK_SIZE) 
             {
-                dataBuffer.push_back(uint8_t(0)); // No seek table
+                dataBuffer.push_back(NO_SEEK_TABLE_MARKER); // No seek table
             }
             else
             {
@@ -171,34 +227,35 @@ class IndexFile {
             
             // # of elements in posting list
             pushVarint(dataBuffer, postingList.size());
-            uint64_t prev = 0;
-            uint32_t index = 0;
-            uint64_t pos = 0;
-            uint64_t offset = 0;
+
+            uint64_t prevLocation = 0;
+            uint32_t postingIndex = 0;
+            uint64_t absoluteLocation = 0;
+            uint64_t byteOffset = 0;
             std::vector<uint8_t> tempBuffer;
-            tempBuffer.reserve(1000000000UL); // 1 gb
+            tempBuffer.reserve(POSTING_LIST_BUFFER_INITIAL_RESERVE); 
             for (const Post & entry : postingList)
             {
                 // We're making a seek table entry every BLOCK_SIZE words we encountered
-                // but since index is 0-indexed we have to add 1
-                if (postingList.size() >= BLOCK_SIZE && (index + 1) % BLOCK_SIZE == 0 && index != 0)
+                // but since postingIndex is 0-indexed we have to add 1
+                if (postingList.size() >= BLOCK_SIZE && (postingIndex + 1) % BLOCK_SIZE == 0 && postingIndex != 0)
                 {
                     // Offset into posting list
-                    uint8_t* bytes = reinterpret_cast<uint8_t*>(&offset);
-                    dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(offset));
-                    // absolute location of element at index
-                    bytes = reinterpret_cast<uint8_t*>(&pos);
-                    dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(pos));
+                    uint8_t* bytes = reinterpret_cast<uint8_t*>(&byteOffset);
+                    dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(byteOffset));
+                    // absolute location of element at postingIndex
+                    bytes = reinterpret_cast<uint8_t*>(&absoluteLocation);
+                    dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(absoluteLocation));
                 }
 
-                uint64_t delta = entry.location - prev;
-                pos += delta;
+                uint64_t delta = entry.location - prevLocation;
+                absoluteLocation += delta;
                 uint8_t deltaSize = SizeOf(delta);
        
-                offset += deltaSize;
+                byteOffset += deltaSize;
                 pushVarint(tempBuffer, delta);
-                prev = entry.location;
-                ++index;
+                prevLocation = entry.location;
+                ++postingIndex;
             }
             // adds all posts after seek table
             dataBuffer.insert(dataBuffer.end(), tempBuffer.begin(), tempBuffer.end()); 
@@ -210,13 +267,16 @@ class IndexFile {
     * @brief Serializes the entire IndexChunk into the provided data buffer
     *
     * Clears the buffer, then serializes the URL list and the posting lists
-    * The dictionary is updated with new offset of the word's posting list
+    * The dictionary is updated with new byteOffset of the word's posting list
     *
     * @param indexChunk The IndexChunk object to serialize
     * @param dataBuffer The vector of bytes to store the serialized chunk data
     * @param dictionary The HashTable associated with the chunk to be updated with offsets
     */
-    void serializeChunk(const IndexChunk &indexChunk, std::vector<uint8_t>& dataBuffer, HashTable<const std::string, size_t> & dictionary)
+    void serializeChunk(
+        const IndexChunk &indexChunk,
+        std::vector<uint8_t>& dataBuffer,
+        HashTable<const std::string, size_t> & dictionary)
     {
         dataBuffer.clear();
 
@@ -243,34 +303,25 @@ class IndexFile {
     * @param indexChunk A reference to the IndexChunk object containing the data to be serialized and written
     *  
     */
-    IndexFile(uint32_t chunkNum, IndexChunk &indexChunk)
+    IndexFile(uint32_t chunkNum, IndexChunk &indexChunk) : fileDescrip_(openIndexChunkFile(chunkNum, indexFilename_, sizeof(indexFilename_))) 
     {
-        if (chunkNum > 99999) exit(EXIT_FAILURE);
-        char indexFilename[32];
-        snprintf(indexFilename, sizeof(indexFilename), "IndexChunk_%05u", chunkNum);
-        fileDescrip = open(indexFilename, O_RDWR | O_CREAT | O_TRUNC, 0666);
-        if ( fileDescrip == -1 )
-        {
-            cerr << "Could not open " << indexFilename;
-            exit(EXIT_FAILURE);
-        }
         HashTable<const std::string, size_t> & dictionary = indexChunk.get_dictionary();
         // used vector so that we didn't need to calculate size of buffer beforehand
         // Every insert is at the end of the dataBuffer
         // no reallocation since we reserved mem
         std::vector<uint8_t> dataBuffer;
-        dataBuffer.reserve(8000000000UL); // 8 Gigabyte worth of bytes
+        dataBuffer.reserve(CHUNK_BUFFER_INITIAL_RESERVE); // 8 Gigabyte worth of bytes
         serializeChunk(indexChunk, dataBuffer, dictionary);
 
-        ssize_t bytesWritten = write(fileDescrip, dataBuffer.data(), dataBuffer.size());
+        ssize_t bytesWritten = write(fileDescrip_.get(), dataBuffer.data(), dataBuffer.size());
         if (bytesWritten == -1) 
         {
-            cerr << "Error writing to " << indexFilename;
+            cerr << "Error writing to " << indexFilename_;
             exit(EXIT_FAILURE);
         }
         else if (static_cast<size_t>(bytesWritten) != dataBuffer.size()) 
         {
-            cerr << "Incomplete write to " << indexFilename;
+            cerr << "Incomplete write to " << indexFilename_;
             exit(EXIT_FAILURE);
         }
 
@@ -279,16 +330,15 @@ class IndexFile {
         HashFile hashfile(hashFilename, &dictionary);
           
     }
-    /**
-    * @brief Destructor for IndexFile.
-    *
-    * Closes the file descriptor associated with the "IndexChunk_XXXXX" file if it was successfully opened.
-    */
-    ~IndexFile()
-    {
-        if (fileDescrip >= 0)
-        {
-            close(fileDescrip);
-        }
-    }
+    ~IndexFile() = default;
+
+    IndexFile(const IndexFile&) = delete;
+    IndexFile& operator=(const IndexFile&) = delete;
+
+    IndexFile(IndexFile&&) = delete;
+    IndexFile& operator=(IndexFile&&) = delete;
+    private:
+
+    char indexFilename_[32];
+
 };

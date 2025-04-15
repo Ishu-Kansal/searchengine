@@ -3,11 +3,11 @@
 #include <cctype>
 #include <iostream>
 #include <sstream>
-#include "../globals.h"
 #include "../isr/isr.h"
 #include <unordered_set>
 
-QueryParser::QueryParser(std::string &query) : stream(query) {}
+QueryParser::QueryParser(std::string &query, uint32_t numIndexChunks, const IndexFileReader & reader) 
+    : stream(query), numIndexChunks(numIndexChunks), reader(reader) {}
 
 std::string QueryParser::FindNextToken() {
     return stream.GetWord();
@@ -24,7 +24,6 @@ std::unique_ptr<Constraint> QueryParser::FindConstraint() {
     while (FindOrOp()) {
         auto right = FindBaseConstraint();
         if (!right) return nullptr;
-        IndexFileReader reader(numIndexChunks);
         left = std::make_unique<OrConstraint>(std::move(left), std::move(right), reader);
     }
 
@@ -42,7 +41,6 @@ std::unique_ptr<Constraint> QueryParser::FindBaseConstraint() {
     while (FindAndOp()) {
         auto right = FindSimpleConstraint();
         if (!right) return nullptr;
-        IndexFileReader reader(numIndexChunks);
         left = std::make_unique<AndConstraint>(std::move(left), std::move(right), reader);
     }
 
@@ -73,7 +71,6 @@ std::unique_ptr<Constraint> QueryParser::FindSimpleConstraint() {
         words.push_back(word);
     }
 
-    IndexFileReader reader(numIndexChunks);
     return std::make_unique<SequenceConstraint>(words, reader);
 }
 
@@ -88,7 +85,6 @@ std::unique_ptr<Constraint> QueryParser::FindPhrase() {
         words.push_back(word);
     }
 
-    IndexFileReader reader(numIndexChunks);
     return std::make_unique<PhraseConstraint>(words, reader);
 }
 

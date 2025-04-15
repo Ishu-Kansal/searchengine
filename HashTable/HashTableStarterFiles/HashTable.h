@@ -103,7 +103,7 @@ public:
   Tuple<Key, Value> tuple;
 
   Bucket(const Key &k, size_t h, const Value v)
-      : tuple(k, v), next(nullptr), hashValue(h) {}
+      : next(nullptr), hashValue(h), tuple(k, v) {}
 
   ~Bucket() { delete next; }
 };

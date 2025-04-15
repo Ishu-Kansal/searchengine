@@ -18,6 +18,7 @@
 #include "../../utils/utf_encoding.h"
 #include "IndexFile.h"
 #include "Index.h"
+#include "RAII_utils.h"
 
 /** @brief Size in bytes of a seek table entry for posting list (offset + location) */
 constexpr size_t ENTRY_SIZE = 16;
@@ -31,74 +32,6 @@ constexpr size_t URL_ENTRY_HEADER_BYTES = 1;
 constexpr size_t URL_ENTRY_RANK_BYTES = 1;
 typedef size_t Location;
 
-
-/**
-* @class FileDescriptor
-* @brief RAII wrapper for a file descriptor
-* Automatically closes the file descriptor when the object goes out of scope
-*/
-class FileDescriptor {
-    public:
-        /**
-         * @brief Constructs a FileDescriptor, taking ownership of the provided file descriptor
-         * @param fd The file descriptor to manage
-         */
-        explicit FileDescriptor(int fd) : fd_(fd) {}
-        /**
-         * @brief Destructor that closes the managed file descriptor if it's valid
-         */
-        ~FileDescriptor() { 
-            if (fd_ != -1) 
-                close(fd_); 
-        }
-        /**
-         * @brief Gets the raw file descriptor value
-         * @return The managed file descriptor
-         */
-        int get() const { return fd_; }
-        FileDescriptor(const FileDescriptor&) = delete;
-        FileDescriptor& operator=(const FileDescriptor&) = delete;
-    private:
-    
-        int fd_ = -1;
-};
-
-/**
- * @class MappedMemory
- * @brief RAII wrapper for memory mapped using mmap
- * Automatically unmaps the memory region when the object goes out of scope
- */
-class MappedMemory {
-    public:
-        /**
-         * @brief Constructs a MappedMemory object, taking ownership of the mapped region
-         * @param ptr Pointer to the start of the mapped memory region
-         * @param size The size of the mapped memory region in bytes
-         */
-        MappedMemory(void* ptr, size_t size) : ptr_(ptr), size_(size) {}
-        /**
-         * @brief Destructor that unmaps the memory region if it's valid
-         */
-        ~MappedMemory() { 
-            if (ptr_ && ptr_ != MAP_FAILED) 
-                munmap(ptr_, size_); 
-        }
-        /**
-         * @brief Gets the pointer to the start of the mapped memory region
-         * @return Void pointer to the mapped memory
-         */
-        void* get() const { return ptr_; }
-        /**
-         * @brief Gets the size of the mapped memory region
-         * @return The size in bytes
-         */
-        size_t size() const { return size_; }
-        MappedMemory(const MappedMemory&) = delete;
-        MappedMemory& operator=(const MappedMemory&) = delete;
-    private:
-        void* ptr_;
-        size_t size_;
-};
 /**
  * @struct SeekObj
  * @brief Struct to hold the results of a search within a posting list
@@ -111,8 +44,9 @@ struct SeekObj {
     Location delta;
     Location index;
     unsigned numOccurrences;
-    SeekObj(Location off, Location loc, Location idx, Location d, unsigned num) 
-    : offset(off), location(loc), index(idx), delta(d), numOccurrences(num) {}
+
+    SeekObj(Location off, Location loc, Location d, Location idx, unsigned num)
+      : offset(off), location(loc), delta(d), index(idx), numOccurrences(num) {}
 };
 /**
  * @class IndexFileReader
@@ -122,6 +56,7 @@ struct SeekObj {
  */
 class IndexFileReader {
 private:
+    static constexpr size_t FILENAME_BUFFER_SIZE = 32;
     /** @brief Vector holding unique pointers to memory-mapped regions for each index chunk file */
     std::vector<std::unique_ptr<MappedMemory>> mappedFiles;
     size_t FileSize(int f)
@@ -158,12 +93,11 @@ public:
      * Warnings are printed for files that cannot be opened or mapped, but construction continues
      * @param numChunks The total number of index chunk files to manage
      */
-    IndexFileReader(uint32_t numChunks) : mappedFiles() 
+    explicit IndexFileReader(uint32_t numChunks) : mappedFiles(numChunks) 
     {
-        mappedFiles.resize(numChunks);
         for (unsigned i = 0; i < numChunks; ++i)
         {
-            char indexFilename[32];
+            char indexFilename[FILENAME_BUFFER_SIZE];
             snprintf(indexFilename, sizeof(indexFilename), "IndexChunk_%05u", i);
             int fd = open(indexFilename, O_RDONLY, 0666);
             if (fd == -1) 
@@ -202,14 +136,18 @@ public:
       *         - An error occurs during parsing (e.g., offset out of bounds, read error)
       *         - No posting with location >= target exists in the list
       */
-    std::unique_ptr<SeekObj> Find(const std::string& word, Location target, uint32_t chunkNum) const {
+    std::unique_ptr<SeekObj> Find(
+        const std::string& word, 
+        Location target, 
+        uint32_t chunkNum) const {
+
         if (chunkNum >= mappedFiles.size() || !mappedFiles[chunkNum]) 
         {
             fprintf(stderr, "DEBUG: invalid chunkNum or unmapped chunk: %u\n", chunkNum);
             return nullptr;
         }
         // Finds word offset using HashFile
-        char hashFilename[32];
+        char hashFilename[FILENAME_BUFFER_SIZE];
         snprintf(hashFilename, sizeof(hashFilename), "HashFile_%05u", chunkNum);
         HashFile hashFile(hashFilename);
         const HashBlob *hashblob = hashFile.Blob();
@@ -273,8 +211,8 @@ public:
             uint64_t entryOffset;
             uint64_t entryLocation;
             
-            if (!readUint64_t(seekEntry, fileEnd, entryOffset)) { nullptr; }
-            if (!readUint64_t(seekEntry, fileEnd, entryLocation)) { nullptr; }
+            if (!readUint64_t(seekEntry, fileEnd, entryOffset)) { return nullptr; }
+            if (!readUint64_t(seekEntry, fileEnd, entryLocation)) { return nullptr; }
 
             uint64_t index = (tableIndex * BLOCK_SIZE) - 1;
       
@@ -292,7 +230,7 @@ public:
                 currentOffset += SizeOf(delta);
                 if (currentLocation >= target)
                 {
-                    return std::make_unique<SeekObj>(currentOffset, currentLocation, index, delta, numPosts);
+                    return std::make_unique<SeekObj>(currentOffset, currentLocation, delta, index, numPosts);
                 }
                 ++index;
             }
@@ -314,13 +252,13 @@ public:
                 currentOffset += SizeOf(delta);
                 if (currentLocation >= target)
                 {
-                    return std::make_unique<SeekObj>(currentOffset, currentLocation, index, delta, numPosts);
+                    return std::make_unique<SeekObj>(currentOffset, currentLocation, delta, index, numPosts);
                 }
                 index++;
             }
         }
 
-        return nullptr;;
+        return nullptr;
     }
 
     /**
@@ -335,7 +273,7 @@ public:
      */
     std::unique_ptr<Doc> FindUrl(uint32_t index, uint32_t chunkNum)
     {
-        if (!mappedFiles[chunkNum]) return nullptr;;
+        if (!mappedFiles[chunkNum]) return nullptr;
 
         const void* mapPtr = mappedFiles[chunkNum]->get();
         size_t fileSize = mappedFiles[chunkNum]->size();
@@ -357,7 +295,7 @@ public:
 
             uint64_t entryOffset;
             
-            if (!readUint64_t(entryPtr, fileEnd, entryOffset)) { return nullptr;; }
+            if (!readUint64_t(entryPtr, fileEnd, entryOffset)) { return nullptr; }
 
             const uint8_t* urlPtr = seekTable + (URL_ENTRY_SIZE * numSeekTableEntries) + entryOffset + numSeekTableEntriesSize;
             uint64_t urlIndex = (tableIndex * BLOCK_SIZE) - 1;

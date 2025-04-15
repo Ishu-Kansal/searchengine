@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html>
-
+  
 <head>
   <meta charset="utf-8" />
   <title>404 Found Search Engine</title>
+  <link rel="icon" type="image/jpg" href="/images/nabeel.jpg" />
+
   <!-- External CSS Libraries -->
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -31,6 +33,17 @@
           </div>
         </div>
       </form>
+    </div>
+
+    <!-- AI Summary Expandable Box -->
+    <div id="aiSummaryContainer" class="panel panel-default" style="display: none; margin-top: 20px;">
+      <div class="panel-heading" style="cursor: pointer;" onclick="toggleAISummary()">
+        <h4 class="panel-title">AI Summary <span id="aiToggleIcon"
+            class="pull-right glyphicon glyphicon-chevron-down"></span></h4>
+      </div>
+      <div class="panel-body" id="aiSummaryContent" style="display: none;">
+        <p id="aiSummaryText" style="white-space: pre-wrap; font-size: 1em; line-height: 1.6;"></p>
+      </div>
     </div>
 
     <!-- Search Results Area -->

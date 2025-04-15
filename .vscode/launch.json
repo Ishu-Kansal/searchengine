@@ -8,9 +8,9 @@
             "type": "lldb",
             "request": "launch",
             "name": "Debug",
-            "program": "${workspaceFolder}/src/debug",
+            "program": "${workspaceFolder}/src/inverted_index/debug",
             "args": [],
-            "cwd": "${workspaceFolder}/src/"
+            "cwd": "${workspaceFolder}/src/inverted_index/"
         }
     ]
 }

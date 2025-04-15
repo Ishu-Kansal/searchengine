@@ -141,7 +141,7 @@ class InvertedIndex {
  */
 class IndexChunk {
  public:
-  IndexChunk() : pos(0), url_list_size(0) 
+  IndexChunk() : url_list_size(0), pos(0) 
   {
     url_list.reserve(100000);
   }
