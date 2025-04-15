@@ -57,7 +57,7 @@ std::vector<string_view> run_engine(std::string& query) {
 }
 
 int main() {
-    std::string test_string = "banana"; 
+    std::string test_string = "apple banana "; 
     assert(!run_engine(test_string).empty()); 
     std::cout << "All tests passed." << std::endl;
     return 0;

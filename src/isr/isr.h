@@ -40,7 +40,9 @@ class ISRWord : public ISR {
 public:
     ISRWord() = delete;
     ISRWord(std::string word_in, const IndexFileReader& reader)
-        : reader_(reader), word(std::move(word_in)) {}
+        : reader_(reader), word(std::move(word_in)) {
+            Seek(0);
+        }
     
     SeekObj* Seek(Location target) override {
         currPost = reader_.Find(word, target, 0);
@@ -57,7 +59,8 @@ public:
     SeekObj* Next() override {
         auto post = GetCurrentPost();
         if (!post) return Seek(0);
-        return Seek(post->location + 1);
+        auto seekResult = Seek(post->location + 1);
+        return seekResult;
     }
     Location getStartLocation() override {
         return nearestStartLocation;
@@ -141,13 +144,15 @@ public:
         // the new nearest match.
         SeekObj * seekObj = terms[nearestTerm]->GetCurrentPost();
         if (!seekObj) return Seek(0);
-        return Seek(seekObj->location + 1);
+        auto seekResult = Seek(seekObj->location + 1);
+        return seekResult;
     }
     SeekObj* NextDocument() override {
         // Seek all the ISRs to the first occurrence just past
         // the end of this document.
         Location currEnd = getEndLocation();
-        return Seek(currEnd + 1);
+        auto seekResult = Seek(currEnd + 1);
+        return seekResult;
     }
 
 private:
@@ -234,11 +239,13 @@ public:
     {
         SeekObj * seekObj = terms[nearestTerm]->GetCurrentPost();
         if (!seekObj) return Seek(0);
-        return Seek(seekObj->location + 1);
+        auto seekResult = Seek(seekObj->location + 1);
+        return seekResult;
     }
     SeekObj * NextDocument() override
     {
-        return Seek(nearestEndLocation + 1);
+        auto seekResult = Seek(nearestEndLocation + 1);
+        return seekResult;
     }
 
 private:
@@ -308,11 +315,13 @@ public:
         // Finds overlapping phrase matches.
         auto firstPost =  terms[0]->GetCurrentPost();
         if (!firstPost) return Seek(0);
-        return Seek(firstPost->location + 1);
+        auto seekResult = Seek(firstPost->location + 1);
+        return seekResult;
     }
     SeekObj * NextDocument() override
     {
-        return Seek(nearestEndLocation + 1);
+        auto seekResult = Seek(nearestEndLocation + 1);
+        return seekResult;
     }
 
     Location getStartLocation() override
@@ -423,11 +432,14 @@ public:
     {
         SeekObj * seekObj = terms[nearestTerm]->GetCurrentPost();
         if (!seekObj) return Seek(0);
-        return Seek(seekObj->location + 1);
+        
+        auto seekResult = Seek(seekObj->location + 1);
+        return seekResult;
     }
     SeekObj * NextDocument() override
     {
-        return Seek(nearestEndLocation + 1);
+        auto seekResult = Seek(nearestEndLocation + 1);
+        return seekResult;
     }
 
 

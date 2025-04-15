@@ -84,22 +84,26 @@ std::vector<UrlRank> constraint_solver(std::unique_ptr<ISR> &queryISR, vector<ve
     AnchorTermIndex indices = get_anchor_ISR(orderedQueryTerms);
     int anchorOuterIndex = indices.outerIndex;
     int anchorInnerIndex = indices.innerIndex;
-    
+
     for (int i = 0; i < numChunks; ++i)
     {
-      SeekObj * docObj = queryISR->NextDocument(); 
-      std::unique_ptr<ISREndDoc> docISR; 
-      docISR->NextDocument();
+      
+      std::unique_ptr<ISREndDoc> docISR = make_unique<ISREndDoc>(reader); 
+      SeekObj * docObj = docISR->NextDocument();
       while (docObj) {
-  
-          int docStartLoc = queryISR->getStartLocation(); 
-          int docEndLoc = queryISR->getEndLocation(); 
+          auto seekResult = queryISR->Seek(docObj->location - docObj->delta);
+
+          int docEndLoc = docObj->location;
+          int docStartLoc = docObj->location - docObj->delta;
   
           // use the index to get relevant doc data
           unique_ptr<Doc> doc = reader.FindUrl(docObj->index, i);
           
-          int dynamic_score = get_dynamic_rank(orderedQueryTerms[anchorOuterIndex][anchorInnerIndex], orderedQueryTerms, docStartLoc, 
-                              docEndLoc);
+          int dynamic_score = get_dynamic_rank(
+            orderedQueryTerms[anchorOuterIndex][anchorInnerIndex],
+            orderedQueryTerms, 
+            docStartLoc, 
+            docEndLoc);
           
 
           UrlRank urlRank = {doc->url, dynamic_score + doc->staticRank}; 

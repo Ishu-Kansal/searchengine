@@ -72,13 +72,12 @@ int get_dynamic_rank(std::unique_ptr<ISRWord> &anchorTerm, vector<vector<std::un
     // seek all of the ISRs to the start location
     for (int i = 0; i < phraseTerms.size(); i++) {
         for (int j = 0; j < phraseTerms[i].size(); j++) {
-            phraseTerms[i][j]->Seek(startLocation);
+            auto temp = phraseTerms[i][j]->Seek(startLocation);
         }
     }
     // need to calculate the remaining amount of spans(shortSpans, orderedSpans, and topSpans)
-    while (anchorTerm->GetCurrentPost()->location < endLoc) {
-        // get the current post of the anchored ISR(rarest term)
-        auto anchorPost = anchorTerm->GetCurrentPost(); 
+    SeekObj * anchorPost = anchorTerm->GetCurrentPost();
+    while (anchorPost && anchorPost->location < endLoc) {
         // declare the current spans distance
         int currSpan = 0;
         // declare it to be near the top for each iteration
