@@ -43,7 +43,7 @@ std::vector<string_view> run_engine(std::string& query) {
 
         std::cout << "Sequences size: " << sequences.size() << std::endl;
 
-       std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, 1);
+       std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, 1, reader);
  
        std::vector<std::string_view> urls;
        urls.reserve(raw_results.size());

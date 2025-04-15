@@ -75,7 +75,8 @@ AnchorTermIndex get_anchor_ISR(vector<vector<std::unique_ptr<ISRWord>>> &ordered
 }
 
 // actual constraint solver function
-std::vector<UrlRank> constraint_solver(std::unique_ptr<ISR> &queryISR, vector<vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms, uint32_t numChunks) {
+std::vector<UrlRank> constraint_solver(std::unique_ptr<ISR> &queryISR, vector<vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms, uint32_t numChunks,
+                                       IndexFileReader& reader) {
     // create an ISR for document seeking
     std::vector<UrlRank> topNdocs;
     topNdocs.reserve(TOTAL_DOCS_TO_RETURN);
@@ -83,11 +84,12 @@ std::vector<UrlRank> constraint_solver(std::unique_ptr<ISR> &queryISR, vector<ve
     AnchorTermIndex indices = get_anchor_ISR(orderedQueryTerms);
     int anchorOuterIndex = indices.outerIndex;
     int anchorInnerIndex = indices.innerIndex;
-    // seek to the first occurence
-    IndexFileReader reader(numChunks);
+    
     for (int i = 0; i < numChunks; ++i)
     {
       SeekObj * docObj = queryISR->NextDocument(); 
+      std::unique_ptr<ISREndDoc> docISR; 
+      docISR->NextDocument();
       while (docObj) {
   
           int docStartLoc = queryISR->getStartLocation(); 
