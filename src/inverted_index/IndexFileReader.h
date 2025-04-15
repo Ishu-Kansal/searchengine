@@ -111,8 +111,9 @@ struct SeekObj {
     Location delta;
     Location index;
     unsigned numOccurrences;
-    SeekObj(Location off, Location loc, Location idx, Location d, unsigned num) 
-    : offset(off), location(loc), index(idx), delta(d), numOccurrences(num) {}
+    // Fixed initializer-order: delta then index
+    SeekObj(Location off, Location loc, Location d, Location idx, unsigned num)
+      : offset(off), location(loc), delta(d), index(idx), numOccurrences(num) {}
 };
 /**
  * @class IndexFileReader
@@ -273,8 +274,8 @@ public:
             uint64_t entryOffset;
             uint64_t entryLocation;
             
-            if (!readUint64_t(seekEntry, fileEnd, entryOffset)) { nullptr; }
-            if (!readUint64_t(seekEntry, fileEnd, entryLocation)) { nullptr; }
+            if (!readUint64_t(seekEntry, fileEnd, entryOffset)) { return nullptr; }
+            if (!readUint64_t(seekEntry, fileEnd, entryLocation)) { return nullptr; }
 
             uint64_t index = (tableIndex * BLOCK_SIZE) - 1;
       
