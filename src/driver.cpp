@@ -21,6 +21,8 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <fstream>  // add this at the top of your file
+
 
 #include <string>
 #include <sstream>
@@ -77,6 +79,16 @@ SearchResult get_and_parse_url(const cstring_view& url) {
    int status = getHTML(url_str, html);
    SearchResult result;
    result.url = url_str;
+
+   if (url_str == "https://www.python.org/") {
+      std::ofstream out("test.txt");
+      if (out.is_open()) {
+          out << html;
+          out.close();
+      } else {
+          std::cerr << "Failed to open test.txt for writing.\n";
+      }
+  }
 
 
    // Check if fetching was successful
