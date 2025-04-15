@@ -51,7 +51,6 @@ public:
 
    // The Key will be a C-string of whatever length.
    char Key[Unknown];
-
    // Calculate the bytes required to encode a HashBucket as a
    // SerialTuple.
 
@@ -134,7 +133,7 @@ public:
        Version,
        BlobSize,
        NumberOfBuckets,
-       Buckets[Unknown];
+       Buckets[1]; // using one element array
       
        const SerialTuple *Find(const char *key) const
        {

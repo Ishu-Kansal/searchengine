@@ -147,8 +147,6 @@ class HtmlParser {
 
     links.emplace_back(url);
 
-    size_t link_idx = links.size() - 1;
-
     // move past the next >
     while (buffer[index] != '>') {
       index++;
@@ -683,7 +681,6 @@ class HtmlParser {
           }
           
           case DesiredAction::Meta: {
-            bool in_quotes = false;
             char quote_type = 0;
             std::string name_value, content_value;
             bool has_name_description = false;

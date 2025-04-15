@@ -28,7 +28,7 @@ class ParsedUrl {
     pathBuffer = new char[strlen(url) + 1];
     const char *f;
     char *t;
-    for (t = pathBuffer, f = url; *t++ = *f++;);
+    for (t = pathBuffer, f = url; (*t++ = *f++););
 
     Service = pathBuffer;
 
