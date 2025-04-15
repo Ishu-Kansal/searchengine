@@ -7,14 +7,13 @@
 #include <iostream>
 #include <string>
 #include <fstream>
-#include "globals.h"
 
-
-// extern std::vector<std::vector<std::unique_ptr<ISRWord>>> sequences;
 
 // driver function for the search engine
 std::vector<string_view> run_engine(std::string& query) {
 
+    uint32_t numChunks = 1;
+    std::vector<std::vector<std::unique_ptr<ISRWord>>> sequences;
     IndexChunk indexChunk;
     std::string url = "http://example.com";
     size_t rank = 1;
@@ -34,9 +33,9 @@ std::vector<string_view> run_engine(std::string& query) {
     uint32_t chunkNum = 0;
     IndexFile indexFile(chunkNum, indexChunk);
 
-    IndexFileReader reader(1);
+    IndexFileReader reader(numChunks);
 
-    QueryParser parser(query);
+    QueryParser parser(query, numChunks, reader);
     std::unique_ptr<Constraint> c = parser.Parse();
  
     if (c) {
@@ -52,11 +51,6 @@ std::vector<string_view> run_engine(std::string& query) {
  
     } 
     return {}; 
-}
-
-bool fileExists(const std::string &filename) {
-    std::ifstream file(filename);
-    return file.good();
 }
 
 int main() {

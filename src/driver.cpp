@@ -34,8 +34,6 @@
 #include "../HtmlParser/HtmlParser.h"
 #include "./crawler/sockets.h"
 
-extern std::vector<vector<ISRWord*>> sequences;
-
 /**
  * @brief Struct to represent a single search result.
  * 

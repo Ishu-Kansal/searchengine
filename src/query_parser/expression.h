@@ -1,29 +1,27 @@
 #pragma once
 #include "../isr/isr.h"
-#include "../globals.h"
 #include <iostream>
 #include <vector>
 #include <string>
-
-// extern std::vector<std::vector<std::unique_ptr<ISRWord>>> sequences;
 
 // ---------- Base Constraint ----------
 
 class Constraint {
 protected:
     const IndexFileReader& reader_;
+    mutable std::vector<std::vector<std::unique_ptr<ISR>>> sequences;
 public:
-    Constraint(const IndexFileReader& reader) : reader_(reader) {}
+    Constraint(const IndexFileReader& reader, std::vector<std::vector<std::unique_ptr<ISR>>> sequences) : reader_(reader), sequences(std::move(sequences)) {}
     virtual ~Constraint() = default;
     virtual std::unique_ptr<ISR> Eval() const = 0;
+    // void ClearSequences() { sequences.clear(); }
 };
-
 // ---------- Sequence Constraint -----
 class SequenceConstraint : public Constraint {
     std::vector<std::string> words;
 public:
     SequenceConstraint(const std::vector<std::string> &words, const IndexFileReader& reader)
-        : Constraint(reader), words(words) {}
+        : Constraint(reader, std::vector<std::vector<std::unique_ptr<ISR>>>()), words(words) {}
 
     ~SequenceConstraint() override = default;
 
@@ -66,7 +64,7 @@ class AndConstraint : public Constraint {
     std::unique_ptr<Constraint> right;
 public:
     AndConstraint(std::unique_ptr<Constraint> l, std::unique_ptr<Constraint> r, const IndexFileReader& reader)
-        : Constraint(reader), left(std::move(l)), right(std::move(r)) {}
+        : Constraint(reader, std::vector<std::vector<std::unique_ptr<ISR>>>()), left(std::move(l)), right(std::move(r)) {}
 
     ~AndConstraint() override = default;
 
@@ -88,7 +86,7 @@ class OrConstraint : public Constraint {
     std::unique_ptr<Constraint> right;
 public:
     OrConstraint(std::unique_ptr<Constraint> l, std::unique_ptr<Constraint> r, const IndexFileReader& reader)
-        : Constraint(reader), left(std::move(l)), right(std::move(r)) {}
+        : Constraint(reader, std::vector<std::vector<std::unique_ptr<ISR>>>()), left(std::move(l)), right(std::move(r)) {}
 
     ~OrConstraint() override = default;
 
@@ -110,7 +108,7 @@ class PhraseConstraint : public Constraint {
     std::vector<std::string> words;
 public:
     PhraseConstraint(const std::vector<std::string> &w, const IndexFileReader& reader)
-        : Constraint(reader), words(w) {}
+        : Constraint(reader, std::vector<std::vector<std::unique_ptr<ISR>>>()), words(w) {}
 
     ~PhraseConstraint() override = default;
 

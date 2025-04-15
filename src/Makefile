@@ -5,11 +5,10 @@ LIBS = -ldl -lssl -lcrypto
 
 # Common source files used by all driver*.cpp targets
 COMMON_SRC = \
-  globals.cpp \
   ../HtmlParser/HtmlTags.cpp \
   query_parser/parser.cpp \
   query_parser/tokenstream.cpp 
-# All driver*.cpp files in src
+# All driver*.cpp files in src  
 DRIVER_SRCS := $(wildcard driver*.cpp)
 
 # Convert src/driverX.cpp → driverX (executable names)
@@ -27,3 +26,5 @@ clean:
 debug: CXXFLAGS += -g3 -DDEBUG -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG
 debug: drivertest1.cpp $(COMMON_SRC)
 	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) $(LIBS) -o debug
+
+

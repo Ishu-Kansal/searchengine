@@ -133,7 +133,7 @@ public:
        Version,
        BlobSize,
        NumberOfBuckets,
-       Buckets[1]; // using one element array
+       Buckets[Unknown]; 
       
        const SerialTuple *Find(const char *key) const
        {
