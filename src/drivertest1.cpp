@@ -21,7 +21,7 @@ std::vector<string_view> run_engine(std::string& query) {
     
     std::string wordApple = "apple";
 
-    for(int i = 0; i < (1 << 14); ++i)
+    for(int i = 0; i < (4); ++i)
     {
         indexChunk.add_word(wordApple, false);
     }
@@ -39,7 +39,10 @@ std::vector<string_view> run_engine(std::string& query) {
     std::unique_ptr<Constraint> c = parser.Parse();
  
     if (c) {
-       std::unique_ptr<ISR> isrs = c->Eval();
+       std::unique_ptr<ISR> isrs = c->Eval(sequences);
+
+        std::cout << "Sequences size: " << sequences.size() << std::endl;
+
        std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, 1);
  
        std::vector<std::string_view> urls;

@@ -11,7 +11,7 @@ class QueryParser {
 
 public:
     explicit QueryParser(std::string &query, uint32_t numIndexChunks, const IndexFileReader & reader);
-    
+
     std::unique_ptr<Constraint> Parse();
 
 private:
