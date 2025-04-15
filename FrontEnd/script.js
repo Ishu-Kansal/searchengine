@@ -42,6 +42,7 @@ searchForm.addEventListener('submit', async function (e) {
   currentPage = 0;
   allResults = [];
   searchResultsContainer.innerHTML = ''; // Clear previous results immediately
+  document.getElementById('aiSummaryContainer').style.display = 'none';
   paginationControls.style.display = 'none'; // Hide pagination
 
   // --- UI Updates for Loading ---
@@ -61,56 +62,57 @@ searchForm.addEventListener('submit', async function (e) {
   let aiText = "";
 
   try {
-    // --- Fetch AI Summary ---
-    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer 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"
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: "You are a non-interactive information assistant. When given a search query, respond with one clear, neutral, and self-contained paragraph that explains the topic. Do not include links. Do not ask questions. Do not invite further interaction."
-          },
-          {
-            role: "user",
-            content: "Search engine query: " + query
-          }
-        ]
+    const [aiResponse, searchResponse] = await Promise.all([
+      fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer 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"
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: "You are a non-interactive information assistant. When given a search query, respond with one clear, neutral, and self-contained paragraph that explains the topic. Do not include links. Do not ask questions. Do not invite further interaction."
+            },
+            {
+              role: "user",
+              content: "Search engine query: " + query
+            }
+          ]
+        })
+      }),
+      fetch('/api/search/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8'
+        },
+        body: JSON.stringify({ query })
       })
-    });
-
+    ]);
+  
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
       throw new Error(`AI API error: ${aiResponse.status} - ${errorText}`);
     }
-
-    const aiData = await aiResponse.json();
-    aiText = aiData.choices?.[0]?.message?.content || "";
-
-    // --- Fetch Search Results ---
-    const searchResponse = await fetch('/api/search/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
-      },
-      body: JSON.stringify({ query })
-    });
-
+  
     if (!searchResponse.ok) {
       const errorText = await searchResponse.text();
       throw new Error(`Search API error: ${searchResponse.status} - ${errorText}`);
     }
-
-    const searchData = await searchResponse.json();
-
+  
+    const [aiData, searchData] = await Promise.all([
+      aiResponse.json(),
+      searchResponse.json()
+    ]);
+  
+    aiText = aiData.choices?.[0]?.message?.content || "";
+  
     if (!Array.isArray(searchData.results)) {
       throw new Error("Invalid data format received from server.");
     }
-
+  
     if (searchData.results.length === 0) {
       searchResultsContainer.innerHTML = `
         <p style="text-align: center; color: #a58d8d; margin-top: 30px;">
@@ -121,14 +123,15 @@ searchForm.addEventListener('submit', async function (e) {
       renderPage(0); // Render the first page
       paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
     }
-
+  
   } catch (error) {
     console.error('Search Error:', error);
     searchResultsContainer.innerHTML = `
       <p style="text-align: center; color: #ec2225; margin-top: 30px;">
         An error occurred: ${error.message}. Please try again.
       </p>`;
-  } finally {
+  }  
+  finally {
     // --- Cleanup UI After Loading ---
     clearInterval(gifInterval); // Stop changing GIFs
     gifInterval = null;
