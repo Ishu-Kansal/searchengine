@@ -5,6 +5,7 @@ package cloudcrawler;
 service Dispatcher {
   rpc GetUrl(Empty) returns (GetResponse) {}
   rpc AddUrl(AddRequest) returns (Empty) {}
+  rpc SaveService(Empty) returns (Empty) {}
 }
 
 message Empty {}

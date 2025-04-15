@@ -25,10 +25,15 @@ include(./common.cmake)
 
 # Find absl package
 find_package(absl CONFIG REQUIRED)
+# set(OPENSSL_ROOT_DIR ./local/lib)
+set(OPENSSL_USE_STATIC_LIBS TRUE)
+find_package(OpenSSL REQUIRED)
 
 # Proto file
 get_filename_component(rg_proto "./protos/info.proto" ABSOLUTE)
 get_filename_component(rg_proto_path "${rg_proto}" PATH)
+
+set(BUILD_MODE Debug)
 
 # Generated sources
 set(rg_proto_srcs "${CMAKE_CURRENT_BINARY_DIR}/info.pb.cc")
@@ -73,9 +78,9 @@ target_link_libraries(html_parser
 
 # Targets route_guide_(client|server)
 foreach(_target
-  dispatcher crawler)
+  dispatcher crawler save_dispatcher)
   add_executable(${_target}
-    "./${_target}/${_target}.cpp")
+    "./${_target}.cpp")
   target_link_libraries(${_target}
     rg_grpc_proto
     html_parser
@@ -83,7 +88,11 @@ foreach(_target
     absl::absl_log
     absl::log_initialize
     absl::log_globals
+   # OpenSSL::SSL
+   # OpenSSL::Crypto
+   # PUBLIC google-cloud-cpp::storage
     ${_REFLECTION}
     ${_GRPC_GRPCPP}
     ${_PROTOBUF_LIBPROTOBUF})
+  set_property(TARGET ${_target} PROPERTY CXX_STANDARD 17)
 endforeach()

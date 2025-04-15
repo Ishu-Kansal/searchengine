@@ -67,6 +67,7 @@ all: CMakeFiles/rg_grpc_proto.dir/all
 all: CMakeFiles/html_parser.dir/all
 all: CMakeFiles/dispatcher.dir/all
 all: CMakeFiles/crawler.dir/all
+all: CMakeFiles/save_dispatcher.dir/all
 .PHONY : all
 
 # The main recursive "codegen" target.
@@ -74,6 +75,7 @@ codegen: CMakeFiles/rg_grpc_proto.dir/codegen
 codegen: CMakeFiles/html_parser.dir/codegen
 codegen: CMakeFiles/dispatcher.dir/codegen
 codegen: CMakeFiles/crawler.dir/codegen
+codegen: CMakeFiles/save_dispatcher.dir/codegen
 .PHONY : codegen
 
 # The main recursive "preinstall" target.
@@ -85,6 +87,7 @@ clean: CMakeFiles/rg_grpc_proto.dir/clean
 clean: CMakeFiles/html_parser.dir/clean
 clean: CMakeFiles/dispatcher.dir/clean
 clean: CMakeFiles/crawler.dir/clean
+clean: CMakeFiles/save_dispatcher.dir/clean
 .PHONY : clean
 
 #=============================================================================
@@ -216,6 +219,39 @@ CMakeFiles/crawler.dir/codegen:
 CMakeFiles/crawler.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/crawler.dir/build.make CMakeFiles/crawler.dir/clean
 .PHONY : CMakeFiles/crawler.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/save_dispatcher.dir
+
+# All Build rule for target.
+CMakeFiles/save_dispatcher.dir/all: CMakeFiles/rg_grpc_proto.dir/all
+CMakeFiles/save_dispatcher.dir/all: CMakeFiles/html_parser.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/save_dispatcher.dir/build.make CMakeFiles/save_dispatcher.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/save_dispatcher.dir/build.make CMakeFiles/save_dispatcher.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/CMakeFiles --progress-num=11,12 "Built target save_dispatcher"
+.PHONY : CMakeFiles/save_dispatcher.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/save_dispatcher.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/CMakeFiles 8
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/save_dispatcher.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/CMakeFiles 0
+.PHONY : CMakeFiles/save_dispatcher.dir/rule
+
+# Convenience name for target.
+save_dispatcher: CMakeFiles/save_dispatcher.dir/rule
+.PHONY : save_dispatcher
+
+# codegen rule for target.
+CMakeFiles/save_dispatcher.dir/codegen:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/save_dispatcher.dir/build.make CMakeFiles/save_dispatcher.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/CMakeFiles --progress-num=11,12 "Finished codegen for target save_dispatcher"
+.PHONY : CMakeFiles/save_dispatcher.dir/codegen
+
+# clean rule for target.
+CMakeFiles/save_dispatcher.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/save_dispatcher.dir/build.make CMakeFiles/save_dispatcher.dir/clean
+.PHONY : CMakeFiles/save_dispatcher.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

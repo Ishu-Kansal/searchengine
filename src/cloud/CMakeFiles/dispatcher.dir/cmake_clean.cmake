@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.o"
-  "CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.o.d"
+  "CMakeFiles/dispatcher.dir/dispatcher.cpp.o"
+  "CMakeFiles/dispatcher.dir/dispatcher.cpp.o.d"
   "dispatcher"
   "dispatcher.pdb"
 )

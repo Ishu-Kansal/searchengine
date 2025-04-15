@@ -50,6 +50,13 @@ class Dispatcher final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>> PrepareAsyncAddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>>(PrepareAsyncAddUrlRaw(context, request, cq));
     }
+    virtual ::grpc::Status SaveService(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::cloudcrawler::Empty* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>> AsyncSaveService(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>>(AsyncSaveServiceRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>> PrepareAsyncSaveService(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>>(PrepareAsyncSaveServiceRaw(context, request, cq));
+    }
     class async_interface {
      public:
       virtual ~async_interface() {}
@@ -57,6 +64,8 @@ class Dispatcher final {
       virtual void GetUrl(::grpc::ClientContext* context, const ::cloudcrawler::Empty* request, ::cloudcrawler::GetResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
       virtual void AddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response, std::function<void(::grpc::Status)>) = 0;
       virtual void AddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void SaveService(::grpc::ClientContext* context, const ::cloudcrawler::Empty* request, ::cloudcrawler::Empty* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void SaveService(::grpc::ClientContext* context, const ::cloudcrawler::Empty* request, ::cloudcrawler::Empty* response, ::grpc::ClientUnaryReactor* reactor) = 0;
     };
     typedef class async_interface experimental_async_interface;
     virtual class async_interface* async() { return nullptr; }
@@ -66,6 +75,8 @@ class Dispatcher final {
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::GetResponse>* PrepareAsyncGetUrlRaw(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>* AsyncAddUrlRaw(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>* PrepareAsyncAddUrlRaw(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>* AsyncSaveServiceRaw(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::cloudcrawler::Empty>* PrepareAsyncSaveServiceRaw(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::grpc::CompletionQueue* cq) = 0;
   };
   class Stub final : public StubInterface {
    public:
@@ -84,6 +95,13 @@ class Dispatcher final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>> PrepareAsyncAddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>>(PrepareAsyncAddUrlRaw(context, request, cq));
     }
+    ::grpc::Status SaveService(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::cloudcrawler::Empty* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>> AsyncSaveService(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>>(AsyncSaveServiceRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>> PrepareAsyncSaveService(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>>(PrepareAsyncSaveServiceRaw(context, request, cq));
+    }
     class async final :
       public StubInterface::async_interface {
      public:
@@ -91,6 +109,8 @@ class Dispatcher final {
       void GetUrl(::grpc::ClientContext* context, const ::cloudcrawler::Empty* request, ::cloudcrawler::GetResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
       void AddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response, std::function<void(::grpc::Status)>) override;
       void AddUrl(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void SaveService(::grpc::ClientContext* context, const ::cloudcrawler::Empty* request, ::cloudcrawler::Empty* response, std::function<void(::grpc::Status)>) override;
+      void SaveService(::grpc::ClientContext* context, const ::cloudcrawler::Empty* request, ::cloudcrawler::Empty* response, ::grpc::ClientUnaryReactor* reactor) override;
      private:
       friend class Stub;
       explicit async(Stub* stub): stub_(stub) { }
@@ -106,8 +126,11 @@ class Dispatcher final {
     ::grpc::ClientAsyncResponseReader< ::cloudcrawler::GetResponse>* PrepareAsyncGetUrlRaw(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>* AsyncAddUrlRaw(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>* PrepareAsyncAddUrlRaw(::grpc::ClientContext* context, const ::cloudcrawler::AddRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>* AsyncSaveServiceRaw(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::cloudcrawler::Empty>* PrepareAsyncSaveServiceRaw(::grpc::ClientContext* context, const ::cloudcrawler::Empty& request, ::grpc::CompletionQueue* cq) override;
     const ::grpc::internal::RpcMethod rpcmethod_GetUrl_;
     const ::grpc::internal::RpcMethod rpcmethod_AddUrl_;
+    const ::grpc::internal::RpcMethod rpcmethod_SaveService_;
   };
   static std::unique_ptr<Stub> NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
 
@@ -117,6 +140,7 @@ class Dispatcher final {
     virtual ~Service();
     virtual ::grpc::Status GetUrl(::grpc::ServerContext* context, const ::cloudcrawler::Empty* request, ::cloudcrawler::GetResponse* response);
     virtual ::grpc::Status AddUrl(::grpc::ServerContext* context, const ::cloudcrawler::AddRequest* request, ::cloudcrawler::Empty* response);
+    virtual ::grpc::Status SaveService(::grpc::ServerContext* context, const ::cloudcrawler::Empty* request, ::cloudcrawler::Empty* response);
   };
   template <class BaseClass>
   class WithAsyncMethod_GetUrl : public BaseClass {
@@ -158,7 +182,27 @@ class Dispatcher final {
       ::grpc::Service::RequestAsyncUnary(1, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_GetUrl<WithAsyncMethod_AddUrl<Service > > AsyncService;
+  template <class BaseClass>
+  class WithAsyncMethod_SaveService : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_SaveService() {
+      ::grpc::Service::MarkMethodAsync(2);
+    }
+    ~WithAsyncMethod_SaveService() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status SaveService(::grpc::ServerContext* /*context*/, const ::cloudcrawler::Empty* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestSaveService(::grpc::ServerContext* context, ::cloudcrawler::Empty* request, ::grpc::ServerAsyncResponseWriter< ::cloudcrawler::Empty>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(2, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  typedef WithAsyncMethod_GetUrl<WithAsyncMethod_AddUrl<WithAsyncMethod_SaveService<Service > > > AsyncService;
   template <class BaseClass>
   class WithCallbackMethod_GetUrl : public BaseClass {
    private:
@@ -213,7 +257,34 @@ class Dispatcher final {
     virtual ::grpc::ServerUnaryReactor* AddUrl(
       ::grpc::CallbackServerContext* /*context*/, const ::cloudcrawler::AddRequest* /*request*/, ::cloudcrawler::Empty* /*response*/)  { return nullptr; }
   };
-  typedef WithCallbackMethod_GetUrl<WithCallbackMethod_AddUrl<Service > > CallbackService;
+  template <class BaseClass>
+  class WithCallbackMethod_SaveService : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_SaveService() {
+      ::grpc::Service::MarkMethodCallback(2,
+          new ::grpc::internal::CallbackUnaryHandler< ::cloudcrawler::Empty, ::cloudcrawler::Empty>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::cloudcrawler::Empty* request, ::cloudcrawler::Empty* response) { return this->SaveService(context, request, response); }));}
+    void SetMessageAllocatorFor_SaveService(
+        ::grpc::MessageAllocator< ::cloudcrawler::Empty, ::cloudcrawler::Empty>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(2);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::cloudcrawler::Empty, ::cloudcrawler::Empty>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_SaveService() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status SaveService(::grpc::ServerContext* /*context*/, const ::cloudcrawler::Empty* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* SaveService(
+      ::grpc::CallbackServerContext* /*context*/, const ::cloudcrawler::Empty* /*request*/, ::cloudcrawler::Empty* /*response*/)  { return nullptr; }
+  };
+  typedef WithCallbackMethod_GetUrl<WithCallbackMethod_AddUrl<WithCallbackMethod_SaveService<Service > > > CallbackService;
   typedef CallbackService ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_GetUrl : public BaseClass {
@@ -245,6 +316,23 @@ class Dispatcher final {
     }
     // disable synchronous version of this method
     ::grpc::Status AddUrl(::grpc::ServerContext* /*context*/, const ::cloudcrawler::AddRequest* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_SaveService : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_SaveService() {
+      ::grpc::Service::MarkMethodGeneric(2);
+    }
+    ~WithGenericMethod_SaveService() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status SaveService(::grpc::ServerContext* /*context*/, const ::cloudcrawler::Empty* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -290,6 +378,26 @@ class Dispatcher final {
     }
   };
   template <class BaseClass>
+  class WithRawMethod_SaveService : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_SaveService() {
+      ::grpc::Service::MarkMethodRaw(2);
+    }
+    ~WithRawMethod_SaveService() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status SaveService(::grpc::ServerContext* /*context*/, const ::cloudcrawler::Empty* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestSaveService(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(2, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
   class WithRawCallbackMethod_GetUrl : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
@@ -331,6 +439,28 @@ class Dispatcher final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     virtual ::grpc::ServerUnaryReactor* AddUrl(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_SaveService : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_SaveService() {
+      ::grpc::Service::MarkMethodRawCallback(2,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->SaveService(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_SaveService() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status SaveService(::grpc::ServerContext* /*context*/, const ::cloudcrawler::Empty* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* SaveService(
       ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
@@ -387,9 +517,36 @@ class Dispatcher final {
     // replace default version of method with streamed unary
     virtual ::grpc::Status StreamedAddUrl(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::cloudcrawler::AddRequest,::cloudcrawler::Empty>* server_unary_streamer) = 0;
   };
-  typedef WithStreamedUnaryMethod_GetUrl<WithStreamedUnaryMethod_AddUrl<Service > > StreamedUnaryService;
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_SaveService : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_SaveService() {
+      ::grpc::Service::MarkMethodStreamed(2,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::cloudcrawler::Empty, ::cloudcrawler::Empty>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::cloudcrawler::Empty, ::cloudcrawler::Empty>* streamer) {
+                       return this->StreamedSaveService(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_SaveService() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status SaveService(::grpc::ServerContext* /*context*/, const ::cloudcrawler::Empty* /*request*/, ::cloudcrawler::Empty* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedSaveService(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::cloudcrawler::Empty,::cloudcrawler::Empty>* server_unary_streamer) = 0;
+  };
+  typedef WithStreamedUnaryMethod_GetUrl<WithStreamedUnaryMethod_AddUrl<WithStreamedUnaryMethod_SaveService<Service > > > StreamedUnaryService;
   typedef Service SplitStreamedService;
-  typedef WithStreamedUnaryMethod_GetUrl<WithStreamedUnaryMethod_AddUrl<Service > > StreamedService;
+  typedef WithStreamedUnaryMethod_GetUrl<WithStreamedUnaryMethod_AddUrl<WithStreamedUnaryMethod_SaveService<Service > > > StreamedService;
 };
 
 }  // namespace cloudcrawler

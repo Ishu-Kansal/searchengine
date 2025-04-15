@@ -102,4 +102,5 @@ set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/html_parser.dir/DependInfo.cmake"
   "CMakeFiles/dispatcher.dir/DependInfo.cmake"
   "CMakeFiles/crawler.dir/DependInfo.cmake"
+  "CMakeFiles/save_dispatcher.dir/DependInfo.cmake"
   )

@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/crawler.dir/crawler/crawler.cpp.o"
-  "CMakeFiles/crawler.dir/crawler/crawler.cpp.o.d"
+  "CMakeFiles/crawler.dir/crawler.cpp.o"
+  "CMakeFiles/crawler.dir/crawler.cpp.o.d"
   "crawler"
   "crawler.pdb"
 )

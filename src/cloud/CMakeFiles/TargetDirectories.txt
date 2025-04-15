@@ -2,5 +2,6 @@
 /Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/CMakeFiles/html_parser.dir
 /Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/CMakeFiles/dispatcher.dir
 /Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/CMakeFiles/crawler.dir
+/Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/CMakeFiles/save_dispatcher.dir
 /Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/CMakeFiles/edit_cache.dir
 /Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/CMakeFiles/rebuild_cache.dir

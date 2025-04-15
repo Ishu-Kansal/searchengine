@@ -13,7 +13,7 @@
 #include <memory>
 
 #include "../../utils/cunique_ptr.h"
-#include "robotParser.h"
+// #include "robotParser.h"
 class ParsedUrl {
  public:
   const char *CompleteUrl;
@@ -84,33 +84,32 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   if (getaddrinfo(url.Host, (*url.Port ? url.Port : "443"), &hints, &address) !=
       0) {
     // std::cerr << "Failed to resolve host" << std::endl;
-    return 1;
+    return 2;
   }
-
   // Create a socket
   int socketFD = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (socketFD < 0) {
     std::cerr << "Failed to create socket" << std::endl;
     freeaddrinfo(address);
-    return 1;
+    return 3;
   }
-
   // Connect the socket
   if (connect(socketFD, address->ai_addr, address->ai_addrlen) < 0) {
     std::cerr << "Failed to connect to host" << std::endl;
     close(socketFD);
     freeaddrinfo(address);
-    return 1;
+    return 4;
   }
   freeaddrinfo(address);  // Done with the address info
   // std::cout << req;
   // Initialize SSL
   SSL_library_init();
+  assert(SSLv23_method() != nullptr);
   SSL_CTX *ctx = SSL_CTX_new(SSLv23_method());
   if (!ctx) {
     std::cerr << "Failed to create SSL context" << std::endl;
     close(socketFD);
-    return 1;
+    return 5;
   }
 
   SSL *ssl = SSL_new(ctx);
@@ -118,7 +117,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
     std::cerr << "could not create ssl object" << std::endl;
     SSL_CTX_free(ctx);
     close(socketFD);
-    return 1;
+    return 6;
   }
 
   struct timeval tv;
@@ -132,10 +131,10 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
     SSL_free(ssl);
     SSL_CTX_free(ctx);
     close(socketFD);
-    return 1;
+    return 7;
   }
 
-  int val = 1;
+  /*int val = 1;
   ret = setsockopt(socketFD, SOL_SOCKET, SO_NOSIGPIPE, &val, sizeof(val));
 
   if (ret != 0) {
@@ -143,8 +142,8 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
     SSL_free(ssl);
     SSL_CTX_free(ctx);
     close(socketFD);
-    return 1;
-  }
+    return 8;
+  }*/
 
   SSL_set_fd(ssl, socketFD);
 
@@ -154,7 +153,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
     SSL_free(ssl);
     SSL_CTX_free(ctx);
     close(socketFD);
-    return 1;
+    return 9;
   }
 
   if (SSL_write(ssl, req.c_str(), req.length()) <= 0) {
@@ -163,7 +162,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
     SSL_free(ssl);
     SSL_CTX_free(ctx);
     close(socketFD);
-    return 1;
+    return 10;
   }
 
   // Read and process the response
@@ -192,7 +191,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
         SSL_free(ssl);
         SSL_CTX_free(ctx);
         close(socketFD);
-        return -1;
+        return 11;
       }
       int code = atoi(header.data() + 9);
       if (code == 0) {
@@ -200,7 +199,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
         SSL_free(ssl);
         SSL_CTX_free(ctx);
         close(socketFD);
-        return -1;
+        return 12;
       }
       if (code == 301) break;
 
@@ -241,8 +240,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   SSL_free(ssl);
   SSL_CTX_free(ctx);
   close(socketFD);
-  if (code == 404)
-  {
+  if (code == 404) {
     return 404;
   }
   return 0;
@@ -250,21 +248,21 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
 
 int getHTML(std::string url_in, std::string &output) {
   ParsedUrl url(url_in.data());
-  static RobotParser bot;
-  int robotStatus = bot.handleRobotFile(url, url_in);
-  if (robotStatus == 0)
-  {
+  // static RobotParser bot;
+  //  int robotStatus = bot.handleRobotFile(url, url_in);
+  int robotStatus = 0;
+  if (robotStatus == 0) {
     // Send the GET request
     std::string req =
-    "GET /" + std::string(url.Path) +
-    " HTTP/1.1\r\n"
-    "Host: " +
-    std::string(url.Host) +
-    "\r\n"
-    "User-Agent: SonOfAnton/1.0 404FoundEngine@umich.edu (Linux)\r\n"
-    "Accept: */*\r\n"
-    "Accept-Encoding: identity\r\n"
-    "Connection: close\r\n\r\n";
+        "GET /" + std::string(url.Path) +
+        " HTTP/1.1\r\n"
+        "Host: " +
+        std::string(url.Host) +
+        "\r\n"
+        "User-Agent: SonOfAnton/1.0 404FoundEngine@umich.edu (Linux)\r\n"
+        "Accept: */*\r\n"
+        "Accept-Encoding: identity\r\n"
+        "Connection: close\r\n\r\n";
 
     int status = runSocket(req, url_in, output);
     // std::cout << status << std::endl;
@@ -272,23 +270,24 @@ int getHTML(std::string url_in, std::string &output) {
     // std::cout << "output:\n" << output << std::endl;
 
     if (status == 301) {
-    ParsedUrl newURL(output.data());
-    std::string req2 =
-      "GET /" + std::string(newURL.Path) +
-      " HTTP/1.1\r\n"
-      "Host: " +
-      std::string(newURL.Host) +
-      "\r\n"
-      "User-Agent: SonOfAnton/1.0 404FoundEngine@umich.edu (Linux)\r\n"
-      "Accept: */*\r\n"
-      "Accept-Encoding: identity\r\n"
-      "Connection: close\r\n\r\n";
-    std::string newishURL = output;
-    output = "";
-    status = runSocket(req2, newishURL, output);
+      ParsedUrl newURL(output.data());
+      std::string req2 =
+          "GET /" + std::string(newURL.Path) +
+          " HTTP/1.1\r\n"
+          "Host: " +
+          std::string(newURL.Host) +
+          "\r\n"
+          "User-Agent: SonOfAnton/1.0 404FoundEngine@umich.edu (Linux)\r\n"
+          "Accept: */*\r\n"
+          "Accept-Encoding: identity\r\n"
+          "Connection: close\r\n\r\n";
+      std::string newishURL = output;
+      output = "";
+      status = runSocket(req2, newishURL, output);
 
-    // std::cout << "redirected output:\n" << output << std::endl;
-    return status;
+      // std::cout << "redirected output:\n" << output << std::endl;
+      return status;
     }
   }
+  return 0;
 }

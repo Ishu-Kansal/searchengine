@@ -1,0 +1,8 @@
+services:
+  dispatcher:
+    image: dispatcher
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"

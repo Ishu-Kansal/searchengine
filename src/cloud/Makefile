@@ -168,6 +168,19 @@ crawler/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/crawler.dir/build.make CMakeFiles/crawler.dir/build
 .PHONY : crawler/fast
 
+#=============================================================================
+# Target rules for targets named save_dispatcher
+
+# Build rule for target.
+save_dispatcher: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 save_dispatcher
+.PHONY : save_dispatcher
+
+# fast build rule for target.
+save_dispatcher/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/save_dispatcher.dir/build.make CMakeFiles/save_dispatcher.dir/build
+.PHONY : save_dispatcher/fast
+
 Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/HtmlParser/HtmlTags.o: Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/HtmlParser/HtmlTags.cpp.o
 .PHONY : Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/HtmlParser/HtmlTags.o
 
@@ -192,53 +205,53 @@ Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/HtmlParser/HtmlT
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/html_parser.dir/build.make CMakeFiles/html_parser.dir/Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/HtmlParser/HtmlTags.cpp.s
 .PHONY : Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/HtmlParser/HtmlTags.cpp.s
 
-crawler/crawler.o: crawler/crawler.cpp.o
-.PHONY : crawler/crawler.o
+crawler.o: crawler.cpp.o
+.PHONY : crawler.o
 
 # target to build an object file
-crawler/crawler.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/crawler.dir/build.make CMakeFiles/crawler.dir/crawler/crawler.cpp.o
-.PHONY : crawler/crawler.cpp.o
+crawler.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/crawler.dir/build.make CMakeFiles/crawler.dir/crawler.cpp.o
+.PHONY : crawler.cpp.o
 
-crawler/crawler.i: crawler/crawler.cpp.i
-.PHONY : crawler/crawler.i
+crawler.i: crawler.cpp.i
+.PHONY : crawler.i
 
 # target to preprocess a source file
-crawler/crawler.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/crawler.dir/build.make CMakeFiles/crawler.dir/crawler/crawler.cpp.i
-.PHONY : crawler/crawler.cpp.i
+crawler.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/crawler.dir/build.make CMakeFiles/crawler.dir/crawler.cpp.i
+.PHONY : crawler.cpp.i
 
-crawler/crawler.s: crawler/crawler.cpp.s
-.PHONY : crawler/crawler.s
+crawler.s: crawler.cpp.s
+.PHONY : crawler.s
 
 # target to generate assembly for a file
-crawler/crawler.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/crawler.dir/build.make CMakeFiles/crawler.dir/crawler/crawler.cpp.s
-.PHONY : crawler/crawler.cpp.s
+crawler.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/crawler.dir/build.make CMakeFiles/crawler.dir/crawler.cpp.s
+.PHONY : crawler.cpp.s
 
-dispatcher/dispatcher.o: dispatcher/dispatcher.cpp.o
-.PHONY : dispatcher/dispatcher.o
+dispatcher.o: dispatcher.cpp.o
+.PHONY : dispatcher.o
 
 # target to build an object file
-dispatcher/dispatcher.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/dispatcher.dir/build.make CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.o
-.PHONY : dispatcher/dispatcher.cpp.o
+dispatcher.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dispatcher.dir/build.make CMakeFiles/dispatcher.dir/dispatcher.cpp.o
+.PHONY : dispatcher.cpp.o
 
-dispatcher/dispatcher.i: dispatcher/dispatcher.cpp.i
-.PHONY : dispatcher/dispatcher.i
+dispatcher.i: dispatcher.cpp.i
+.PHONY : dispatcher.i
 
 # target to preprocess a source file
-dispatcher/dispatcher.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/dispatcher.dir/build.make CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.i
-.PHONY : dispatcher/dispatcher.cpp.i
+dispatcher.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dispatcher.dir/build.make CMakeFiles/dispatcher.dir/dispatcher.cpp.i
+.PHONY : dispatcher.cpp.i
 
-dispatcher/dispatcher.s: dispatcher/dispatcher.cpp.s
-.PHONY : dispatcher/dispatcher.s
+dispatcher.s: dispatcher.cpp.s
+.PHONY : dispatcher.s
 
 # target to generate assembly for a file
-dispatcher/dispatcher.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/dispatcher.dir/build.make CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.s
-.PHONY : dispatcher/dispatcher.cpp.s
+dispatcher.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/dispatcher.dir/build.make CMakeFiles/dispatcher.dir/dispatcher.cpp.s
+.PHONY : dispatcher.cpp.s
 
 info.grpc.pb.o: info.grpc.pb.cc.o
 .PHONY : info.grpc.pb.o
@@ -288,6 +301,30 @@ info.pb.cc.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/rg_grpc_proto.dir/build.make CMakeFiles/rg_grpc_proto.dir/info.pb.cc.s
 .PHONY : info.pb.cc.s
 
+save_dispatcher.o: save_dispatcher.cpp.o
+.PHONY : save_dispatcher.o
+
+# target to build an object file
+save_dispatcher.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/save_dispatcher.dir/build.make CMakeFiles/save_dispatcher.dir/save_dispatcher.cpp.o
+.PHONY : save_dispatcher.cpp.o
+
+save_dispatcher.i: save_dispatcher.cpp.i
+.PHONY : save_dispatcher.i
+
+# target to preprocess a source file
+save_dispatcher.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/save_dispatcher.dir/build.make CMakeFiles/save_dispatcher.dir/save_dispatcher.cpp.i
+.PHONY : save_dispatcher.cpp.i
+
+save_dispatcher.s: save_dispatcher.cpp.s
+.PHONY : save_dispatcher.s
+
+# target to generate assembly for a file
+save_dispatcher.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/save_dispatcher.dir/build.make CMakeFiles/save_dispatcher.dir/save_dispatcher.cpp.s
+.PHONY : save_dispatcher.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -300,21 +337,25 @@ help:
 	@echo "... dispatcher"
 	@echo "... html_parser"
 	@echo "... rg_grpc_proto"
+	@echo "... save_dispatcher"
 	@echo "... Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/HtmlParser/HtmlTags.o"
 	@echo "... Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/HtmlParser/HtmlTags.i"
 	@echo "... Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/HtmlParser/HtmlTags.s"
-	@echo "... crawler/crawler.o"
-	@echo "... crawler/crawler.i"
-	@echo "... crawler/crawler.s"
-	@echo "... dispatcher/dispatcher.o"
-	@echo "... dispatcher/dispatcher.i"
-	@echo "... dispatcher/dispatcher.s"
+	@echo "... crawler.o"
+	@echo "... crawler.i"
+	@echo "... crawler.s"
+	@echo "... dispatcher.o"
+	@echo "... dispatcher.i"
+	@echo "... dispatcher.s"
 	@echo "... info.grpc.pb.o"
 	@echo "... info.grpc.pb.i"
 	@echo "... info.grpc.pb.s"
 	@echo "... info.pb.o"
 	@echo "... info.pb.i"
 	@echo "... info.pb.s"
+	@echo "... save_dispatcher.o"
+	@echo "... save_dispatcher.i"
+	@echo "... save_dispatcher.s"
 .PHONY : help
 
 

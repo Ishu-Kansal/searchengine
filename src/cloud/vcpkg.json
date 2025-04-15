@@ -1,0 +1,19 @@
+{
+  "name": "search-engine",
+  "version-string": "1.0",
+  "homepage": "https://github.com/Ishu-Kansal/searchengine/",
+  "description": [
+    "Cloud deployment of 404Found search engine."
+  ],
+  "dependencies": [
+    {
+      "name": "google-cloud-cpp"
+    },
+    {
+      "name": "functions-framework-cpp"
+    },
+    {
+      "name": "grpc"
+    }
+  ]
+}

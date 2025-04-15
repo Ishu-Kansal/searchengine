@@ -72,36 +72,40 @@ include CMakeFiles/dispatcher.dir/flags.make
 CMakeFiles/dispatcher.dir/codegen:
 .PHONY : CMakeFiles/dispatcher.dir/codegen
 
-CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.o: CMakeFiles/dispatcher.dir/flags.make
-CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.o: dispatcher/dispatcher.cpp
-CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.o: CMakeFiles/dispatcher.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.o"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.o -MF CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.o.d -o CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.o -c /Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/dispatcher/dispatcher.cpp
+CMakeFiles/dispatcher.dir/dispatcher.cpp.o: CMakeFiles/dispatcher.dir/flags.make
+CMakeFiles/dispatcher.dir/dispatcher.cpp.o: dispatcher.cpp
+CMakeFiles/dispatcher.dir/dispatcher.cpp.o: CMakeFiles/dispatcher.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/dispatcher.dir/dispatcher.cpp.o"
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/dispatcher.dir/dispatcher.cpp.o -MF CMakeFiles/dispatcher.dir/dispatcher.cpp.o.d -o CMakeFiles/dispatcher.dir/dispatcher.cpp.o -c /Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/dispatcher.cpp
 
-CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.i"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/dispatcher/dispatcher.cpp > CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.i
+CMakeFiles/dispatcher.dir/dispatcher.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/dispatcher.dir/dispatcher.cpp.i"
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/dispatcher.cpp > CMakeFiles/dispatcher.dir/dispatcher.cpp.i
 
-CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.s"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/dispatcher/dispatcher.cpp -o CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.s
+CMakeFiles/dispatcher.dir/dispatcher.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/dispatcher.dir/dispatcher.cpp.s"
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud/dispatcher.cpp -o CMakeFiles/dispatcher.dir/dispatcher.cpp.s
 
 # Object files for target dispatcher
 dispatcher_OBJECTS = \
-"CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.o"
+"CMakeFiles/dispatcher.dir/dispatcher.cpp.o"
 
 # External object files for target dispatcher
 dispatcher_EXTERNAL_OBJECTS =
 
-dispatcher: CMakeFiles/dispatcher.dir/dispatcher/dispatcher.cpp.o
+dispatcher: CMakeFiles/dispatcher.dir/dispatcher.cpp.o
 dispatcher: CMakeFiles/dispatcher.dir/build.make
 dispatcher: librg_grpc_proto.a
 dispatcher: libhtml_parser.a
 dispatcher: /opt/homebrew/lib/libabsl_flags_parse.2407.0.0.dylib
+dispatcher: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libssl.dylib
+dispatcher: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libcrypto.dylib
 dispatcher: librg_grpc_proto.a
 dispatcher: /opt/homebrew/lib/libgrpc++_reflection.1.71.0.dylib
 dispatcher: /opt/homebrew/lib/libgrpc++.1.71.0.dylib
 dispatcher: /opt/homebrew/lib/libgrpc.46.0.0.dylib
+dispatcher: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libssl.dylib
+dispatcher: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libcrypto.dylib
 dispatcher: /opt/homebrew/lib/libupb_json_lib.46.0.0.dylib
 dispatcher: /opt/homebrew/lib/libupb_textformat_lib.46.0.0.dylib
 dispatcher: /opt/homebrew/lib/libupb_mini_descriptor_lib.46.0.0.dylib
@@ -114,8 +118,6 @@ dispatcher: /opt/homebrew/lib/libre2.11.0.0.dylib
 dispatcher: /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/lib/libz.tbd
 dispatcher: /opt/homebrew/lib/libcares.2.19.3.dylib
 dispatcher: /opt/homebrew/lib/libgpr.46.0.0.dylib
-dispatcher: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libssl.dylib
-dispatcher: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libcrypto.dylib
 dispatcher: /opt/homebrew/lib/libaddress_sorting.46.0.0.dylib
 dispatcher: /opt/homebrew/lib/libprotobuf.29.3.0.dylib
 dispatcher: /opt/homebrew/lib/libabsl_log_initialize.2407.0.0.dylib

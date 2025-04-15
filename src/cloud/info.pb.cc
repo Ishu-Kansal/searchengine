@@ -150,17 +150,18 @@ const char descriptor_table_protodef_info_2eproto[] ABSL_ATTRIBUTE_SECTION_VARIA
     protodesc_cold) = {
     "\n\ninfo.proto\022\014cloudcrawler\"\007\n\005Empty\"\032\n\013G"
     "etResponse\022\013\n\003url\030\001 \001(\t\"\'\n\nAddRequest\022\013\n"
-    "\003url\030\001 \001(\t\022\014\n\004rank\030\002 \001(\r2\203\001\n\nDispatcher\022"
+    "\003url\030\001 \001(\t\022\014\n\004rank\030\002 \001(\r2\276\001\n\nDispatcher\022"
     ":\n\006GetUrl\022\023.cloudcrawler.Empty\032\031.cloudcr"
     "awler.GetResponse\"\000\0229\n\006AddUrl\022\030.cloudcra"
-    "wler.AddRequest\032\023.cloudcrawler.Empty\"\000b\006"
-    "proto3"
+    "wler.AddRequest\032\023.cloudcrawler.Empty\"\000\0229"
+    "\n\013SaveService\022\023.cloudcrawler.Empty\032\023.clo"
+    "udcrawler.Empty\"\000b\006proto3"
 };
 static ::absl::once_flag descriptor_table_info_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_info_2eproto = {
     false,
     false,
-    246,
+    305,
     descriptor_table_protodef_info_2eproto,
     "info.proto",
     &descriptor_table_info_2eproto_once,

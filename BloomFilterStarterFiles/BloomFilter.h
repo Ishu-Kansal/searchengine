@@ -13,7 +13,7 @@
 
 class Bloomfilter {
  public:
-  Bloomfilter(int num_objects, double false_positive_rate) {
+  Bloomfilter(uint64_t num_objects, double false_positive_rate) {
     // Determine the size of bits of our data vector, and resize.
     sizeInBits =
         -ceil((num_objects * log(false_positive_rate)) / (log(2) * log(2)));
@@ -57,8 +57,13 @@ class Bloomfilter {
 
     // Pack bits into a byte then add to vector
     size_t numBytes = (sizeInBits + 7) / 8;
+    ftruncate(handle, numBytes + sizeof(header));
     char *bytes = static_cast<char *>(mmap(nullptr, sizeof(header) + numBytes,
-                                           PROT_WRITE, MAP_PRIVATE, handle, 0));
+                                           PROT_READ | PROT_WRITE, MAP_PRIVATE,
+                                           handle, 0));
+    if (bytes == MAP_FAILED) {
+      perror("");
+    }
     assert(bytes != MAP_FAILED);
 
     bytes += sizeof(header);
