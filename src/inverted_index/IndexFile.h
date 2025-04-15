@@ -14,9 +14,10 @@
 #include <cstring>
 
 #include "../../HashTable/HashTableStarterFiles/HashBlob.h"
-#include "Index.h"
 #include "../../HashTable/HashTableStarterFiles/HashTable.h"
 #include "../../utils/utf_encoding.h"
+#include "Index.h"
+#include "RAII_utils.h"
 
 /**
  * @brief Number of bits used for byteOffset within block
@@ -56,6 +57,34 @@ constexpr uint8_t NO_SEEK_TABLE_MARKER = 0;
 
 // Didn't use pushVarint for some of them, because some of the values are one byte and I want the full range from 0 - 255.
 
+
+/**
+ * @brief Helper function to open the index file and check for errors
+ *        Exits on failure. Returns a valid file descriptor on success
+ * @param chunkNum The chunk number to use in the filename
+ * @param outFilename Buffer to store the generated filename (for error messages)
+ * @param filenameBufferSize Size of the outFilename buffer
+ * @return A valid file descriptor. Exits program on failure
+ */
+static int openIndexChunkFile(
+    uint32_t chunkNum, 
+    char* outFilename, 
+    size_t filenameBufferSize) 
+{
+    if (chunkNum > MAX_CHUNK_NUM) {
+        std::cerr << "Error: Chunk number " << chunkNum << " exceeds maximum " << MAX_CHUNK_NUM << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    snprintf(outFilename, filenameBufferSize, "IndexChunk_%05u", chunkNum);
+
+    int fd = open(outFilename, O_RDWR | O_CREAT | O_TRUNC, 0666);
+    if (fd == -1) {
+        std::cerr << "Error: Could not open or create file '" << outFilename << "': " << strerror(errno) << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return fd;
+}
+
 /**
  * @class IndexFile
  * @brief Handles the serialization and writing of an IndexChunk and its dictionary to disk
@@ -70,7 +99,7 @@ class IndexFile {
     /**
     * @brief File descriptor for the main postingIndex chunk data file ("IndexChunk_XXXXX").
     */
-    int fileDescrip;
+   FileDescriptor fileDescrip_;
 
     /**
     * @brief Encodes a uint64_t value using variable-length encoding (Varint) and appends it to a data buffer
@@ -274,17 +303,8 @@ class IndexFile {
     * @param indexChunk A reference to the IndexChunk object containing the data to be serialized and written
     *  
     */
-    IndexFile(uint32_t chunkNum, IndexChunk &indexChunk)
+    IndexFile(uint32_t chunkNum, IndexChunk &indexChunk) : fileDescrip_(openIndexChunkFile(chunkNum, indexFilename_, sizeof(indexFilename_))) 
     {
-        if (chunkNum > MAX_CHUNK_NUM) exit(EXIT_FAILURE);
-        char indexFilename[32];
-        snprintf(indexFilename, sizeof(indexFilename), "IndexChunk_%05u", chunkNum);
-        fileDescrip = open(indexFilename, O_RDWR | O_CREAT | O_TRUNC, 0666);
-        if ( fileDescrip == -1 )
-        {
-            cerr << "Could not open " << indexFilename;
-            exit(EXIT_FAILURE);
-        }
         HashTable<const std::string, size_t> & dictionary = indexChunk.get_dictionary();
         // used vector so that we didn't need to calculate size of buffer beforehand
         // Every insert is at the end of the dataBuffer
@@ -293,15 +313,15 @@ class IndexFile {
         dataBuffer.reserve(CHUNK_BUFFER_INITIAL_RESERVE); // 8 Gigabyte worth of bytes
         serializeChunk(indexChunk, dataBuffer, dictionary);
 
-        ssize_t bytesWritten = write(fileDescrip, dataBuffer.data(), dataBuffer.size());
+        ssize_t bytesWritten = write(fileDescrip_.get(), dataBuffer.data(), dataBuffer.size());
         if (bytesWritten == -1) 
         {
-            cerr << "Error writing to " << indexFilename;
+            cerr << "Error writing to " << indexFilename_;
             exit(EXIT_FAILURE);
         }
         else if (static_cast<size_t>(bytesWritten) != dataBuffer.size()) 
         {
-            cerr << "Incomplete write to " << indexFilename;
+            cerr << "Incomplete write to " << indexFilename_;
             exit(EXIT_FAILURE);
         }
 
@@ -310,16 +330,15 @@ class IndexFile {
         HashFile hashfile(hashFilename, &dictionary);
           
     }
-    /**
-    * @brief Destructor for IndexFile.
-    *
-    * Closes the file descriptor associated with the "IndexChunk_XXXXX" file if it was successfully opened.
-    */
-    ~IndexFile()
-    {
-        if (fileDescrip >= 0)
-        {
-            close(fileDescrip);
-        }
-    }
+    ~IndexFile() = default;
+
+    IndexFile(const IndexFile&) = delete;
+    IndexFile& operator=(const IndexFile&) = delete;
+
+    IndexFile(IndexFile&&) = delete;
+    IndexFile& operator=(IndexFile&&) = delete;
+    private:
+
+    char indexFilename_[32];
+
 };

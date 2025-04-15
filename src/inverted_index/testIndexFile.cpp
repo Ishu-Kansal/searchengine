@@ -184,6 +184,7 @@ void seekTableOffsetTest() {
         if (i == 8191) {
             int t =0;
         }
+        std::cout << i << '\n';
         auto seekApple = reader.Find("apple", i, chunkNum);
         assert(seekApple->location == i);
         assert(seekApple->index == i);
