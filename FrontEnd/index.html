@@ -33,12 +33,19 @@
       </form>
     </div>
 
-    <!-- Search Results Area -->
-    <div id="searchResults">
+    <!-- AI Summary Expandable Box -->
+    <div id="aiSummaryContainer" class="panel panel-default" style="display: none; margin-top: 20px;">
+      <div class="panel-heading" style="cursor: pointer;" onclick="toggleAISummary()">
+        <h4 class="panel-title">AI Summary <span id="aiToggleIcon"
+            class="pull-right glyphicon glyphicon-chevron-down"></span></h4>
+      </div>
+      <div class="panel-body" id="aiSummaryContent" style="display: none;">
+        <p id="aiSummaryText" style="white-space: pre-wrap; font-size: 1em; line-height: 1.6;"></p>
+      </div>
     </div>
 
-    <!-- AI Overview Area -->
-    <div id="AIResults">
+    <!-- Search Results Area -->
+    <div id="searchResults">
     </div>
 
     <!-- Loading Indicator -->

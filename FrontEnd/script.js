@@ -29,7 +29,7 @@ const submitButton = searchForm.querySelector('button[type="submit"]');
 
 let gifInterval = null; // To store the interval ID
 
-searchForm.addEventListener('submit', function (e) {
+searchForm.addEventListener('submit', async function (e) {
   e.preventDefault(); // Prevent default form submission
 
   const query = queryInput.value.trim();
@@ -58,85 +58,88 @@ searchForm.addEventListener('submit', function (e) {
     loadingGif.src = gifs[gifIndex];
   }, 2000); // Change GIF every 2 seconds
 
-  // --- Fetch Data ---
-  fetch('/api/search/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8'
-    },
-    body: JSON.stringify({ query: query }) // Ensure key matches backend expectation
-  })
-    .then(response => {
-      if (!response.ok) {
-        // Try to get error message from response body if possible
-        return response.text().then(text => {
-           throw new Error(`HTTP error! Status: ${response.status}, Message: ${text || response.statusText}`);
-        });
-      }
-      return response.json();
-    })
-    .then(data => {
-      if (!data.results || !Array.isArray(data.results)) {
-         throw new Error("Invalid data format received from server.");
-      }
+  let aiText = "";
 
-      if (data.results.length === 0) {
-        searchResultsContainer.innerHTML = '<p style="text-align: center; color: #a58d8d; margin-top: 30px;">No results found for your query.</p>';
-      } else {
-        allResults = data.results;
-        renderPage(0); // Render the first page
-        // Show pagination only if there are results
-        paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
-      }
-    })
-    .catch(error => {
-      console.error('Search Error:', error);
-      searchResultsContainer.innerHTML = `<p style="text-align: center; color: #ec2225; margin-top: 30px;">An error occurred: ${error.message}. Please try again.</p>`;
-    })
-    .finally(() => {
-      // --- Cleanup UI After Loading ---
-      clearInterval(gifInterval); // Stop changing GIFs
-      gifInterval = null;
-      loadingIndicator.style.display = 'none'; // Hide loading section
-      submitButton.classList.remove('loading');
-      submitButton.disabled = false;
-
-      fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer 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" 
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content: "You are a non-interactive information assistant. When given a search query, respond with one clear, neutral, and self-contained paragraph that explains the topic. Do not include links. Do not ask questions. Do not invite further interaction."
-            },
-            {
-              role: "user",
-              content: "Search engine query: " + query
-            }
-          ]
-        })
+  try {
+    // --- Fetch AI Summary ---
+    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer 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"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are a non-interactive information assistant. When given a search query, respond with one clear, neutral, and self-contained paragraph that explains the topic. Do not include links. Do not ask questions. Do not invite further interaction."
+          },
+          {
+            role: "user",
+            content: "Search engine query: " + query
+          }
+        ]
       })
-      .then(res => res.json())
-      .then(data => console.log(data.choices?.[0]?.message?.content));
-
-
-      // console.log("here");
-      // const response = client.responses.create({
-      //   model: "gpt-4o-mini",
-      //   input: "Here is a search engine query, return a one paragraph response to this query, do not provide any links, do not ask any follow up questions. Search engine query: " + query
-      // });
-
-      // console.log(response.output_text);
-
-
     });
 
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      throw new Error(`AI API error: ${aiResponse.status} - ${errorText}`);
+    }
+
+    const aiData = await aiResponse.json();
+    aiText = aiData.choices?.[0]?.message?.content || "";
+
+    // --- Fetch Search Results ---
+    const searchResponse = await fetch('/api/search/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8'
+      },
+      body: JSON.stringify({ query })
+    });
+
+    if (!searchResponse.ok) {
+      const errorText = await searchResponse.text();
+      throw new Error(`Search API error: ${searchResponse.status} - ${errorText}`);
+    }
+
+    const searchData = await searchResponse.json();
+
+    if (!Array.isArray(searchData.results)) {
+      throw new Error("Invalid data format received from server.");
+    }
+
+    if (searchData.results.length === 0) {
+      searchResultsContainer.innerHTML = `
+        <p style="text-align: center; color: #a58d8d; margin-top: 30px;">
+          No results found for your query.
+        </p>`;
+    } else {
+      allResults = searchData.results;
+      renderPage(0); // Render the first page
+      paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
+    }
+
+  } catch (error) {
+    console.error('Search Error:', error);
+    searchResultsContainer.innerHTML = `
+      <p style="text-align: center; color: #ec2225; margin-top: 30px;">
+        An error occurred: ${error.message}. Please try again.
+      </p>`;
+  } finally {
+    // --- Cleanup UI After Loading ---
+    clearInterval(gifInterval); // Stop changing GIFs
+    gifInterval = null;
+    loadingIndicator.style.display = 'none'; // Hide loading section
+    submitButton.classList.remove('loading');
+    submitButton.disabled = false;
+
+    displayAISummary(aiText); // guaranteed to have value if AI call succeeded
+  }
 });
+
 
 function renderPage(page) {
   // Ensure page is within valid bounds
@@ -222,3 +225,33 @@ nextButton.addEventListener('click', () => {
     renderPage(currentPage + 1);
   }
 });
+
+function toggleAISummary() {
+  const content = document.getElementById('aiSummaryContent');
+  const icon = document.getElementById('aiToggleIcon');
+  if (content.style.display === 'none') {
+    content.style.display = 'block';
+    document.getElementsByClassName('panel-heading')[0].style.borderBottomLeftRadius = '0px';
+    document.getElementsByClassName('panel-heading')[0].style.borderBottomRightRadius = '0px';
+    icon.classList.remove('glyphicon-chevron-down');
+    icon.classList.add('glyphicon-chevron-up');
+  }
+  else {
+    content.style.display = 'none';
+    document.getElementsByClassName('panel-heading')[0].style.borderBottomLeftRadius = '16px';
+    document.getElementsByClassName('panel-heading')[0].style.borderBottomRightRadius = '16px';
+    icon.classList.remove('glyphicon-chevron-up');
+    icon.classList.add('glyphicon-chevron-down');
+  }
+}
+
+function displayAISummary(summaryText) {
+  const summaryContainer = document.getElementById('aiSummaryContainer');
+  const summaryTextEl = document.getElementById('aiSummaryText');
+
+  summaryTextEl.textContent = summaryText;
+  summaryContainer.style.display = 'block';
+  document.getElementById('aiSummaryContent').style.display = 'block';
+  document.getElementById('aiToggleIcon').classList.remove('glyphicon-chevron-up');
+  document.getElementById('aiToggleIcon').classList.add('glyphicon-chevron-down');
+}
