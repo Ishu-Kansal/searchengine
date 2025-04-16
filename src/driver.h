@@ -1,8 +1,10 @@
+// driver.h
+// Header file for driver.cpp
+
 #pragma once
 
 #include <string>
 #include <vector>
-#include "../utils/cstring_view.h"
 
 struct SearchResult {
     std::string url;
@@ -10,6 +12,18 @@ struct SearchResult {
     std::string snippet;
 };
 
-std::string join_words(const std::vector<std::string>& words, size_t max_words = SIZE_MAX);
-SearchResult get_and_parse_url(const cstring_view& url);
-std::vector<cstring_view> run_engine(std::string& query);
+class Driver {
+    public:
+        Driver();
+    
+        // Runs the full query pipeline and returns the matching URLs
+        std::vector<std::string_view> run_engine(std::string& query);
+    
+        // Given a URL, fetches and parses HTML into SearchResult metadata
+        SearchResult get_url_and_parse(const std::string_view& url);
+    
+    private:
+        // Utility for joining words into a space-separated string
+        std::string join_words(const std::vector<std::string>& words, size_t max_words = SIZE_MAX);
+
+    };

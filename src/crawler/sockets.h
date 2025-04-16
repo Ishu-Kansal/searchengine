@@ -270,10 +270,9 @@ int getHTML(std::string url_in, std::string &output) {
     std::string req =
       "GET " + path + " HTTP/1.1\r\n"
       "Host: " + std::string(url.Host) + "\r\n"
-      "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15\r\n"
+      "User-Agent: SonOfAnton/1.0 404FoundEngine@umich.edu (Linux)\r\n"
       "Accept: */*\r\n"
       "Accept-Encoding: identity\r\n"
-      "Referer: https://www.google.com/\r\n"
       "Connection: close\r\n\r\n";
 
     int status = runSocket(req, url_in, output);
@@ -284,11 +283,17 @@ int getHTML(std::string url_in, std::string &output) {
       std::string req2 =
         "GET " + path2 + " HTTP/1.1\r\n"
         "Host: " + std::string(newURL.Host) + "\r\n"
-        "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15\r\n"
+        "User-Agent: SonOfAnton/1.0 404FoundEngine@umich.edu (Linux)\r\n"
         "Accept: */*\r\n"
         "Accept-Encoding: identity\r\n"
-        "Referer: https://www.google.com/\r\n"
         "Connection: close\r\n\r\n";
+
+        // static constexpr std::string_view HTTP_HEADER = 
+        //     "\r\n"
+        //     "User-Agent: SonOfAnton/1.0 404FoundEngine@umich.edu (Linux)\r\n"
+        //     "Accept: */*\r\n"
+        //     "Accept-Encoding: identity\r\n"
+        //     "Connection: close\r\n\r\n";
         
       std::string newishURL = output;
       output = "";

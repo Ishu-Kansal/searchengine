@@ -105,6 +105,15 @@ class HtmlParser {
 
   bool found = false;
 
+  bool case_insensitive_match(const char* a, const char* b, size_t n) {
+    for (size_t i = 0; i < n; ++i) {
+        if (tolower(a[i]) != tolower(b[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
   // Helper function to determine if a character marks the end of an HTML tag name.
   bool is_tag_ending(const char c) {
     return c == ' ' || c == '\n' || c == '/' || c == '>' || c == '\r' ||
@@ -558,7 +567,7 @@ class HtmlParser {
           
               while (index + 7 < length) {
                   // Check for closing </title>
-                  if (strncmp(buffer + index, "</title>", 8) == 0) {
+                  if (case_insensitive_match(buffer + index, "</title>", 8)) {
                       index += 8;
                       break;
                   }
@@ -587,7 +596,7 @@ class HtmlParser {
                   titleWords.push_back(word);
               }
               break;
-          }          
+          }
 
           case DesiredAction::Anchor:
             index = extract_anchor(buffer, length, index, false);
