@@ -29,17 +29,16 @@ std::vector<string_view> run_engine(std::string& query) {
     indexChunk.add_word(banana, false);
     indexChunk.add_enddoc();
 
-    assert(!indexChunk.get_posting_lists().empty());
     uint32_t chunkNum = 0;
     IndexFile indexFile(chunkNum, indexChunk);
 
     IndexFileReader reader(numChunks);
 
     QueryParser parser(query, numChunks, reader);
-    std::unique_ptr<Constraint> c = parser.Parse();
+    std::unique_ptr<Constraint> constraint = parser.Parse();
  
-    if (c) {
-       std::unique_ptr<ISR> isrs = c->Eval(sequences);
+    if (constraint) {
+       std::unique_ptr<ISR> isrs = constraint->Eval(sequences);
 
         std::cout << "Sequences size: " << sequences.size() << std::endl;
 

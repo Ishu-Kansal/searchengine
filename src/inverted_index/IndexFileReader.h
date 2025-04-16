@@ -233,6 +233,7 @@ public:
                     return std::make_unique<SeekObj>(currentOffset, currentLocation, delta, index, numPosts);
                 }
                 ++index;
+                if (index > numPosts) return nullptr;
             }
         }
         else
@@ -255,6 +256,7 @@ public:
                     return std::make_unique<SeekObj>(currentOffset, currentLocation, delta, index, numPosts);
                 }
                 index++;
+                if (index > numPosts) return nullptr;
             }
         }
 
@@ -339,5 +341,138 @@ public:
             }
         }
         return nullptr;
+    }
+
+    std::vector<Location> LoadChunkOfPostingList(
+        const std::string& word, 
+        uint32_t chunkNum,
+        uint64_t startLoc,
+        uint64_t endLoc) const
+    {
+        std::vector<Location> results;
+        if (chunkNum >= mappedFiles.size() || !mappedFiles[chunkNum]) 
+        {
+            return results; 
+        }
+
+        char hashFilename[FILENAME_BUFFER_SIZE];
+        snprintf(hashFilename, sizeof(hashFilename), "HashFile_%05u", chunkNum);
+        HashFile hashFile(hashFilename);
+        const HashBlob *hashblob = hashFile.Blob();
+        if (!hashblob) 
+        {
+             return results;
+        }
+
+        const SerialTuple * tup = hashblob->Find(word.c_str());
+        if (!tup) 
+        {
+             return results;
+        }
+
+        const void* mapPtr = mappedFiles[chunkNum]->get();
+        size_t fileSize = mappedFiles[chunkNum]->size();
+
+        const uint8_t* fileStart = static_cast<const uint8_t*>(mapPtr);
+        const uint8_t* fileEnd = fileStart + fileSize;
+
+        Location postingListOffset = tup->Value; 
+        if (postingListOffset >= fileSize) 
+        {
+            fprintf(stderr, "ERROR: Offset into file (%zu) is out of bounds (%zu) for word '%s' in chunk %u.\n", postingListOffset, fileSize, word.c_str(), chunkNum);
+            return results;
+        } 
+
+        const uint8_t * postingListBuf = fileStart + postingListOffset;
+        if (postingListBuf >= fileEnd) return results;
+
+        uint8_t numSeekTableEntriesSize = *postingListBuf;
+        postingListBuf += NUM_ENTRIES_SIZE_BYTES;
+         if (postingListBuf > fileEnd) return results;
+
+        uint64_t numSeekTableEntries = 0;
+        uint64_t numPosts = 0;
+     
+        const uint8_t* nextPtr = nullptr;
+        if (numSeekTableEntriesSize) 
+        {
+            if (postingListBuf + numSeekTableEntriesSize > fileEnd) 
+            {
+                fprintf(stderr, "ERROR: Not enough space for numSeekTableEntries varint encoding.\n");
+                return results;
+            }
+            nextPtr = decodeVarint(postingListBuf, numSeekTableEntries);
+            if (!nextPtr || nextPtr > fileEnd) return results;
+            postingListBuf = nextPtr;
+
+            nextPtr = decodeVarint(postingListBuf, numPosts);
+            if (!nextPtr || nextPtr > fileEnd) return results;
+            postingListBuf = nextPtr;
+        }
+        else 
+        {
+            nextPtr = decodeVarint(postingListBuf, numPosts);
+            if (!nextPtr || nextPtr > fileEnd) return results;
+            postingListBuf = nextPtr;
+        }
+
+        if (numPosts == 0) return results;
+
+        size_t tableIndex = startLoc >> BLOCK_OFFSET_BITS; 
+
+        uint64_t currentLocation = 0;
+        uint64_t currentOffset = 0;
+        uint64_t currentIndex = 0;
+
+        if (numSeekTableEntriesSize && tableIndex > 0 && tableIndex <= numSeekTableEntries)
+        {
+            const uint8_t * seekEntry = postingListBuf + ((tableIndex - 1) * ENTRY_SIZE);
+
+            uint64_t entryOffset;
+            uint64_t entryLocation;
+            
+            const uint8_t* tempReadPtr = seekEntry;
+            if (!readUint64_t(tempReadPtr, fileEnd, entryOffset)) { return results; }
+            if (!readUint64_t(tempReadPtr, fileEnd, entryLocation)) { return results; }
+
+            currentLocation = entryLocation;
+            currentOffset = entryOffset;
+            postingListBuf += ((ENTRY_SIZE * numSeekTableEntries) + entryOffset);
+
+            currentIndex = (tableIndex * BLOCK_SIZE) - 1;
+           
+        }
+
+        while (currentIndex < numPosts && currentLocation < startLoc)
+        {
+             if (postingListBuf >= fileEnd) return results;
+             uint64_t delta = 0;
+             nextPtr = decodeVarint(postingListBuf, delta);
+             if (!nextPtr || nextPtr > fileEnd) return results;
+
+             postingListBuf = nextPtr;
+             currentLocation += delta;
+             currentIndex++;
+        }
+
+        // load locations within the [startLoc, endLoc) range
+        while (currentIndex < numPosts && currentLocation < endLoc)
+        {
+             if (postingListBuf >= fileEnd) break;
+
+             uint64_t delta = 0;
+             nextPtr = decodeVarint(postingListBuf, delta);
+             if (!nextPtr || nextPtr > fileEnd) break; 
+
+             postingListBuf = nextPtr;
+             currentLocation += delta;
+             if (currentLocation >= startLoc)
+             {
+                results.push_back(currentLocation);
+             }
+             currentIndex++;
+        }
+
+        return results;
     }
 };

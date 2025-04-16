@@ -29,7 +29,6 @@ h1 {
   font-weight: 600;
   text-shadow: 0.05em 0 0 #ec2225, -0.025em -0.05em 0 #313f97, 0.025em 0.05em 0 #50c878;
 }
-
 h1::before, h1::after {
   content: attr(data-text);
   position: absolute;
@@ -41,14 +40,12 @@ h1::before, h1::after {
   color: inherit;
   background-color: #f8f9fa;
 }
-
 h1::before {
   animation: glitch 650ms infinite;
   -webkit-clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
           clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
   transform: translate(-0.025em, -0.0125em);
 }
-
 h1::after {
   animation: glitch 375ms infinite;
   -webkit-clip-path: polygon(0 65%, 100% 20%, 100% 100%, 0 70%);
@@ -79,11 +76,9 @@ h1::after {
     text-shadow: -0.025em 0 0 rgba(236, 34, 37, 0.8), -0.025em -0.025em 0 rgba(49, 63, 151, 0.8), -0.025em -0.05em 0 rgba(80, 200, 120, 0.8);
   }
 }
-
 #stickyHeader {
   position: sticky;
   top: 0;
-  background-color: rgba(248, 249, 250, 1);
   z-index: 1000;
   padding: 10px 0 25px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
@@ -254,30 +249,6 @@ h1::after {
   margin: 0 auto;
   border-radius: 5px;
   opacity: 0.8;
-}
-
-#aiSummaryContainer {
-  border-radius: 16px;
-  margin-bottom: 40px;
-}
-
-.panel-heading {
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
-  border-bottom-left-radius: 0px;
-  border-bottom-right-radius: 0px;
-}
-
-#aiSummaryText {
-  margin-bottom: 0px;
-}
-
-#aiToggleIcon {
-  transition: transform 0.2s ease;
-}
-
-#aiToggleIcon:hover {
-  transform: scale(1.2);
 }
 
 #paginationControls {

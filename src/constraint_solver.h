@@ -75,8 +75,12 @@ AnchorTermIndex get_anchor_ISR(vector<vector<std::unique_ptr<ISRWord>>> &ordered
 }
 
 // actual constraint solver function
-std::vector<UrlRank> constraint_solver(std::unique_ptr<ISR> &queryISR, vector<vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms, uint32_t numChunks,
-                                       IndexFileReader& reader) {
+std::vector<UrlRank> constraint_solver(
+  std::unique_ptr<ISR> &queryISR,
+  vector<vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms,
+  uint32_t numChunks,
+  IndexFileReader& reader) 
+  {
     // create an ISR for document seeking
     std::vector<UrlRank> topNdocs;
     topNdocs.reserve(TOTAL_DOCS_TO_RETURN);
@@ -85,14 +89,15 @@ std::vector<UrlRank> constraint_solver(std::unique_ptr<ISR> &queryISR, vector<ve
     int anchorOuterIndex = indices.outerIndex;
     int anchorInnerIndex = indices.innerIndex;
 
+    SeekObj* currMatch = queryISR->Seek(0);
     for (int i = 0; i < numChunks; ++i)
     {
-      
       std::unique_ptr<ISREndDoc> docISR = make_unique<ISREndDoc>(reader); 
-      SeekObj * docObj = docISR->NextDocument();
-      while (docObj) {
+      SeekObj * docObj = docISR->Seek(currMatch->location);
+      while (docObj) 
+      {
           auto seekResult = queryISR->Seek(docObj->location - docObj->delta);
-
+  
           int docEndLoc = docObj->location;
           int docStartLoc = docObj->location - docObj->delta;
   
@@ -103,15 +108,16 @@ std::vector<UrlRank> constraint_solver(std::unique_ptr<ISR> &queryISR, vector<ve
             orderedQueryTerms[anchorOuterIndex][anchorInnerIndex],
             orderedQueryTerms, 
             docStartLoc, 
-            docEndLoc);
-          
-
-          UrlRank urlRank = {doc->url, dynamic_score + doc->staticRank}; 
-
-          insertionSort(topNdocs,urlRank); 
+            docEndLoc,
+            reader,
+            i);
   
-          docObj = queryISR->NextDocument(); 
-      }
+          UrlRank urlRank = {doc->url, dynamic_score + doc->staticRank}; 
+  
+          insertionSort(topNdocs, urlRank); 
+          docObj = queryISR->NextDocument(docObj->location); 
+    }
+   
     }
     return topNdocs; 
 }
