@@ -59,6 +59,11 @@ private:
     static constexpr size_t FILENAME_BUFFER_SIZE = 32;
     /** @brief Vector holding unique pointers to memory-mapped regions for each index chunk file */
     std::vector<std::unique_ptr<MappedMemory>> mappedFiles;
+
+    std::vector<std::unique_ptr<MappedMemory>> mappedHashFiles;
+
+    std::vector<const HashBlob*> hashBlobPtrs;   
+
     size_t FileSize(int f)
     {
         struct stat fileInfo;
@@ -93,7 +98,7 @@ public:
      * Warnings are printed for files that cannot be opened or mapped, but construction continues
      * @param numChunks The total number of index chunk files to manage
      */
-    explicit IndexFileReader(uint32_t numChunks) : mappedFiles(numChunks) 
+    explicit IndexFileReader(uint32_t numChunks) : mappedFiles(numChunks), mappedHashFiles(numChunks), hashBlobPtrs(numChunks, nullptr) 
     {
         for (unsigned i = 0; i < numChunks; ++i)
         {
@@ -119,6 +124,35 @@ public:
                 continue;
             }
             mappedFiles[i] = std::make_unique<MappedMemory>(map, fileSize);
+
+            char hashFilename[FILENAME_BUFFER_SIZE];
+            snprintf(hashFilename, sizeof(hashFilename), "HashFile_%05u", i);
+            int hashFd = open(hashFilename, O_RDONLY, 0666);
+            if (hashFd == -1) 
+            {
+                fprintf(stderr, "WARNING: Couldn't open hash file '%s': %s\n", hashFilename, strerror(errno));
+                continue; 
+            }
+
+            FileDescriptor hashFileDesc(hashFd);
+            size_t hashFileSize = FileSize(hashFileDesc.get());
+            if (hashFileSize < sizeof(HashBlob)) 
+            { 
+                 fprintf(stderr, "WARNING: Hash file '%s' is too small (%zu bytes) or stat failed.\n", hashFilename, hashFileSize);
+                 continue;
+            }
+
+            void* hashMap = mmap(NULL, hashFileSize, PROT_READ, MAP_PRIVATE, hashFileDesc.get(), 0);
+            if (hashMap == MAP_FAILED) 
+            {
+                 fprintf(stderr, "WARNING: Couldn't mmap hash file '%s': %s\n", hashFilename, strerror(errno));
+                 continue;
+            }
+
+            mappedHashFiles[i] = std::make_unique<MappedMemory>(hashMap, hashFileSize);
+
+            hashBlobPtrs[i] = static_cast<const HashBlob*>(mappedHashFiles[i]->get());
+
         }
     }
 
@@ -146,16 +180,12 @@ public:
             fprintf(stderr, "DEBUG: invalid chunkNum or unmapped chunk: %u\n", chunkNum);
             return nullptr;
         }
-        // Finds word offset using HashFile
-        char hashFilename[FILENAME_BUFFER_SIZE];
-        snprintf(hashFilename, sizeof(hashFilename), "HashFile_%05u", chunkNum);
-        HashFile hashFile(hashFilename);
-        const HashBlob *hashblob = hashFile.Blob();
-        if (!hashblob) 
-        {
-            fprintf(stderr, "DEBUG: HashBlob not found for chunk %u\n", chunkNum);
+        if (!hashBlobPtrs[chunkNum])
+        { 
+            fprintf(stderr, "DEBUG: Hash file %u was not mapped successfully or is invalid.\n", chunkNum);
             return nullptr;
         }
+        const HashBlob *hashblob = hashBlobPtrs[chunkNum]; 
 
         const SerialTuple * tup = hashblob->Find(word.c_str());
         if (!tup) 
@@ -385,10 +415,12 @@ public:
             return results; 
         }
 
-        char hashFilename[FILENAME_BUFFER_SIZE];
-        snprintf(hashFilename, sizeof(hashFilename), "HashFile_%05u", chunkNum);
-        HashFile hashFile(hashFilename);
-        const HashBlob *hashblob = hashFile.Blob();
+        if (!hashBlobPtrs[chunkNum])
+        { 
+            fprintf(stderr, "DEBUG: Hash file %u was not mapped successfully or is invalid.\n", chunkNum);
+            return results;
+        }
+        const HashBlob *hashblob = hashBlobPtrs[chunkNum]; 
         if (!hashblob) 
         {
              return results;
