@@ -116,6 +116,7 @@ public:
         // Seek all the ISRs to the first occurrence beginning at
         // the target location. Return null if there is no match.
         // The document is the document containing the nearest term.
+        nearestTerm = 0;
         for (size_t i = 0; i < terms.size(); ++i)
         {
             SeekObj * seekObj = terms[i]->Seek(target);

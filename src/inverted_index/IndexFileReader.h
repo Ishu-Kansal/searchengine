@@ -202,62 +202,92 @@ public:
 
         if (numPosts == 0) return nullptr;
 
+        const uint8_t * seekTableStart = postingListBuf;
+
         size_t tableIndex = (target + 1) >> BLOCK_OFFSET_BITS;
+        uint64_t index = 0;
+
+        uint64_t entryOffset = 0;
+        uint64_t entryLocation = 0;
+
         if (numSeekTableEntriesSize && tableIndex != 0)
         {
-            // Gets seek table entry at target index
-            const uint8_t * seekEntry = postingListBuf + ((tableIndex - 1) * ENTRY_SIZE);
 
-            uint64_t entryOffset;
-            uint64_t entryLocation;
-            
-            if (!readUint64_t(seekEntry, fileEnd, entryOffset)) { return nullptr; }
-            if (!readUint64_t(seekEntry, fileEnd, entryLocation)) { return nullptr; }
+            int cursor = 0;
+            int jump = 1;
+            const uint8_t * tempPtr = seekTableStart;
 
-            uint64_t index = (tableIndex * BLOCK_SIZE) - 1;
-      
-            // Need to linearly scan to find first entry with location >= target
-            uint64_t currentLocation = entryLocation;
-            uint64_t currentOffset = entryOffset;
-            postingListBuf += ((ENTRY_SIZE * numSeekTableEntries) + entryOffset);
+            if (!readUint64_t(tempPtr, fileEnd, entryOffset)) { return nullptr; }
+            if (!readUint64_t(tempPtr, fileEnd, entryLocation)) { return nullptr; }
 
-            while (currentLocation < target || target == 0)
+            while (cursor < numSeekTableEntries && target < entryLocation)
             {
-                uint64_t delta = 0;
-                // decode varint automatically moves the buffer ahead
-                postingListBuf = decodeVarint(postingListBuf, delta);
-                currentLocation += delta;
-                currentOffset += SizeOf(delta);
-                if (currentLocation >= target)
+                jump *= 2;
+                cursor += jump;
+
+                const uint8_t * readPtr = (ENTRY_SIZE * cursor) + seekTableStart;
+
+                if (!readUint64_t(readPtr, fileEnd, entryOffset)) { return nullptr; }
+                if (!readUint64_t(readPtr, fileEnd, entryLocation)) { return nullptr; }
+
+            }
+            int low = cursor;
+            int high = numSeekTableEntries - 1;
+            int best = -1;
+
+            uint64_t closestOffset = 0;
+            uint64_t closestLocation = 0;
+
+            while (low <= high)
+            {
+                int mid = (low + high) / 2;
+                const uint8_t * readPtr = (ENTRY_SIZE * mid) + seekTableStart;
+
+                if (!readUint64_t(readPtr, fileEnd, entryOffset)) { return nullptr; }
+                if (!readUint64_t(readPtr, fileEnd, entryLocation)) { return nullptr; }
+
+                if (entryLocation <= target) 
                 {
-                    return std::make_unique<SeekObj>(currentOffset, currentLocation, delta, index, numPosts);
+                    best = mid;
+                    closestOffset = entryOffset;
+                    closestLocation = entryLocation;
+                    low = mid + 1; 
+
                 }
-                ++index;
-                if (index > numPosts) return nullptr;
+                else 
+                {
+                    high = mid - 1; 
+                }
+                
+            }
+
+            entryOffset = closestOffset;
+            entryLocation = closestLocation;
+
+            if (best != -1) 
+            {
+                index = (best + 1) * BLOCK_SIZE;
             }
         }
-        else
-        {
-            // Linearly scan if we don't have a seek table
-            // Or if index is 0 (means element is within the first 8192 entries)
-            postingListBuf += (ENTRY_SIZE * numSeekTableEntries);
-            uint64_t currentLocation = 0;
-            uint64_t currentOffset = 0;
-            uint64_t index = 0;
+
+        postingListBuf += (ENTRY_SIZE * numSeekTableEntries) ;
+        // Linearly scan if we don't have a seek table
+        // Or if index is 0 (means element is within the first 8192 entries)
+        uint64_t currentLocation = entryLocation;
+        uint64_t currentOffset = entryOffset;
             
-            while (currentLocation < target || target == 0)
+        while (currentLocation < target || target == 0)
+        {
+            uint64_t delta = 0;
+            postingListBuf = decodeVarint(postingListBuf, delta);
+            currentLocation += delta;
+            currentOffset += SizeOf(delta);
+            if (currentLocation >= target)
             {
-                uint64_t delta = 0;
-                postingListBuf = decodeVarint(postingListBuf, delta);
-                currentLocation += delta;
-                currentOffset += SizeOf(delta);
-                if (currentLocation >= target)
-                {
-                    return std::make_unique<SeekObj>(currentOffset, currentLocation, delta, index, numPosts);
-                }
-                index++;
-                if (index > numPosts) return nullptr;
+                return std::make_unique<SeekObj>(currentOffset, currentLocation, delta, index, numPosts);
             }
+            index++;
+            if (index > numPosts) return nullptr;
         }
 
         return nullptr;
