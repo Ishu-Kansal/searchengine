@@ -69,12 +69,7 @@ int get_rank_score(int shortSpans, int orderedSpans, int phraseMatches, int topS
 int get_dynamic_rank(std::unique_ptr<ISRWord> &anchorTerm, vector<vector<std::unique_ptr<ISRWord>>> &phraseTerms, uint64_t startLocation, uint64_t endLocation, const IndexFileReader & reader, uint32_t currChunk) {
 
     // Gets all locations for anchor in this document
-    locationVector anchorLocations = reader.LoadChunkOfPostingList(
-        anchorTerm->GetWord(), 
-        currChunk,   
-        startLocation,
-        endLocation
-    );
+    locationVector anchorLocations;
     // 3D vector, 1D is each phrase, 2D is the words in that phrase i, and 3D are all the locations for word j
     std::vector<std::vector<locationVector>> loadedPhrasePostings(phraseTerms.size());
 
@@ -84,14 +79,22 @@ int get_dynamic_rank(std::unique_ptr<ISRWord> &anchorTerm, vector<vector<std::un
     for (int i = 0; i < phraseTerms.size(); ++i) {
         // Resize it to the number of words in that phrase
         loadedPhrasePostings[i].resize(phraseTerms[i].size());
-        for (int j = 0; j < phraseTerms[i].size(); ++j) {
-            // Load chunk for term (i, j)
-            loadedPhrasePostings[i][j] = reader.LoadChunkOfPostingList(
-                phraseTerms[i][j]->GetWord(),
-                currChunk,                   
-                startLocation,
-                endLocation
-            );
+        for (int j = 0; j < phraseTerms[i].size(); ++j) 
+        {
+            if (phraseTerms[i][j]->GetWord() == anchorTerm->GetWord()) 
+            {
+                loadedPhrasePostings[i][j] = anchorLocations;
+            } 
+            else 
+            {
+                // Load chunk for term (i, j)
+                loadedPhrasePostings[i][j] = reader.LoadChunkOfPostingList(
+                    phraseTerms[i][j]->GetWord(),
+                    currChunk,                   
+                    startLocation,
+                    endLocation
+                );
+            }
         }
     }
 
