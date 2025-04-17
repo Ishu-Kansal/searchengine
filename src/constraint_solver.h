@@ -87,6 +87,18 @@ std::vector<UrlRank> constraint_solver(
     topNdocs.reserve(TOTAL_DOCS_TO_RETURN);
     int j = 0;
 
+    // Copy orderedQueryTerms for the title terms
+    std::vector<std::vector<std::unique_ptr<ISRWord>>> titleTerms;
+    for (const auto& innerVec : orderedQueryTerms) {
+        std::vector<std::unique_ptr<ISRWord>> copiedInner;
+        for (const auto& termPtr : innerVec) {
+            if (termPtr) {
+                copiedInner.emplace_back(std::make_unique<ISRWord>(termPtr->GetWord() + "!"));
+            }
+        }
+        titleTerms.push_back(std::move(copiedInner));
+    }
+
     AnchorTermIndex indices = get_anchor_ISR(orderedQueryTerms);
     int anchorOuterIndex = indices.outerIndex;
     int anchorInnerIndex = indices.innerIndex;
@@ -117,8 +129,18 @@ std::vector<UrlRank> constraint_solver(
             docEndLoc,
             reader,
             i);
-  
-          UrlRank urlRank = {doc->url, dynamic_score + doc->staticRank}; 
+
+          // Dynamic score for title words
+          int title_score = get_dynamic_rank(
+            titleTerms[anchorOuterIndex][anchorInnerIndex],
+            titleTerms,
+            docStartLoc,
+            docEndLoc,
+            reader,
+            i);
+
+          // Add weights to the score later
+          UrlRank urlRank = {doc->url, dynamic_score + title_score + doc->staticRank}; 
   
           insertionSort(topNdocs, urlRank); 
           currMatch = queryISR->NextDocument(currLoc); 
