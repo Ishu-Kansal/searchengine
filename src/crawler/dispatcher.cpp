@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <fstream>
+#include <memory>
 #include <queue>
 #include <random>
 #include <string>
@@ -129,75 +130,88 @@ std::string get_next_url() {
   }
 }
 
+void get_handler(int fd) {
+  pthread_lock_guard{queue_lock};
+  const std::string next = get_next_url();
+  const size_t header = next.size();
+  send(fd, &header, sizeof(header), 0);
+  send(fd, next.data(), next.size(), 0);
+}
+
+void save_handler(int sock) {
+  pthread_lock_guard{queue_lock};
+  static const char *filterName = "dispatcher_filter.bin";
+  static const char *queueName = "dispatcher_queue.bin";
+  remove(filterName);
+  remove(queueName);
+  int fd = open(filterName, O_CREAT | O_RDWR, 0666);
+  if (fd == -1) {
+    perror("");
+  }
+  bf.writeBFtoFile(fd);
+
+  std::ofstream outputFile{queueName};
+
+  int ctr = 0;
+  std::queue<std::string> temp_queue{};
+  while (ctr < 100 && !explore_queue.empty()) {
+    outputFile << explore_queue.front() << '\n';
+    temp_queue.push(std::move(explore_queue.front()));
+    ++ctr;
+    explore_queue.pop();
+  }
+  while (!temp_queue.empty()) {
+    explore_queue.push(std::move(temp_queue.front()));
+    temp_queue.pop();
+  }
+  int right_ptr = int(links_vector.size()) - 1;
+  while (ctr < 100 && right_ptr >= 0) {
+    outputFile << links_vector[right_ptr].first << '\n';
+    --right_ptr;
+    ++ctr;
+  }
+  outputFile.flush();
+  send(sock, &SAVE_SUCCESS, sizeof(SAVE_SUCCESS), 0);
+}
+
+void add_handler(int fd, uint64_t size) {
+  std::string req(size, 0);
+  ssize_t bytes;
+  uint64_t rank;
+  if ((bytes = recv(fd, req.data(), req.size(), MSG_WAITALL)) <= 0) {
+    return;
+  }
+  auto ptr = memcpy(&rank, req.data(), sizeof(rank));
+  auto url = req.substr(sizeof(rank));
+
+  pthread_lock_guard{queue_lock};
+  if (links_vector.size() < MAX_VECTOR_SIZE && !bf.contains(url)) {
+    std::clog << "Adding link: " << url << std::endl;
+    bf.insert(url);
+    links_vector.emplace_back(std::move(url), rank);
+  }
+}
+
 void *handler(void *fd) {
-  static const cstring_view GET_COMMAND{"GET"};
+  /*static const cstring_view GET_COMMAND{"GET"};
   static const cstring_view ADD_COMMAND{"ADD"};
   static const cstring_view SAVE_COMMAND{"SAVE"};
-  static const cstring_view SAVE_CONFIRMED{"CONFIRMED"};
+  static const cstring_view SAVE_CONFIRMED{"CONFIRMED"};*/
   int *t = reinterpret_cast<int *>(fd);
-  uint64_t val;
-  ssize_t bytes;
-  int sock = *t;
-  SocketWrapper _{sock};
+  const int sock = *t;
+  std::unique_ptr<int> _{t};
+  SocketWrapper sock_{sock};
+  header_t val;
   if (recv(sock, &val, sizeof(val), 0) <= 0) {
     return NULL;
   }
-  char buf[val];
-  if ((bytes = recv(sock, buf, sizeof(buf), MSG_WAITALL)) <= 0) {
-    return NULL;
+  if (val == GET_COMMAND) {
+    get_handler(sock);
+  } else if (val == SAVE_COMMAND) {
+    save_handler(sock);
+  } else {
+    add_handler(sock, val);
   }
-  auto req = std::string{buf, val};
-  if (cstring_view{req}.starts_with(GET_COMMAND)) {
-    pthread_lock_guard{queue_lock};
-    const std::string next = get_next_url();
-    const size_t header = next.size();
-    send(sock, &header, sizeof(header), 0);
-    send(sock, next.data(), next.size(), 0);
-  } else if (cstring_view{req}.starts_with(ADD_COMMAND)) {
-    pthread_lock_guard{queue_lock};
-    uint64_t rank;
-    auto ptr = memcpy(&rank, req.data() + 3, sizeof(rank));
-    auto url = req.substr(3 + sizeof(rank));
-    if (links_vector.size() < MAX_VECTOR_SIZE && !bf.contains(url)) {
-      std::clog << "Adding link: " << url << std::endl;
-      bf.insert(url);
-      links_vector.emplace_back(std::move(url), rank);
-    }
-  } else if (cstring_view{req}.starts_with(SAVE_COMMAND)) {
-    pthread_lock_guard{queue_lock};
-    static const char *filterName = "dispatcher_filter.bin";
-    static const char *queueName = "dispatcher_queue.bin";
-    remove(filterName);
-    remove(queueName);
-    int fd = open(filterName, O_CREAT | O_RDWR, 0666);
-    if (fd == -1) perror("");
-    assert(fd != -1);
-    bf.writeBFtoFile(fd);
-
-    std::ofstream outputFile{queueName};
-
-    int ctr = 0;
-    std::queue<std::string> temp_queue{};
-    while (ctr < 100 && !explore_queue.empty()) {
-      outputFile << explore_queue.front() << '\n';
-      temp_queue.push(std::move(explore_queue.front()));
-      ++ctr;
-      explore_queue.pop();
-    }
-    while (!temp_queue.empty()) {
-      explore_queue.push(std::move(temp_queue.front()));
-      temp_queue.pop();
-    }
-    int right_ptr = int(links_vector.size()) - 1;
-    while (ctr < 100 && right_ptr >= 0) {
-      outputFile << links_vector[right_ptr].first << '\n';
-      --right_ptr;
-      ++ctr;
-    }
-    outputFile.flush();
-    send(sock, SAVE_CONFIRMED.begin(), SAVE_CONFIRMED.size(), 0);
-  }
-  delete t;
   return NULL;
 }
 

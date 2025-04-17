@@ -82,7 +82,7 @@ int get_socket() {
   int res = connect(sock, (struct sockaddr*)&address, sizeof(address));
   if (res == -1) return -1;
   struct timeval tv;
-  tv.tv_sec = 15;  // 5 seconds
+  tv.tv_sec = 5;  // 5 seconds
   tv.tv_usec = 0;
   res = setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
   if (res == -1) return -1;
@@ -90,30 +90,24 @@ int get_socket() {
 }
 
 std::string get_string() {
-  static const std::string REQUEST = "GET";
   const int sock = get_socket();
   if (sock == -1) return "";
   SocketWrapper _{sock};
-  auto req = REQUEST.size();
-  int res = send(sock, &req, sizeof(req), 0);
+  int res = send(sock, &GET_COMMAND, sizeof(GET_COMMAND), 0);
   if (res == -1) return "";
-  res = send(sock, REQUEST.data(), REQUEST.size(), 0);
-  if (res <= 0) return "";
   size_t header;
   if (recv(sock, &header, sizeof(header), 0) <= 0) return "";
-  char buf[header];
-  if (recv(sock, buf, sizeof(buf), 0) <= 0) return "";
-  return {buf, header};
+  std::string result(header, 0);
+  if (recv(sock, result.data(), result.size(), MSG_WAITALL) <= 0) return "";
+  return result;
 }
 
 void add_url(cstring_view url, uint64_t rank) {
-  static const std::string REQUEST = "ADD";
   int sock = get_socket();
   if (sock == -1) return;
   SocketWrapper _{sock};
-  auto header = REQUEST.size() + sizeof(rank) + url.size();
+  header_t header = sizeof(rank) + url.size();
   send(sock, &header, sizeof(header), 0);
-  send(sock, REQUEST.data(), REQUEST.size(), 0);
   send(sock, &rank, sizeof(rank), 0);
   send(sock, url.data(), url.size(), 0);
 }
@@ -491,22 +485,6 @@ void* runner(void*) {
 
 int main(int argc, char** argv) {
   signal(SIGPIPE, SIG_IGN);
-  // Randomizes what seed urls get crawled
-  /*std::vector<std::string> seed_urls;
-  seed_urls.reserve(100);
-  std::ifstream infile("seed_list.txt");
-  if (!infile.is_open()) {
-    std::cerr << "Failed to open seed list" << std::endl;
-    exit(EXIT_FAILURE);
-  }
-  std::string line;
-  std::uniform_int_distribution<> pushDist(1, 25);
-  while (std::getline(infile, line)) {
-    if (!line.empty() && pushDist(mt) == 1) {
-      seed_urls.push_back(line);
-    }
-  }
-  infile.close();*/
 
   std::vector<std::string> sem_names{};
   for (int i = 0; i < NUM_CHUNKS; ++i) {

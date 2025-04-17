@@ -7,5 +7,10 @@ constexpr uint64_t NUM_RANDOM = 10'000;
 constexpr uint64_t TOP_K_ELEMENTS = 7'500;
 constexpr double MAX_FALSE_POSITIVE_RATE = 1e-3;
 
+using header_t = uint64_t;
+constexpr uint64_t GET_COMMAND = 1;
+constexpr uint64_t SAVE_COMMAND = 2;
+constexpr uint64_t SAVE_SUCCESS = 1;
+
 constexpr int SERVER_PORT = 8080;
 constexpr const char *const SERVER_PORT_STR = "8080";
