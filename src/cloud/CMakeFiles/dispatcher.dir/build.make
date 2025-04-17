@@ -98,14 +98,10 @@ dispatcher: CMakeFiles/dispatcher.dir/build.make
 dispatcher: librg_grpc_proto.a
 dispatcher: libhtml_parser.a
 dispatcher: /opt/homebrew/lib/libabsl_flags_parse.2407.0.0.dylib
-dispatcher: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libssl.dylib
-dispatcher: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libcrypto.dylib
 dispatcher: librg_grpc_proto.a
 dispatcher: /opt/homebrew/lib/libgrpc++_reflection.1.71.0.dylib
 dispatcher: /opt/homebrew/lib/libgrpc++.1.71.0.dylib
 dispatcher: /opt/homebrew/lib/libgrpc.46.0.0.dylib
-dispatcher: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libssl.dylib
-dispatcher: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libcrypto.dylib
 dispatcher: /opt/homebrew/lib/libupb_json_lib.46.0.0.dylib
 dispatcher: /opt/homebrew/lib/libupb_textformat_lib.46.0.0.dylib
 dispatcher: /opt/homebrew/lib/libupb_mini_descriptor_lib.46.0.0.dylib
@@ -118,6 +114,8 @@ dispatcher: /opt/homebrew/lib/libre2.11.0.0.dylib
 dispatcher: /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/lib/libz.tbd
 dispatcher: /opt/homebrew/lib/libcares.2.19.3.dylib
 dispatcher: /opt/homebrew/lib/libgpr.46.0.0.dylib
+dispatcher: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libssl.dylib
+dispatcher: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libcrypto.dylib
 dispatcher: /opt/homebrew/lib/libaddress_sorting.46.0.0.dylib
 dispatcher: /opt/homebrew/lib/libprotobuf.29.3.0.dylib
 dispatcher: /opt/homebrew/lib/libabsl_log_initialize.2407.0.0.dylib

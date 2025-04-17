@@ -98,14 +98,10 @@ crawler: CMakeFiles/crawler.dir/build.make
 crawler: librg_grpc_proto.a
 crawler: libhtml_parser.a
 crawler: /opt/homebrew/lib/libabsl_flags_parse.2407.0.0.dylib
-crawler: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libssl.dylib
-crawler: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libcrypto.dylib
 crawler: librg_grpc_proto.a
 crawler: /opt/homebrew/lib/libgrpc++_reflection.1.71.0.dylib
 crawler: /opt/homebrew/lib/libgrpc++.1.71.0.dylib
 crawler: /opt/homebrew/lib/libgrpc.46.0.0.dylib
-crawler: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libssl.dylib
-crawler: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libcrypto.dylib
 crawler: /opt/homebrew/lib/libupb_json_lib.46.0.0.dylib
 crawler: /opt/homebrew/lib/libupb_textformat_lib.46.0.0.dylib
 crawler: /opt/homebrew/lib/libupb_mini_descriptor_lib.46.0.0.dylib
@@ -118,6 +114,8 @@ crawler: /opt/homebrew/lib/libre2.11.0.0.dylib
 crawler: /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/lib/libz.tbd
 crawler: /opt/homebrew/lib/libcares.2.19.3.dylib
 crawler: /opt/homebrew/lib/libgpr.46.0.0.dylib
+crawler: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libssl.dylib
+crawler: /opt/homebrew/Cellar/openssl@3/3.4.1/lib/libcrypto.dylib
 crawler: /opt/homebrew/lib/libaddress_sorting.46.0.0.dylib
 crawler: /opt/homebrew/lib/libprotobuf.29.3.0.dylib
 crawler: /opt/homebrew/lib/libabsl_log_initialize.2407.0.0.dylib

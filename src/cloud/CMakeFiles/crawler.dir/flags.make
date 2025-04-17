@@ -6,7 +6,7 @@ CXX_DEFINES = -DPROTOBUF_USE_DLLS
 
 CXX_INCLUDES = -I/Users/antonpetushkov/Documents/EECS498SearchEngine/searchengine/src/cloud -isystem /opt/homebrew/include -isystem /opt/homebrew/Cellar/openssl@3/3.4.1/include
 
-CXX_FLAGSarm64 = -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -mmacosx-version-min=14.5
+CXX_FLAGSx86_64 = -std=gnu++17 -arch x86_64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -mmacosx-version-min=14.5
 
-CXX_FLAGS = -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -mmacosx-version-min=14.5
+CXX_FLAGS = -std=gnu++17 -arch x86_64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -mmacosx-version-min=14.5
 
