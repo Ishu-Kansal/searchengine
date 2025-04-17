@@ -28,7 +28,7 @@ class ParsedUrl {
     pathBuffer = new char[strlen(url) + 1];
     const char *f;
     char *t;
-    for (t = pathBuffer, f = url; *t++ = *f++;);
+    for (t = pathBuffer, f = url; (*t++ = *f++););
 
     Service = pathBuffer;
 
@@ -101,7 +101,6 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
     return 4;
   }
   freeaddrinfo(address);  // Done with the address info
-  // std::cout << req;
   // Initialize SSL
   SSL_library_init();
   assert(SSLv23_method() != nullptr);
@@ -146,9 +145,10 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   }*/
 
   SSL_set_fd(ssl, socketFD);
+  SSL_set_tlsext_host_name(ssl, url.Host);  // needed for umich and espn to work
 
   if (SSL_connect(ssl) <= 0) {
-    // std::cerr << "Failed to establish SSL connection" << std::endl;
+    std::cerr << "Failed to establish SSL connection" << std::endl;
     // ERR_print_errors_fp(stderr);
     SSL_free(ssl);
     SSL_CTX_free(ctx);
@@ -157,7 +157,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   }
 
   if (SSL_write(ssl, req.c_str(), req.length()) <= 0) {
-    // std::cerr << "Failed to send request" << std::endl;
+    std::cerr << "Failed to send request" << std::endl;
     // SSL_shutdown(ssl);
     SSL_free(ssl);
     SSL_CTX_free(ctx);
@@ -193,7 +193,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
         close(socketFD);
         return 11;
       }
-      int code = atoi(header.data() + 9);
+      code = atoi(header.data() + 9);
       if (code == 0) {
         SSL_shutdown(ssl);
         SSL_free(ssl);
@@ -223,16 +223,33 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   }
 
   if (code == 301) {
-    int locPos = header.find("location");
-    int endPos = header.find("\r\n", locPos);
-    std::string newURL = header.substr(locPos + 10, endPos - locPos - 10);
-    // std::cout << "redirecting to " << newURL << std::endl;
-    output = newURL;
-    return code;
+    // Convert to lowercase to find "location:" in a case-insensitive way
+    std::string header_lower = header;
+    std::transform(header_lower.begin(), header_lower.end(),
+                   header_lower.begin(), ::tolower);
+
+    size_t locPos = header_lower.find("location:");
+    if (locPos != std::string::npos) {
+      // Use the original header to extract the actual Location value (case
+      // preserved)
+      size_t endPos = header.find("\r\n", locPos);
+      std::string newURL = header.substr(locPos + 9, endPos - locPos - 9);
+
+      // Trim whitespace
+      newURL.erase(0, newURL.find_first_not_of(" \t\r\n"));
+      newURL.erase(newURL.find_last_not_of(" \t\r\n") + 1);
+
+      output = newURL;
+      return 301;
+    } else {
+      std::cerr << "Redirect code 301, but no Location header found."
+                << std::endl;
+      return -1;
+    }
   }
 
   if (bytes < 0) {
-    // std::cerr << "Error reading from SSL socket" << std::endl;
+    std::cerr << "Error reading from SSL socket" << std::endl;
   }
 
   // Clean up
@@ -253,6 +270,7 @@ int getHTML(std::string url_in, std::string &output) {
   int robotStatus = 0;
   if (robotStatus == 0) {
     // Send the GET request
+    std::string path = (url.Path && *url.Path) ? std::string(url.Path) : "/";
     std::string req =
         "GET /" + std::string(url.Path) +
         " HTTP/1.1\r\n"
@@ -265,9 +283,6 @@ int getHTML(std::string url_in, std::string &output) {
         "Connection: close\r\n\r\n";
 
     int status = runSocket(req, url_in, output);
-    // std::cout << status << std::endl;
-
-    // std::cout << "output:\n" << output << std::endl;
 
     if (status == 301) {
       ParsedUrl newURL(output.data());

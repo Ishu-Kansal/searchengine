@@ -1,28 +1,27 @@
-#ifndef PARSER_H_
-#define PARSER_H_
+#pragma once
 
 #include "tokenstream.h"
 #include "expression.h"
-#include <string>
+#include "../isr/isr.h"
 
 class QueryParser {
-private:
-   TokenStream stream;
+    TokenStream stream;
+    uint32_t numIndexChunks;
+    const IndexFileReader& reader;
 
 public:
-   explicit QueryParser(std::string &query);
+    explicit QueryParser(std::string &query, uint32_t numIndexChunks, const IndexFileReader & reader);
 
-   Constraint *Parse();
+    std::unique_ptr<Constraint> Parse();
 
-   std::string FindNextToken();
-   Constraint *FindConstraint();
-   bool FindOrOp();
-   Constraint *FindBaseConstraint();
-   bool FindAndOp();
-   Constraint *FindSimpleConstraint();
-   Constraint *FindPhrase();
-   Constraint *FindNestedConstraint();
-   Constraint *FindSearchWord();
+private:
+    std::string FindNextToken();
+    std::unique_ptr<Constraint> FindConstraint();
+    bool FindOrOp();
+    std::unique_ptr<Constraint> FindBaseConstraint();
+    bool FindAndOp();
+    std::unique_ptr<Constraint> FindSimpleConstraint();
+    std::unique_ptr<Constraint> FindPhrase();
+    std::unique_ptr<Constraint> FindNestedConstraint();
 };
 
-#endif // PARSER_H_

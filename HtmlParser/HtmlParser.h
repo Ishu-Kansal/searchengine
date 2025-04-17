@@ -72,6 +72,8 @@
 //     be
 //          added to the links with no anchor text.
 
+
+// Struct representing an extracted hyperlink and its anchor text
 class Link {
  public:
   std::string URL;
@@ -80,9 +82,19 @@ class Link {
   Link(std::string URL) : URL(URL) {}
 };
 
+
+// The main HTML parser class.
+// Parses an input HTML buffer and extracts:
+// - all words (body text),
+// - words in the <title>,
+// - outgoing links (with associated anchor text),
+// - a base URL if present (<base>),
+// - a short description from <meta name="description">,
+// - image count from <img> tags,
+// - language flag (isEnglish).
 class HtmlParser {
  public:
-  std::vector<std::string> words, titleWords;
+  std::vector<std::string> words, titleWords, description;
   std::vector<Link> links;
   std::string base;
   int img_count;
@@ -93,11 +105,15 @@ class HtmlParser {
 
   bool found = false;
 
+  // Helper function to determine if a character marks the end of an HTML tag name.
   bool is_tag_ending(const char c) {
     return c == ' ' || c == '\n' || c == '/' || c == '>' || c == '\r' ||
            c == '\f' || c == '\t';
   }
 
+  // Parses an <a href="..."> tag and extracts the target URL and the anchor text.
+  // Words are pushed to `words` or `titleWords` depending on the `in_title` flag.
+  // Returns the index just after the closing </a> tag.
   size_t extract_anchor(const char *buffer, size_t length, size_t index,
                         bool in_title) {
     // move past the first href
@@ -130,8 +146,6 @@ class HtmlParser {
     std::string url(buffer + url_start, buffer + url_end);
 
     links.emplace_back(url);
-
-    size_t link_idx = links.size() - 1;
 
     // move past the next >
     while (buffer[index] != '>') {
@@ -291,6 +305,8 @@ class HtmlParser {
     return index;
   }
 
+  // Parses a <base href="..."> tag and extracts the base URL used for resolving relative links.
+  // Only the first base tag is considered.
   size_t extract_base(const char *buffer, size_t length, size_t i) {
     // <base href="url" />
     bool in_quotes = false;
@@ -337,6 +353,8 @@ class HtmlParser {
     return i;
   }
 
+  // Parses an <embed src="..."> tag and extracts the embedded media source URL.
+  // Adds it to the `links` vector.
   size_t extract_embed(const char *buffer, size_t length, size_t i) {
     // <base href="url" />
     bool in_quotes = false;
@@ -391,6 +409,9 @@ class HtmlParser {
   // all the HTML tags and producing the list of words in body,
   // words in title, and links found on the page.
 
+  // Main constructor that accepts an HTML buffer and its length.
+  // Parses the HTML to populate words, titleWords, links, base URL, language flag, etc.
+  // Handles tag actions like discarding content, extracting metadata, handling special tags, etc.
   HtmlParser(const char *buffer, size_t length)  // Your code here
   {
     /*words.reserve(160000);
@@ -528,61 +549,45 @@ class HtmlParser {
 
             break;
 
-          case DesiredAction::Title:
-
-            while (buffer[index] != '>') {
-              // if (buffer[index] == '>')
-              // {
-              //    index++;
-              //    break;
-              // }
-              index++;
-            }
-            index++;
-
-            // grab each word in between title tags
-            inside_bracket = false;
-            while (index < length && strncmp(buffer + index, "</title>", 8) &&
-                   !closing_token) {
-              if (!(strncmp(buffer + index, "</title\n>", 8) &&
-                    strncmp(buffer + index, "</title\r>", 8) &&
-                    strncmp(buffer + index, "</title\f>", 8))) {
-                index += 2;
-                break;
-              }
-              if (buffer[index] == '<') {
-                if (strncmp(buffer + index, "<a", 2) == 0) {
-                  extract_anchor(buffer, length, index + 2, true);
-                  if (!links.empty()) links.pop_back();
-                }
-                if (word.size() > 0) {
-                  titleWords.push_back(word);
-                  word = "";
-                }
-                inside_bracket = true;
-              } else if (buffer[index] == '>') {
-                inside_bracket = false;
-              } else if (!inside_bracket) {
-                if (buffer[index] == ' ' || buffer[index] == '\t' ||
-                    buffer[index] == '\r' || buffer[index] == '\n' ||
-                    strncmp(buffer + index, "\r\n", 2) == 0) {
-                  if (word.size() > 0) {
-                    titleWords.push_back(word);
-                    word = "";
+            case DesiredAction::Title: {
+              while (buffer[index] != '>' && index < length) index++;  // skip <title> opening
+              if (index < length) index++;
+          
+              std::string word;
+              bool inside_tag = false;
+          
+              while (index + 7 < length) {
+                  // Check for closing </title>
+                  if (strncmp(buffer + index, "</title>", 8) == 0) {
+                      index += 8;
+                      break;
                   }
-                } else {
-                  word += buffer[index];
-                }
+          
+                  char c = buffer[index];
+          
+                  if (c == '<') {
+                      inside_tag = true;
+                  } else if (c == '>') {
+                      inside_tag = false;
+                  } else if (!inside_tag) {
+                      if (isspace(c)) {
+                          if (!word.empty()) {
+                              titleWords.push_back(word);
+                              word.clear();
+                          }
+                      } else {
+                          word += c;
+                      }
+                  }
+          
+                  index++;
               }
-              index++;
-            }
-            if (word.size() > 0) {
-              titleWords.push_back(word);
-              word = "";
-            }
-            index += 8;
-
-            break;
+          
+              if (!word.empty()) {
+                  titleWords.push_back(word);
+              }
+              break;
+          }          
 
           case DesiredAction::Anchor:
             index = extract_anchor(buffer, length, index, false);
@@ -657,9 +662,74 @@ class HtmlParser {
             }
             index++;
             break;
-        }
-            
-        }
+          }
+          
+          case DesiredAction::Meta: {
+        
+            char quote_type = 0;
+            std::string name_value, content_value;
+            bool has_name = false, has_content = false;
+        
+            size_t attr_index = index;
+            while (attr_index < length && buffer[attr_index] != '>') {
+                // Skip whitespace
+                while (attr_index < length && isspace(buffer[attr_index])) attr_index++;
+        
+                // Parse name or content
+                if (strncmp(buffer + attr_index, "name", 4) == 0) {
+                    attr_index += 4;
+                    while (attr_index < length && buffer[attr_index] != '=') attr_index++;
+                    attr_index++;
+                    if (buffer[attr_index] == '"' || buffer[attr_index] == '\'') {
+                        quote_type = buffer[attr_index++];
+                        size_t start = attr_index;
+                        while (attr_index < length && buffer[attr_index] != quote_type) attr_index++;
+                        name_value = std::string(buffer + start, attr_index - start);
+                        has_name = true;
+                        if (attr_index < length) attr_index++;  // skip end quote
+                    }
+                } else if (strncmp(buffer + attr_index, "content", 7) == 0) {
+                    attr_index += 7;
+                    while (attr_index < length && buffer[attr_index] != '=') attr_index++;
+                    attr_index++;
+                    if (buffer[attr_index] == '"' || buffer[attr_index] == '\'') {
+                        quote_type = buffer[attr_index++];
+                        size_t start = attr_index;
+                        while (attr_index < length && buffer[attr_index] != quote_type) attr_index++;
+                        content_value = std::string(buffer + start, attr_index - start);
+                        has_content = true;
+                        if (attr_index < length) attr_index++;  // skip end quote
+                    }
+                } else {
+                    // Skip other attributes
+                    while (attr_index < length && buffer[attr_index] != ' ' && buffer[attr_index] != '>') attr_index++;
+                }
+            }
+        
+            // After parsing all attributes
+            if (has_name && has_content && strcasecmp(name_value.c_str(), "description") == 0) {
+                std::string temp_word;
+                for (char c : content_value) {
+                    if (std::isspace(c)) {
+                        if (!temp_word.empty()) {
+                            description.push_back(temp_word);
+                            temp_word.clear();
+                        }
+                    } else {
+                        temp_word += c;
+                    }
+                }
+                if (!temp_word.empty()) {
+                    description.push_back(temp_word);
+                }
+            }
+        
+            while (index < length && buffer[index] != '>') index++;
+            if (index < length) index++;
+        
+            break;
+          }
+        }        
 
       } else {
         if (buffer[index] == ' ' || buffer[index] == '\t' ||

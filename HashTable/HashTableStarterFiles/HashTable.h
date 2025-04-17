@@ -103,7 +103,7 @@ public:
   Tuple<Key, Value> tuple;
 
   Bucket(const Key &k, size_t h, const Value v)
-      : tuple(k, v), next(nullptr), hashValue(h) {}
+      : next(nullptr), hashValue(h), tuple(k, v) {}
 
   ~Bucket() { delete next; }
 };
@@ -205,13 +205,39 @@ public:
     entry->value = newValue;
     return true;
   }
-  void Optimize(double loading = 1.5)
+  void Optimize(double loading = 1.1)
   {
     // Modify or rebuild the hash table as you see fit
     // to improve its performance now that you know
     // nothing more is to be added.
 
-    // Your code here.
+    size_t newNumberOfBuckets = static_cast<size_t>(numberOfElements / loading);
+    if (newNumberOfBuckets == numberOfBuckets) return;
+    
+    Bucket<Key, Value>** newBuckets = new Bucket<Key, Value>*[newNumberOfBuckets]();
+
+    for (size_t i = 0; i < numberOfBuckets; ++i) {
+      Bucket<Key, Value>* current = buckets[i];
+      buckets[i] = nullptr;
+
+      while (current != nullptr) {
+          Bucket<Key, Value>* nextNode = current->next; 
+
+          size_t newIndex = current->hashValue % newNumberOfBuckets;
+
+          current->next = newBuckets[newIndex];
+          newBuckets[newIndex] = current;
+
+          current = nextNode;
+      }
+    }
+
+    delete[] buckets;
+
+    buckets = newBuckets;
+    numberOfBuckets = newNumberOfBuckets;
+    
+    /*
     HashTable<Key, Value> *t = new HashTable<Key, Value>(loading * numberOfElements);
     for (auto it = begin(); it != end(); ++it)
       t->Find(it->key, it->value);
@@ -219,6 +245,7 @@ public:
     swap(t->numberOfElements, this->numberOfElements);
     swap(t->buckets, this->buckets);
     delete t;
+    */
   }
 
   // Your constructor may take as many default arguments

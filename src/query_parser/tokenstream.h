@@ -1,5 +1,4 @@
-#ifndef TOKENSTREAM_H_
-#define TOKENSTREAM_H_
+#pragma once
 
 #include <string>
 
@@ -62,5 +61,3 @@ public:
 
    std::string Peek();
 };
-
-#endif /* TOKENSTREAM_H_ */

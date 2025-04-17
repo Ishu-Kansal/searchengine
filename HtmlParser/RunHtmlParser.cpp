@@ -66,5 +66,10 @@ int main(int argc, char **argv)
         cout << link.URL << '\n';
     }
 
+    cout << "description:\n";
+    for (string desc : parser.description) {
+        cout << desc << '\n';
+    }
+
     delete[] buffer;
 }

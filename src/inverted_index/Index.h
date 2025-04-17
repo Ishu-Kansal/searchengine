@@ -11,37 +11,49 @@
 
 constexpr unsigned char TITLE_FLAG = 0x01;
 constexpr unsigned char BOLD_FLAG = 0x02;
-constexpr char TITLE_MARKER = '!';
 
+constexpr char TITLE_MARKER = '!';
+/**
+ * @struct Post
+ * @brief Represents a single posting of a word within the indexed content
+ * Stores the location of the post
+ */
 struct Post {
   uint64_t location{};
   Post() = default;
   Post(uint64_t pos) : location{pos} {}
 };
 
+/**
+ * @struct Doc
+ * @brief Represents metadata for a single document in the index
+ * Stores the document's URL and its pre-calculated static rank
+ */
 struct Doc {
   std::string url;
-  size_t staticRank;
-
-  Doc(std::string &url_, size_t staticRank_)
+  uint8_t staticRank;
+  Doc() = default;
+  Doc(std::string &url_, uint8_t staticRank_)
       : url(std::move(url_)), staticRank(staticRank_) {}
-  Doc(const char *c1, const char *c2, size_t staticRank_)
+  Doc(const char *c1, const char *c2, uint8_t staticRank_)
       : url(c1, c2), staticRank(staticRank_) {}
 };
 
+/**
+ * @class PostingList
+ * @brief Stores the list of posts for a single word
+ * Holds the word itself and a list of Post objects indicating where the word appeared
+ */
 class PostingList {
  public:
   friend uint8_t *encode_posting_list(uint8_t *, const PostingList &);
 
   void add_post(size_t pos) {
-    table.addEntry(bytes, pos);
     posting_list.emplace_back(pos);
-    bytes += SizeOf(pos - prev);
-    prev = pos;
   }
   void add_word(std::string & word_)
   {
-    word = std::move(word_);
+    word = (word_);
   }
   auto begin() { return posting_list.begin(); }
 
@@ -61,18 +73,32 @@ class PostingList {
   // Linked list of posts
   std::deque<Post> posting_list{};
   std::string word;
-  uint64_t bytes{};
-  uint64_t prev{};
-  SeekTable table{};
 };
 
+/**
+ * @class InvertedIndex
+ * @brief Manages the core inverted index structure: a dictionary mapping words to their posting lists
+ */
 class InvertedIndex {
  public:
+   /**
+   * @brief Adds a special marker indicating the end of a document at the given position.
+   * Uses a unique internal string "!#$%!#13513sfas" to represent this marker
+   * @param pos The position immediately following the last word of the document
+   */
   void add_enddoc(size_t pos) {
     static std::string endDoc = "!#$%!#13513sfas";
     add_word(endDoc, pos, false);
   }
-
+  /**
+   * @brief Adds a word occurrence at a specific position to the inverted index
+   * If the word is new, creates a new PostingList. Otherwise, adds the position to the existing list
+   * Appends TITLE_MARKER ('!') to the word if it appeared in a title
+   *
+   * @param word The word to add (will be modified if title is true)
+   * @param pos The position (location) where the word occurred
+   * @param title If true, indicates the word appeared in a title, and TITLE_MARKER is appended
+   */
   void add_word(std::string &word, size_t pos, bool title = true) {
     if (title) word.push_back('!');
     // Check if the word exists in the dictionary
@@ -108,9 +134,19 @@ class InvertedIndex {
   std::vector<PostingList> lists_of_posting_lists;
 };
 
+/**
+ * @class IndexChunk
+ * @brief Represents a portion (chunk) of the overall index being built
+ * Contains a list of documents (URLs and ranks) and an InvertedIndex for the words within those documents
+ */
 class IndexChunk {
  public:
+  IndexChunk() : url_list_size(0), pos(0) 
+  {
+    url_list.reserve(100000);
+  }
   void add_url(std::string &url, size_t staticRank) {
+    url_list_size += url.size() + 2; // 1 byte for static rank and 1 byte for url length
     url_list.emplace_back(url, staticRank);
   }
   void add_enddoc() {
@@ -131,13 +167,17 @@ class IndexChunk {
   [[nodiscard]] HashTable<const std::string, size_t> & get_dictionary() {
     return inverted_word_index.get_dictionary();
   }
+  [[nodiscard]] uint64_t get_url_list_size_bytes() const {
+    return url_list_size;
+  }
  private:
   std::vector<Doc> url_list;
   InvertedIndex inverted_word_index;
+  uint64_t url_list_size;
   uint64_t pos;
 };
 
-uint8_t *encode_url_list(uint8_t *buf, const std::vector<Doc> &url_list) {
+inline uint8_t *encode_url_list(uint8_t *buf, const std::vector<Doc> &url_list) {
   buf = encodeVarint(url_list.size(), buf);
   for (const auto &url : url_list) {
     buf = encodeVarint(url.staticRank, buf);
@@ -147,7 +187,7 @@ uint8_t *encode_url_list(uint8_t *buf, const std::vector<Doc> &url_list) {
   return buf;
 }
 
-size_t doc_list_required_size(const std::vector<Doc> &doc_list) {
+inline size_t doc_list_required_size(const std::vector<Doc> &doc_list) {
   size_t ans = SizeOf(doc_list.size());
   for (const auto &url : doc_list) {
     ans += SizeOf(url.staticRank);
@@ -156,6 +196,7 @@ size_t doc_list_required_size(const std::vector<Doc> &doc_list) {
   return ans;
 }
 
+/*
 uint8_t *encode_posting_list(uint8_t *buf, const PostingList &pl) {
   // save byte start for header
   // isr will load seek table into memory; seek table needs byte offsets
@@ -170,7 +211,5 @@ uint8_t *encode_posting_list(uint8_t *buf, const PostingList &pl) {
   }
   return buf;
 }
+*/
 
-void *encodeIndex(const IndexChunk &h) {
-
-}

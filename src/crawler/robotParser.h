@@ -54,7 +54,10 @@ class RobotParser {
 
       if (isEqual(field_view, "User-agent")) {
         if (isEqual(value_view, USER_AGENT)) ourUserAgentFound = true;
-        if (isEqual(value_view, "*")) }
+        if (isEqual(value_view, "*")) {
+          ourUserAgentFound = true;
+        }
+      }
     }
   }
   int handleRobotFile(const ParsedUrl& url, const std::string& url_in) {
