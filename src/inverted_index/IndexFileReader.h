@@ -10,6 +10,8 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
+
+#include <algorithm>
 #include <memory>
 #include <unordered_map>
 
@@ -43,11 +45,14 @@ struct SeekObj {
     Location location;
     Location delta;
     Location index;
+    int seekTableIndex;
     unsigned numOccurrences;
 
-    SeekObj(Location off, Location loc, Location d, Location idx, unsigned num)
-      : offset(off), location(loc), delta(d), index(idx), numOccurrences(num) {}
+    SeekObj() = default;
+    SeekObj(Location off, Location loc, Location d, Location idx, unsigned num, int seekIdx)
+      : offset(off), location(loc), delta(d), index(idx), numOccurrences(num),seekTableIndex(seekIdx) {}
 };
+
 /**
  * @class IndexFileReader
  * @brief Reads data from serialized index chunk files ("IndexChunk_XXXXX") and hash files ("HashFile_XXXXX")
@@ -87,6 +92,92 @@ private:
         }
         memcpy(&value, currentPtr, sizeof(uint64_t));
         currentPtr += sizeof(uint64_t);
+        return true;
+    }
+
+    bool findBestSeekEntry(
+        const uint8_t* seekTableStart,
+        const uint8_t* fileEnd,
+        size_t numSeekTableEntries,
+        Location target,
+        Location& outBestOffset,
+        Location& outBestLocation,
+        uint64_t& outIndex,
+        int& outTableIndex)
+        const
+    {
+        outIndex = 0;
+        uint64_t entryOffset = 0;
+        uint64_t entryLocation = 0;
+        outBestOffset = entryOffset;
+        outBestLocation = entryLocation;
+        
+        if (numSeekTableEntries > 0)
+        {
+
+            int cursor = 0;
+            if (outTableIndex > 0)
+            {
+                cursor = outTableIndex;
+            }
+            int jump = 1;
+
+            const uint8_t * tempPtr = seekTableStart + cursor * ENTRY_SIZE;
+            if (!readUint64_t(tempPtr, fileEnd, entryOffset)) { return false; }
+            if (!readUint64_t(tempPtr, fileEnd, entryLocation)) { return false; }
+
+            while (cursor < numSeekTableEntries && target > entryLocation)
+            {
+                jump *= 2;
+                cursor += jump;
+
+                const uint8_t * readPtr = (ENTRY_SIZE * cursor) + seekTableStart;
+
+                if (!readUint64_t(readPtr, fileEnd, entryOffset)) { return false; }
+                if (!readUint64_t(readPtr, fileEnd, entryLocation)) { return false; }
+
+            }
+
+            int best = -1;
+            if (cursor != 0)
+            {
+                int low = cursor - jump;
+                int high = min(cursor, static_cast<int>(numSeekTableEntries - 1));
+
+    
+                while (low <= high)
+                {
+                    int mid = (low + high) / 2;
+                    const uint8_t * readPtr = (ENTRY_SIZE * mid) + seekTableStart;
+    
+                    if (!readUint64_t(readPtr, fileEnd, entryOffset)) { return false; }
+                    if (!readUint64_t(readPtr, fileEnd, entryLocation)) { return false; }
+    
+                    if (entryLocation <= target) 
+                    {
+                        best = mid;
+                        outBestOffset = entryOffset;
+                        outBestLocation = entryLocation;
+                        low = mid + 1;
+                    }
+                    else 
+                    {
+                        high = mid - 1; 
+                    }
+                }
+            }
+
+            if (best == -1)
+            {
+                outBestOffset = 0;
+                outBestLocation = 0;
+                outTableIndex = -1;
+                outIndex = 0;
+                return true;
+            }
+            outIndex = (best + 1) * BLOCK_SIZE;
+            outTableIndex = best;
+        }
         return true;
     }
 public:
@@ -173,7 +264,8 @@ public:
     std::unique_ptr<SeekObj> Find(
         const std::string& word, 
         Location target, 
-        uint32_t chunkNum) const {
+        uint32_t chunkNum,
+        int tableIndex = -1) const {
 
         if (chunkNum >= mappedFiles.size() || !mappedFiles[chunkNum]) 
         {
@@ -207,7 +299,6 @@ public:
             fprintf(stderr, "ERROR: Offset into file (%zu) is out of bounds (%zu) for word '%s' in chunk %u.\n", postingListOffset, fileSize, word.c_str(), chunkNum);
             return nullptr;
         } 
-
         const uint8_t * postingListBuf = fileStart + postingListOffset;
         uint8_t numSeekTableEntriesSize = *postingListBuf;
         postingListBuf += NUM_ENTRIES_SIZE_BYTES;
@@ -234,87 +325,35 @@ public:
 
         const uint8_t * seekTableStart = postingListBuf;
 
-        size_t tableIndex = (target + 1) >> BLOCK_OFFSET_BITS;
+
         uint64_t index = 0;
+        Location bestOffset = 0;
+        Location bestLocation = 0;
 
-        uint64_t entryOffset = 0;
-        uint64_t entryLocation = 0;
+        bool found = findBestSeekEntry(seekTableStart, fileEnd, numSeekTableEntries, target, bestOffset, bestLocation, index, tableIndex);
 
-        if (numSeekTableEntriesSize && tableIndex != 0)
-        {
-
-            int cursor = 0;
-            int jump = 1;
-            const uint8_t * tempPtr = seekTableStart;
-
-            if (!readUint64_t(tempPtr, fileEnd, entryOffset)) { return nullptr; }
-            if (!readUint64_t(tempPtr, fileEnd, entryLocation)) { return nullptr; }
-
-            while (cursor < numSeekTableEntries && target < entryLocation)
-            {
-                jump *= 2;
-                cursor += jump;
-
-                const uint8_t * readPtr = (ENTRY_SIZE * cursor) + seekTableStart;
-
-                if (!readUint64_t(readPtr, fileEnd, entryOffset)) { return nullptr; }
-                if (!readUint64_t(readPtr, fileEnd, entryLocation)) { return nullptr; }
-
-            }
-            int low = cursor;
-            int high = numSeekTableEntries - 1;
-            int best = -1;
-
-            uint64_t closestOffset = 0;
-            uint64_t closestLocation = 0;
-
-            while (low <= high)
-            {
-                int mid = (low + high) / 2;
-                const uint8_t * readPtr = (ENTRY_SIZE * mid) + seekTableStart;
-
-                if (!readUint64_t(readPtr, fileEnd, entryOffset)) { return nullptr; }
-                if (!readUint64_t(readPtr, fileEnd, entryLocation)) { return nullptr; }
-
-                if (entryLocation <= target) 
-                {
-                    best = mid;
-                    closestOffset = entryOffset;
-                    closestLocation = entryLocation;
-                    low = mid + 1; 
-
-                }
-                else 
-                {
-                    high = mid - 1; 
-                }
-                
-            }
-
-            entryOffset = closestOffset;
-            entryLocation = closestLocation;
-
-            if (best != -1) 
-            {
-                index = (best + 1) * BLOCK_SIZE;
-            }
-        }
-
-        postingListBuf += (ENTRY_SIZE * numSeekTableEntries) ;
+        if (!found) return nullptr;
+        postingListBuf += (ENTRY_SIZE * numSeekTableEntries) + bestOffset;
         // Linearly scan if we don't have a seek table
         // Or if index is 0 (means element is within the first 8192 entries)
-        uint64_t currentLocation = entryLocation;
-        uint64_t currentOffset = entryOffset;
-            
-        while (currentLocation < target || target == 0)
+    
+        uint64_t currentLocation = bestLocation;
+        uint64_t currentOffset = bestOffset;
+
+        Location decodeCounter = 0;
+        while (currentLocation <= target || target == 0)
         {
+            decodeCounter++;
             uint64_t delta = 0;
             postingListBuf = decodeVarint(postingListBuf, delta);
             currentLocation += delta;
             currentOffset += SizeOf(delta);
             if (currentLocation >= target)
             {
-                return std::make_unique<SeekObj>(currentOffset, currentLocation, delta, index, numPosts);
+                // cout << "Deltas decoded: " << decodeCounter << "\n";
+                // cout << decodeCounter << "\n";
+                return std::make_unique<SeekObj>(currentOffset, currentLocation, delta, index, numPosts, tableIndex);
+          
             }
             index++;
             if (index > numPosts) return nullptr;
@@ -407,7 +446,8 @@ public:
         const std::string& word, 
         uint32_t chunkNum,
         uint64_t startLoc,
-        uint64_t endLoc) const
+        uint64_t endLoc,
+        int tableIndex = -1) const
     {
         std::vector<Location> results;
         if (chunkNum >= mappedFiles.size() || !mappedFiles[chunkNum]) 
@@ -456,6 +496,7 @@ public:
         uint64_t numPosts = 0;
      
         const uint8_t* nextPtr = nullptr;
+
         if (numSeekTableEntriesSize) 
         {
             if (postingListBuf + numSeekTableEntriesSize > fileEnd) 
@@ -480,31 +521,14 @@ public:
 
         if (numPosts == 0) return results;
 
-        size_t tableIndex = startLoc >> BLOCK_OFFSET_BITS; 
-
-        uint64_t currentLocation = 0;
-        uint64_t currentOffset = 0;
+        Location currentLocation = 0;
+        Location currentOffset = 0;
         uint64_t currentIndex = 0;
+        const uint8_t * seekTableStart = postingListBuf;
+        bool found = findBestSeekEntry(seekTableStart, fileEnd, numSeekTableEntries, startLoc, currentOffset, currentLocation, currentIndex, tableIndex);
 
-        if (numSeekTableEntriesSize && tableIndex > 0 && tableIndex <= numSeekTableEntries)
-        {
-            const uint8_t * seekEntry = postingListBuf + ((tableIndex - 1) * ENTRY_SIZE);
-
-            uint64_t entryOffset;
-            uint64_t entryLocation;
-            
-            const uint8_t* tempReadPtr = seekEntry;
-            if (!readUint64_t(tempReadPtr, fileEnd, entryOffset)) { return results; }
-            if (!readUint64_t(tempReadPtr, fileEnd, entryLocation)) { return results; }
-
-            currentLocation = entryLocation;
-            currentOffset = entryOffset;
-            postingListBuf += ((ENTRY_SIZE * numSeekTableEntries) + entryOffset);
-
-            currentIndex = (tableIndex * BLOCK_SIZE) - 1;
-           
-        }
-
+        if (!found) return results;
+        postingListBuf += (ENTRY_SIZE * numSeekTableEntries) + currentOffset;
         while (currentIndex < numPosts && currentLocation < startLoc)
         {
              if (postingListBuf >= fileEnd) return results;
@@ -516,7 +540,7 @@ public:
              currentLocation += delta;
              currentIndex++;
         }
-
+        
         // load locations within the [startLoc, endLoc) range
         while (currentIndex < numPosts && currentLocation < endLoc)
         {
@@ -528,11 +552,12 @@ public:
 
              postingListBuf = nextPtr;
              currentLocation += delta;
-             if (currentLocation >= startLoc)
+             if (currentLocation < endLoc)
              {
                 results.push_back(currentLocation);
              }
              currentIndex++;
+             
         }
 
         return results;

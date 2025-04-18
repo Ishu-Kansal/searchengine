@@ -123,6 +123,7 @@ int main()
 
     const uint32_t chunkNum = 0; 
 
+    /*
     IndexChunk indexChunk; 
     if (!build_index_from_file(data_filename, indexChunk)) 
     {
@@ -132,7 +133,7 @@ int main()
     IndexFile indexFile(chunkNum, indexChunk); 
 
     std::cout << "Creating IndexFileReader..." << std::endl;
-
+    */
     IndexFileReader reader(numChunks); 
 
     std::string test_query_1 = "apple banana"; 

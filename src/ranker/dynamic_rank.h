@@ -1,4 +1,8 @@
+#pragma once
+
 #include <stdint.h>
+
+#include <algorithm>
 #include <vector>
 #include <climits>
 #include <string>
@@ -32,6 +36,7 @@ enum Requirements: int {
 
 using locationVector = std::vector<Location>;
 
+constexpr Location RANGE_TOLERANCE = 25;
 // given all of the occurences assigns the weights and returns the actual dynamic rank
 // ***RME CLAUSE***
 // Requires: The number of short spans, ordered spans, phrase matches, top spans, and the type of section this is being scored on
@@ -69,7 +74,25 @@ int get_rank_score(int shortSpans, int orderedSpans, int phraseMatches, int topS
 int get_dynamic_rank(std::unique_ptr<ISRWord> &anchorTerm, vector<vector<std::unique_ptr<ISRWord>>> &phraseTerms, uint64_t startLocation, uint64_t endLocation, const IndexFileReader & reader, uint32_t currChunk) {
 
     // Gets all locations for anchor in this document
-    locationVector anchorLocations;
+    locationVector anchorLocations = reader.LoadChunkOfPostingList(
+        anchorTerm->GetWord(), 
+        currChunk,   
+        startLocation,
+        endLocation,
+        anchorTerm->GetSeekTableIndex()
+    );
+
+    Location newStart = startLocation;
+    Location newEnd = endLocation;
+
+    if (!anchorLocations.empty())
+    {
+        Location anchorStart = anchorLocations.front();
+        Location anchorEnd = anchorLocations.back();
+    
+        newStart = max(anchorStart + RANGE_TOLERANCE, Location(newStart));
+        newEnd = min(anchorEnd + RANGE_TOLERANCE, Location(newEnd));
+    }
     // 3D vector, 1D is each phrase, 2D is the words in that phrase i, and 3D are all the locations for word j
     std::vector<std::vector<locationVector>> loadedPhrasePostings(phraseTerms.size());
 
@@ -91,8 +114,9 @@ int get_dynamic_rank(std::unique_ptr<ISRWord> &anchorTerm, vector<vector<std::un
                 loadedPhrasePostings[i][j] = reader.LoadChunkOfPostingList(
                     phraseTerms[i][j]->GetWord(),
                     currChunk,                   
-                    startLocation,
-                    endLocation
+                    newStart,
+                    newEnd,
+                    phraseTerms[i][j]->GetSeekTableIndex()
                 );
             }
         }

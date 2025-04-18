@@ -85,7 +85,7 @@ std::vector<UrlRank> constraint_solver(
     // create an ISR for document seeking
     std::vector<UrlRank> topNdocs;
     topNdocs.reserve(TOTAL_DOCS_TO_RETURN);
-    int j = 0;
+    int matchedDocs = 0;
 
     // Copy orderedQueryTerms for the title terms
     std::vector<std::vector<std::unique_ptr<ISRWord>>> titleTerms;
@@ -110,12 +110,11 @@ std::vector<UrlRank> constraint_solver(
       SeekObj * docObj = docISR->Seek(currMatch->location);
       while (docObj) 
       {
-        ++j;
+          ++matchedDocs;
           int currLoc = docObj->location;
           int currDelta = docObj->delta;
           int index = docObj->index;
 
-  
           int docEndLoc = currLoc;
           int docStartLoc = currLoc - currDelta;
   
@@ -148,14 +147,10 @@ std::vector<UrlRank> constraint_solver(
           {
             break;
           }
-          if (j % 1000 == 0)
-          {
-            cout << j << '\n';
-          }
           docObj = docISR->Seek(currMatch->location);
     }
    
     }
-    cout << "MATCHED DOCUMENTS:" << j << '\n';
+    cout << "MATCHED DOCUMENTS:" << matchedDocs << '\n';
     return topNdocs; 
 }
