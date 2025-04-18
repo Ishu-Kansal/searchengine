@@ -2,6 +2,7 @@
 #include <netdb.h>
 #include <pthread.h>
 #include <sys/socket.h>
+#include <signal.h>
 #include <unistd.h>
 
 #include <cstdint>
@@ -21,7 +22,7 @@
 #include "constants.h"
 
 pthread_mutex_t queue_lock{};
-Bloomfilter bf(0, 0);
+Bloomfilter bf(1, 1);
 
 std::mt19937 mt{std::random_device{}()};
 std::queue<std::string> explore_queue{};
@@ -131,7 +132,7 @@ std::string get_next_url() {
 }
 
 void get_handler(int fd) {
-  pthread_lock_guard{queue_lock};
+  pthread_lock_guard _{queue_lock};
   const std::string next = get_next_url();
   const size_t header = next.size();
   send(fd, &header, sizeof(header), 0);
@@ -139,7 +140,7 @@ void get_handler(int fd) {
 }
 
 void save_handler(int sock) {
-  pthread_lock_guard{queue_lock};
+  pthread_lock_guard _{queue_lock};
   static const char *filterName = "dispatcher_filter.bin";
   static const char *queueName = "dispatcher_queue.bin";
   remove(filterName);
@@ -175,18 +176,18 @@ void save_handler(int sock) {
 }
 
 void add_handler(int fd, uint64_t size) {
+  if (size <= sizeof(uint64_t)) return;
   std::string req(size, 0);
-  ssize_t bytes;
-  uint64_t rank;
+  ssize_t bytes = 0;
+  uint64_t rank = 0;
   if ((bytes = recv(fd, req.data(), req.size(), MSG_WAITALL)) <= 0) {
     return;
   }
-  auto ptr = memcpy(&rank, req.data(), sizeof(rank));
+  memcpy(&rank, req.data(), sizeof(rank));
   auto url = req.substr(sizeof(rank));
 
-  pthread_lock_guard{queue_lock};
+  pthread_lock_guard _{queue_lock};
   if (links_vector.size() < MAX_VECTOR_SIZE && !bf.contains(url)) {
-    std::clog << "Adding link: " << url << std::endl;
     bf.insert(url);
     links_vector.emplace_back(std::move(url), rank);
   }
@@ -215,8 +216,10 @@ void *handler(void *fd) {
   return NULL;
 }
 
-int main() {
-  pthread_mutex_init(&queue_lock, NULL);
+int main(int argc, char **argv) {
+  signal(SIGPIPE, SIG_IGN);
+  int res = pthread_mutex_init(&queue_lock, NULL);
+  if (res != 0) return 1;
   bf = Bloomfilter(MAX_EXPECTED_LINKS, MAX_FALSE_POSITIVE_RATE);
   std::ifstream infile("seed_list.txt");
   if (!infile.is_open()) {

@@ -32,6 +32,7 @@
 #include "../../utils/pthread_lock_guard.h"
 #include "../../utils/socket_wrapper.h"
 #include "../inverted_index/Index.h"
+#include "../inverted_index/IndexFile.h"
 #include "../ranker/rank.h"
 #include "constants.h"
 #include "sockets.h"
@@ -51,27 +52,26 @@ static constexpr std::string_view UNWANTED_LRM = "&lrm";
 static constexpr std::string_view UNWANTED_RLM = "&rlm";
 static constexpr size_t MAX_WORD_LENGTH = 50;
 
-constexpr uint32_t MAX_PROCESSED = 500;
-constexpr uint32_t NUM_CHUNKS = 5;
+constexpr uint32_t MAX_PROCESSED = 10'000;
+constexpr uint32_t NUM_CHUNKS = 1;
 
-ChunkBlock* chunks = new ChunkBlock[NUM_CHUNKS]{};
+IndexChunk chunk{};
 
-const static int NUM_THREADS = 32;  // start small
+const static int NUM_THREADS = 1024;  // start small
 
 uint32_t STATIC_RANK = 0;  // temp global variable
 
 std::queue<std::string> explore_queue{};
 std::vector<std::pair<std::string, uint32_t>> links_vector;
-Bloomfilter bf(100000, 0.0001);  // Temp size and false pos rate
 
 pthread_mutex_t queue_lock{};
+pthread_mutex_t chunk_lock{};
+pthread_mutex_t cout_lock{};
 sem_t* queue_sem;
 uint32_t num_processed{};
 std::mt19937 mt{std::random_device{}()};
 
-uint64_t thread_ids[NUM_THREADS];
-
-int get_socket() {
+int get_socket(int timeout = 5) {
   sockaddr_in address;
   address.sin_family = AF_INET;
   address.sin_port = htons(SERVER_PORT);             // Port number
@@ -82,7 +82,7 @@ int get_socket() {
   int res = connect(sock, (struct sockaddr*)&address, sizeof(address));
   if (res == -1) return -1;
   struct timeval tv;
-  tv.tv_sec = 5;  // 5 seconds
+  tv.tv_sec = timeout;  // 5 seconds
   tv.tv_usec = 0;
   res = setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
   if (res == -1) return -1;
@@ -90,20 +90,23 @@ int get_socket() {
 }
 
 std::string get_string() {
-  const int sock = get_socket();
+  const int sock = get_socket(5);
   if (sock == -1) return "";
   SocketWrapper _{sock};
   int res = send(sock, &GET_COMMAND, sizeof(GET_COMMAND), 0);
   if (res == -1) return "";
-  size_t header;
-  if (recv(sock, &header, sizeof(header), 0) <= 0) return "";
+  size_t header = 0;
+  if (recv(sock, &header, sizeof(header), 0) <= 0 || header == 0) return "";
   std::string result(header, 0);
   if (recv(sock, result.data(), result.size(), MSG_WAITALL) <= 0) return "";
+{
+  pthread_lock_guard guard{cout_lock};
+  std::cout << "GOT: " << result << std::endl;}
   return result;
 }
 
 void add_url(cstring_view url, uint64_t rank) {
-  int sock = get_socket();
+  int sock = get_socket(1);
   if (sock == -1) return;
   SocketWrapper _{sock};
   header_t header = sizeof(rank) + url.size();
@@ -336,10 +339,10 @@ struct Args {
 void* add_to_index(void* addr) {
   Args* arg = reinterpret_cast<Args*>(addr);
 
-  pthread_lock_guard{chunks[arg->thread_id].lock};
+  pthread_lock_guard _{chunk_lock};
   if (arg->parser.isEnglish) {
     const uint16_t urlLength = arg->url.size();
-    chunks[arg->thread_id].chunk.add_url(arg->url, arg->static_rank);
+    chunk.add_url(arg->url, arg->static_rank);
 
     for (auto& word : arg->parser.titleWords) {
       cleanString(word);
@@ -349,7 +352,7 @@ void* add_to_index(void* addr) {
         std::transform(part.begin(), part.end(), part.begin(),
                        [](unsigned char c) { return std::tolower(c); });
         // std::cout << part << '\n';
-        chunks[arg->thread_id].chunk.add_word(part, true);
+        chunk.add_word(part, false);
       }
     }
 
@@ -361,13 +364,12 @@ void* add_to_index(void* addr) {
         std::transform(part.begin(), part.end(), part.begin(),
                        [](unsigned char c) { return std::tolower(c); });
         // std::cout << part << '\n';
-        chunks[arg->thread_id].chunk.add_word(part, false);
+        chunk.add_word(part, false);
       }
     }
 
-    chunks[arg->thread_id].chunk.add_enddoc();
+    chunk.add_enddoc();
   }
-  sem_post(chunks[arg->thread_id].sem);
   delete arg;
   return NULL;
 }
@@ -471,7 +473,6 @@ void* runner(void*) {
       output_file.close();
        */
       // --------------------------------------------------
-      sem_wait(chunks[thread_id].sem);
       pthread_t t;
       pthread_create(
           &t, NULL, add_to_index,
@@ -501,32 +502,29 @@ int main(int argc, char** argv) {
   if (queue_sem == SEM_FAILED) exit(EXIT_FAILURE);
 
   pthread_mutex_init(&queue_lock, NULL);
-  for (int i = 0; i < NUM_CHUNKS; ++i) {
-    pthread_mutex_init(&chunks[i].lock, NULL);
-    chunks[i].sem = sem_open(sem_names[i].data(), O_CREAT, 0666, 1);
-  }
+  pthread_mutex_init(&chunk_lock, NULL);
+  pthread_mutex_init(&cout_lock, NULL);
 
   pthread_t threads[NUM_THREADS];
   for (int i = 0; i < NUM_THREADS; i++) {
     pthread_create(threads + i, NULL, runner, NULL);
-    int res = pthread_threadid_np(threads[i], thread_ids + i);
-    assert(res == 0);
   }
-  std::clog << "STARTED THREADS...\n";
+  std::cout << "STARTED THREADS...\n";
   for (int i = 0; i < NUM_THREADS; i++) {
     pthread_join(threads[i], NULL);
   }
 
+  exit(0);
+  std::cout << "FINISHED THREADS/...\n";
+
+  IndexFile chunkFile(0, chunk);
+
   pthread_mutex_destroy(&queue_lock);
-  for (int i = 0; i < NUM_CHUNKS; ++i) {
-    pthread_mutex_destroy(&chunks[i].lock);
-    sem_close(chunks[i].sem);
-  }
+  pthread_mutex_destroy(&chunk_lock);
+  pthread_mutex_destroy(&cout_lock);
   // for (int i = 0; i < NUM_CHUNKS; ++i) IndexChunk::Write(chunks[i].chunk,
   // i);
 
   // std::cout << "Time taken: " << duration.count() << " ms" << std::endl;
-  sem_close(queue_sem);
-  delete[] chunks;
   return 0;
 }

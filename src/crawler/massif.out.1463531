@@ -1,0 +1,615 @@
+desc: (none)
+cmd: ./crawler2
+time_unit: i
+#-----------
+snapshot=0
+#-----------
+time=0
+mem_heap_B=0
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=1
+#-----------
+time=4476953
+mem_heap_B=72704
+mem_heap_extra_B=8
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=2
+#-----------
+time=4533589
+mem_heap_B=73352
+mem_heap_extra_B=24
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=3
+#-----------
+time=4533764
+mem_heap_B=473352
+mem_heap_extra_B=32
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=4
+#-----------
+time=4784018
+mem_heap_B=873352
+mem_heap_extra_B=40
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=5
+#-----------
+time=5034272
+mem_heap_B=1273352
+mem_heap_extra_B=48
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=6
+#-----------
+time=5284526
+mem_heap_B=1673352
+mem_heap_extra_B=56
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=7
+#-----------
+time=5534780
+mem_heap_B=2073352
+mem_heap_extra_B=64
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=8
+#-----------
+time=5786016
+mem_heap_B=2073416
+mem_heap_extra_B=72
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=9
+#-----------
+time=5786178
+mem_heap_B=2073928
+mem_heap_extra_B=80
+mem_stacks_B=0
+heap_tree=detailed
+n3: 2073928 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 2000000 0x40E17C: HashTable<char const*, unsigned long>::HashTable() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+  n1: 2000000 0x40C79D: InvertedIndex::InvertedIndex() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+   n1: 2000000 0x40C7DA: IndexChunk::IndexChunk() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+    n1: 2000000 0x408BB3: __static_initialization_and_destruction_0(int, int) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+     n1: 2000000 0x408D05: _GLOBAL__sub_I__Z20get_numImages_weighti (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+      n1: 2000000 0x41991C: __libc_csu_init (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+       n0: 2000000 0x6364777: (below main) (in /usr/lib64/libc-2.28.so)
+ n1: 72704 0x586DC19: ??? (in /usr/lib64/libstdc++.so.6.0.25)
+  n1: 72704 0x4009119: call_init.part.0 (dl-init.c:72)
+   n1: 72704 0x4009219: call_init (dl-init.c:118)
+    n1: 72704 0x4009219: _dl_init (dl-init.c:119)
+     n0: 72704 0x401EF19: ??? (in /usr/lib64/ld-2.28.so)
+ n0: 1224 in 3 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=10
+#-----------
+time=5788937
+mem_heap_B=2313560
+mem_heap_extra_B=88
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=11
+#-----------
+time=5858972
+mem_heap_B=2313613
+mem_heap_extra_B=107
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=12
+#-----------
+time=5862086
+mem_heap_B=2313633
+mem_heap_extra_B=127
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=13
+#-----------
+time=5863800
+mem_heap_B=2313809
+mem_heap_extra_B=223
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=14
+#-----------
+time=5864932
+mem_heap_B=2313898
+mem_heap_extra_B=294
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=15
+#-----------
+time=5866064
+mem_heap_B=2314004
+mem_heap_extra_B=348
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=16
+#-----------
+time=5867436
+mem_heap_B=2314677
+mem_heap_extra_B=411
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=17
+#-----------
+time=5868992
+mem_heap_B=2314730
+mem_heap_extra_B=430
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=18
+#-----------
+time=5870408
+mem_heap_B=2314951
+mem_heap_extra_B=561
+mem_stacks_B=0
+heap_tree=detailed
+n4: 2314951 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 2000000 0x40E17C: HashTable<char const*, unsigned long>::HashTable() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+  n1: 2000000 0x40C79D: InvertedIndex::InvertedIndex() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+   n1: 2000000 0x40C7DA: IndexChunk::IndexChunk() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+    n1: 2000000 0x408BB3: __static_initialization_and_destruction_0(int, int) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+     n1: 2000000 0x408D05: _GLOBAL__sub_I__Z20get_numImages_weighti (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+      n1: 2000000 0x41991C: __libc_csu_init (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+       n0: 2000000 0x6364777: (below main) (in /usr/lib64/libc-2.28.so)
+ n1: 239632 0x414B61: std::__new_allocator<unsigned long>::allocate(unsigned long, void const*) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+  n1: 239632 0x413521: std::allocator_traits<std::allocator<unsigned long> >::allocate(std::allocator<unsigned long>&, unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+   n1: 239632 0x41137F: std::_Bvector_base<std::allocator<bool> >::_M_allocate(unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+    n1: 239632 0x40EC66: std::vector<bool, std::allocator<bool> >::_M_reallocate(unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+     n1: 239632 0x40CF08: std::vector<bool, std::allocator<bool> >::reserve(unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+      n1: 239632 0x40941E: Bloomfilter::Bloomfilter(int, double) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+       n1: 239632 0x408C22: __static_initialization_and_destruction_0(int, int) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+        n1: 239632 0x408D05: _GLOBAL__sub_I__Z20get_numImages_weighti (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+         n1: 239632 0x41991C: __libc_csu_init (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+          n0: 239632 0x6364777: (below main) (in /usr/lib64/libc-2.28.so)
+ n1: 72704 0x586DC19: ??? (in /usr/lib64/libstdc++.so.6.0.25)
+  n1: 72704 0x4009119: call_init.part.0 (dl-init.c:72)
+   n1: 72704 0x4009219: call_init (dl-init.c:118)
+    n1: 72704 0x4009219: _dl_init (dl-init.c:119)
+     n0: 72704 0x401EF19: ??? (in /usr/lib64/ld-2.28.so)
+ n0: 2615 in 5 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=19
+#-----------
+time=5871116
+mem_heap_B=2315039
+mem_heap_extra_B=633
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=20
+#-----------
+time=5872333
+mem_heap_B=2315186
+mem_heap_extra_B=726
+mem_stacks_B=0
+heap_tree=peak
+n4: 2315186 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 2000000 0x40E17C: HashTable<char const*, unsigned long>::HashTable() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+  n1: 2000000 0x40C79D: InvertedIndex::InvertedIndex() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+   n1: 2000000 0x40C7DA: IndexChunk::IndexChunk() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+    n1: 2000000 0x408BB3: __static_initialization_and_destruction_0(int, int) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+     n1: 2000000 0x408D05: _GLOBAL__sub_I__Z20get_numImages_weighti (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+      n1: 2000000 0x41991C: __libc_csu_init (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+       n0: 2000000 0x6364777: (below main) (in /usr/lib64/libc-2.28.so)
+ n1: 239632 0x414B61: std::__new_allocator<unsigned long>::allocate(unsigned long, void const*) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+  n1: 239632 0x413521: std::allocator_traits<std::allocator<unsigned long> >::allocate(std::allocator<unsigned long>&, unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+   n1: 239632 0x41137F: std::_Bvector_base<std::allocator<bool> >::_M_allocate(unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+    n1: 239632 0x40EC66: std::vector<bool, std::allocator<bool> >::_M_reallocate(unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+     n1: 239632 0x40CF08: std::vector<bool, std::allocator<bool> >::reserve(unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+      n1: 239632 0x40941E: Bloomfilter::Bloomfilter(int, double) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+       n1: 239632 0x408C22: __static_initialization_and_destruction_0(int, int) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+        n1: 239632 0x408D05: _GLOBAL__sub_I__Z20get_numImages_weighti (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+         n1: 239632 0x41991C: __libc_csu_init (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+          n0: 239632 0x6364777: (below main) (in /usr/lib64/libc-2.28.so)
+ n1: 72704 0x586DC19: ??? (in /usr/lib64/libstdc++.so.6.0.25)
+  n1: 72704 0x4009119: call_init.part.0 (dl-init.c:72)
+   n1: 72704 0x4009219: call_init (dl-init.c:118)
+    n1: 72704 0x4009219: _dl_init (dl-init.c:119)
+     n0: 72704 0x401EF19: ??? (in /usr/lib64/ld-2.28.so)
+ n0: 2850 in 5 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=21
+#-----------
+time=5873449
+mem_heap_B=2314677
+mem_heap_extra_B=411
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=22
+#-----------
+time=5880113
+mem_heap_B=2314709
+mem_heap_extra_B=419
+mem_stacks_B=0
+heap_tree=detailed
+n4: 2314709 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 2000000 0x40E17C: HashTable<char const*, unsigned long>::HashTable() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+  n1: 2000000 0x40C79D: InvertedIndex::InvertedIndex() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+   n1: 2000000 0x40C7DA: IndexChunk::IndexChunk() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+    n1: 2000000 0x408BB3: __static_initialization_and_destruction_0(int, int) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+     n1: 2000000 0x408D05: _GLOBAL__sub_I__Z20get_numImages_weighti (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+      n1: 2000000 0x41991C: __libc_csu_init (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+       n0: 2000000 0x6364777: (below main) (in /usr/lib64/libc-2.28.so)
+ n1: 239632 0x414B61: std::__new_allocator<unsigned long>::allocate(unsigned long, void const*) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+  n1: 239632 0x413521: std::allocator_traits<std::allocator<unsigned long> >::allocate(std::allocator<unsigned long>&, unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+   n1: 239632 0x41137F: std::_Bvector_base<std::allocator<bool> >::_M_allocate(unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+    n1: 239632 0x40EC66: std::vector<bool, std::allocator<bool> >::_M_reallocate(unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+     n1: 239632 0x40CF08: std::vector<bool, std::allocator<bool> >::reserve(unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+      n1: 239632 0x40941E: Bloomfilter::Bloomfilter(int, double) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+       n1: 239632 0x408C22: __static_initialization_and_destruction_0(int, int) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+        n1: 239632 0x408D05: _GLOBAL__sub_I__Z20get_numImages_weighti (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+         n1: 239632 0x41991C: __libc_csu_init (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+          n0: 239632 0x6364777: (below main) (in /usr/lib64/libc-2.28.so)
+ n1: 72704 0x586DC19: ??? (in /usr/lib64/libstdc++.so.6.0.25)
+  n1: 72704 0x4009119: call_init.part.0 (dl-init.c:72)
+   n1: 72704 0x4009219: call_init (dl-init.c:118)
+    n1: 72704 0x4009219: _dl_init (dl-init.c:119)
+     n0: 72704 0x401EF19: ??? (in /usr/lib64/ld-2.28.so)
+ n0: 2373 in 5 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=23
+#-----------
+time=5882734
+mem_heap_B=2314773
+mem_heap_extra_B=427
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=24
+#-----------
+time=5884221
+mem_heap_B=2314741
+mem_heap_extra_B=419
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=25
+#-----------
+time=5885338
+mem_heap_B=2314869
+mem_heap_extra_B=427
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=26
+#-----------
+time=5886115
+mem_heap_B=2314805
+mem_heap_extra_B=419
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=27
+#-----------
+time=5887954
+mem_heap_B=2315061
+mem_heap_extra_B=427
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=28
+#-----------
+time=5889621
+mem_heap_B=2314986
+mem_heap_extra_B=438
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=29
+#-----------
+time=5897579
+mem_heap_B=2315006
+mem_heap_extra_B=458
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=30
+#-----------
+time=5902053
+mem_heap_B=2315030
+mem_heap_extra_B=474
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=31
+#-----------
+time=5906522
+mem_heap_B=2315059
+mem_heap_extra_B=485
+mem_stacks_B=0
+heap_tree=detailed
+n4: 2315059 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 2000000 0x40E17C: HashTable<char const*, unsigned long>::HashTable() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+  n1: 2000000 0x40C79D: InvertedIndex::InvertedIndex() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+   n1: 2000000 0x40C7DA: IndexChunk::IndexChunk() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+    n1: 2000000 0x408BB3: __static_initialization_and_destruction_0(int, int) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+     n1: 2000000 0x408D05: _GLOBAL__sub_I__Z20get_numImages_weighti (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+      n1: 2000000 0x41991C: __libc_csu_init (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+       n0: 2000000 0x6364777: (below main) (in /usr/lib64/libc-2.28.so)
+ n1: 239632 0x414B61: std::__new_allocator<unsigned long>::allocate(unsigned long, void const*) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+  n1: 239632 0x413521: std::allocator_traits<std::allocator<unsigned long> >::allocate(std::allocator<unsigned long>&, unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+   n1: 239632 0x41137F: std::_Bvector_base<std::allocator<bool> >::_M_allocate(unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+    n1: 239632 0x40EC66: std::vector<bool, std::allocator<bool> >::_M_reallocate(unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+     n1: 239632 0x40CF08: std::vector<bool, std::allocator<bool> >::reserve(unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+      n1: 239632 0x40941E: Bloomfilter::Bloomfilter(int, double) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+       n1: 239632 0x408C22: __static_initialization_and_destruction_0(int, int) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+        n1: 239632 0x408D05: _GLOBAL__sub_I__Z20get_numImages_weighti (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+         n1: 239632 0x41991C: __libc_csu_init (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+          n0: 239632 0x6364777: (below main) (in /usr/lib64/libc-2.28.so)
+ n1: 72704 0x586DC19: ??? (in /usr/lib64/libstdc++.so.6.0.25)
+  n1: 72704 0x4009119: call_init.part.0 (dl-init.c:72)
+   n1: 72704 0x4009219: call_init (dl-init.c:118)
+    n1: 72704 0x4009219: _dl_init (dl-init.c:119)
+     n0: 72704 0x401EF19: ??? (in /usr/lib64/ld-2.28.so)
+ n0: 2723 in 5 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=32
+#-----------
+time=5910991
+mem_heap_B=2315095
+mem_heap_extra_B=505
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=33
+#-----------
+time=5915455
+mem_heap_B=2315116
+mem_heap_extra_B=524
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=34
+#-----------
+time=5919929
+mem_heap_B=2315146
+mem_heap_extra_B=534
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=35
+#-----------
+time=5924398
+mem_heap_B=2315182
+mem_heap_extra_B=554
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=36
+#-----------
+time=5928862
+mem_heap_B=2315207
+mem_heap_extra_B=569
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=37
+#-----------
+time=5933331
+mem_heap_B=2315229
+mem_heap_extra_B=587
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=38
+#-----------
+time=5937805
+mem_heap_B=2315250
+mem_heap_extra_B=606
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=39
+#-----------
+time=5942279
+mem_heap_B=2315271
+mem_heap_extra_B=625
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=40
+#-----------
+time=5946753
+mem_heap_B=2315295
+mem_heap_extra_B=641
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=41
+#-----------
+time=5951222
+mem_heap_B=2315324
+mem_heap_extra_B=652
+mem_stacks_B=0
+heap_tree=detailed
+n4: 2315324 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 2000000 0x40E17C: HashTable<char const*, unsigned long>::HashTable() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+  n1: 2000000 0x40C79D: InvertedIndex::InvertedIndex() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+   n1: 2000000 0x40C7DA: IndexChunk::IndexChunk() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+    n1: 2000000 0x408BB3: __static_initialization_and_destruction_0(int, int) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+     n1: 2000000 0x408D05: _GLOBAL__sub_I__Z20get_numImages_weighti (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+      n1: 2000000 0x41991C: __libc_csu_init (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+       n0: 2000000 0x6364777: (below main) (in /usr/lib64/libc-2.28.so)
+ n1: 239632 0x414B61: std::__new_allocator<unsigned long>::allocate(unsigned long, void const*) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+  n1: 239632 0x413521: std::allocator_traits<std::allocator<unsigned long> >::allocate(std::allocator<unsigned long>&, unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+   n1: 239632 0x41137F: std::_Bvector_base<std::allocator<bool> >::_M_allocate(unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+    n1: 239632 0x40EC66: std::vector<bool, std::allocator<bool> >::_M_reallocate(unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+     n1: 239632 0x40CF08: std::vector<bool, std::allocator<bool> >::reserve(unsigned long) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+      n1: 239632 0x40941E: Bloomfilter::Bloomfilter(int, double) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+       n1: 239632 0x408C22: __static_initialization_and_destruction_0(int, int) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+        n1: 239632 0x408D05: _GLOBAL__sub_I__Z20get_numImages_weighti (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+         n1: 239632 0x41991C: __libc_csu_init (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+          n0: 239632 0x6364777: (below main) (in /usr/lib64/libc-2.28.so)
+ n1: 72704 0x586DC19: ??? (in /usr/lib64/libstdc++.so.6.0.25)
+  n1: 72704 0x4009119: call_init.part.0 (dl-init.c:72)
+   n1: 72704 0x4009219: call_init (dl-init.c:118)
+    n1: 72704 0x4009219: _dl_init (dl-init.c:119)
+     n0: 72704 0x401EF19: ??? (in /usr/lib64/ld-2.28.so)
+ n0: 2988 in 5 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=42
+#-----------
+time=5955691
+mem_heap_B=2315352
+mem_heap_extra_B=664
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=43
+#-----------
+time=5960307
+mem_heap_B=2315864
+mem_heap_extra_B=672
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=44
+#-----------
+time=5960469
+mem_heap_B=2315889
+mem_heap_extra_B=687
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=45
+#-----------
+time=5964989
+mem_heap_B=2315908
+mem_heap_extra_B=708
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=46
+#-----------
+time=5969463
+mem_heap_B=2315932
+mem_heap_extra_B=724
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=47
+#-----------
+time=5973932
+mem_heap_B=2315954
+mem_heap_extra_B=742
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=48
+#-----------
+time=5981983
+mem_heap_B=2076322
+mem_heap_extra_B=734
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=49
+#-----------
+time=5982725
+mem_heap_B=2076249
+mem_heap_extra_B=695
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=50
+#-----------
+time=5982965
+mem_heap_B=2076160
+mem_heap_extra_B=648
+mem_stacks_B=0
+heap_tree=detailed
+n3: 2076160 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 2000000 0x40E17C: HashTable<char const*, unsigned long>::HashTable() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+  n1: 2000000 0x40C79D: InvertedIndex::InvertedIndex() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+   n1: 2000000 0x40C7DA: IndexChunk::IndexChunk() (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+    n1: 2000000 0x408BB3: __static_initialization_and_destruction_0(int, int) (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+     n1: 2000000 0x408D05: _GLOBAL__sub_I__Z20get_numImages_weighti (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+      n1: 2000000 0x41991C: __libc_csu_init (in /home/antonpet/eecs498/searchengine/src/crawler/crawler2)
+       n0: 2000000 0x6364777: (below main) (in /usr/lib64/libc-2.28.so)
+ n1: 72704 0x586DC19: ??? (in /usr/lib64/libstdc++.so.6.0.25)
+  n1: 72704 0x4009119: call_init.part.0 (dl-init.c:72)
+   n1: 72704 0x4009219: call_init (dl-init.c:118)
+    n1: 72704 0x4009219: _dl_init (dl-init.c:119)
+     n0: 72704 0x401EF19: ??? (in /usr/lib64/ld-2.28.so)
+ n0: 3456 in 6 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=51
+#-----------
+time=5983205
+mem_heap_B=2076073
+mem_heap_extra_B=599
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=52
+#-----------
+time=5983445
+mem_heap_B=2076005
+mem_heap_extra_B=547
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=53
+#-----------
+time=5983685
+mem_heap_B=2075931
+mem_heap_extra_B=501
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=54
+#-----------
+time=5983982
+mem_heap_B=2075859
+mem_heap_extra_B=453
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=55
+#-----------
+time=5984306
+mem_heap_B=2075301
+mem_heap_extra_B=411
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=56
+#-----------
+time=5984579
+mem_heap_B=2074725
+mem_heap_extra_B=395
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=57
+#-----------
+time=5992383
+mem_heap_B=2002021
+mem_heap_extra_B=387
+mem_stacks_B=0
+heap_tree=empty

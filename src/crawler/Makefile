@@ -1,7 +1,7 @@
 CXX = g++ 
 CXXFLAGS = -std=c++20 -Wall -pedantic -O3 -I/opt/homebrew/opt/openssl@3/include
 LDFLAGS = -L/opt/homebrew/opt/openssl@3/lib
-LIBS = -ldl -lssl -lcrypto
+LIBS = -ldl -lssl -lcrypto -pthread
 
 crawler: crawler3.cpp ../../HtmlParser/HtmlTags.cpp
 	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) $(LIBS) -o $@
