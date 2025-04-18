@@ -287,6 +287,13 @@ int getHTML(std::string url_in, std::string &output) {
         "Accept: */*\r\n"
         "Accept-Encoding: identity\r\n"
         "Connection: close\r\n\r\n";
+
+        // static constexpr std::string_view HTTP_HEADER = 
+        //     "\r\n"
+        //     "User-Agent: SonOfAnton/1.0 404FoundEngine@umich.edu (Linux)\r\n"
+        //     "Accept: */*\r\n"
+        //     "Accept-Encoding: identity\r\n"
+        //     "Connection: close\r\n\r\n";
         
       std::string newishURL = output;
       output = "";

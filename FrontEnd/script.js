@@ -44,6 +44,7 @@ searchForm.addEventListener('submit', async function (e) {
   searchResultsContainer.innerHTML = ''; // Clear previous results immediately
   document.getElementById('aiSummaryContainer').style.display = 'none';
   paginationControls.style.display = 'none'; // Hide pagination
+  toggleAISummary();
 
   // --- UI Updates for Loading ---
   submitButton.classList.add('loading');

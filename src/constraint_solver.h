@@ -17,13 +17,14 @@ struct AnchorTermIndex
 struct UrlRank 
 {
   int rank;
-  std::string_view url;
+  std::string url;
 
   bool operator<(const UrlRank& other) const { return rank < other.rank; }
   bool operator>(const UrlRank& other) const { return rank > other.rank; }
   bool operator>=(const UrlRank& other) const { return rank >= other.rank; }
 
   UrlRank() : url(""), rank(0) {}
+  UrlRank(std::string u, int r) : url(std::move(u)), rank(r) {}
   UrlRank(std::string_view u, int r) : url(u), rank(r) {}
 
 };
@@ -75,37 +76,86 @@ AnchorTermIndex get_anchor_ISR(vector<vector<std::unique_ptr<ISRWord>>> &ordered
 }
 
 // actual constraint solver function
-std::vector<UrlRank> constraint_solver(std::unique_ptr<ISR> &queryISR, vector<vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms, uint32_t numChunks) {
+std::vector<UrlRank> constraint_solver(
+  std::unique_ptr<ISR> &queryISR,
+  vector<vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms,
+  uint32_t numChunks,
+  IndexFileReader& reader) 
+  {
     // create an ISR for document seeking
     std::vector<UrlRank> topNdocs;
     topNdocs.reserve(TOTAL_DOCS_TO_RETURN);
+    int j = 0;
+
+    // Copy orderedQueryTerms for the title terms
+    std::vector<std::vector<std::unique_ptr<ISRWord>>> titleTerms;
+    for (const auto& innerVec : orderedQueryTerms) {
+        std::vector<std::unique_ptr<ISRWord>> copiedInner;
+        for (const auto& termPtr : innerVec) {
+            if (termPtr) {
+                copiedInner.emplace_back(std::make_unique<ISRWord>(termPtr->GetWord() + "!"));
+            }
+        }
+        titleTerms.push_back(std::move(copiedInner));
+    }
 
     AnchorTermIndex indices = get_anchor_ISR(orderedQueryTerms);
     int anchorOuterIndex = indices.outerIndex;
     int anchorInnerIndex = indices.innerIndex;
-    // seek to the first occurence
-    IndexFileReader reader(numChunks);
+
+    SeekObj* currMatch = queryISR->Seek(0);
     for (int i = 0; i < numChunks; ++i)
     {
-      SeekObj * docObj = queryISR->NextDocument(); 
-      while (docObj) {
+      std::unique_ptr<ISREndDoc> docISR = make_unique<ISREndDoc>(reader); 
+      SeekObj * docObj = docISR->Seek(currMatch->location);
+      while (docObj) 
+      {
+        ++j;
+          int currLoc = docObj->location;
+          int currDelta = docObj->delta;
+          int index = docObj->index;
+
   
-          int docStartLoc = queryISR->getStartLocation(); 
-          int docEndLoc = queryISR->getEndLocation(); 
+          int docEndLoc = currLoc;
+          int docStartLoc = currLoc - currDelta;
   
           // use the index to get relevant doc data
-          unique_ptr<Doc> doc = reader.FindUrl(docObj->index, i);
+          unique_ptr<Doc> doc = reader.FindUrl(index, i);
           
-          int dynamic_score = get_dynamic_rank(orderedQueryTerms[anchorOuterIndex][anchorInnerIndex], orderedQueryTerms, docStartLoc, 
-                              docEndLoc);
-          
+          int dynamic_score = get_dynamic_rank(
+            orderedQueryTerms[anchorOuterIndex][anchorInnerIndex],
+            orderedQueryTerms, 
+            docStartLoc, 
+            docEndLoc,
+            reader,
+            i);
 
-          UrlRank urlRank = {doc->url, dynamic_score + doc->staticRank}; 
+          // Dynamic score for title words
+          int title_score = get_dynamic_rank(
+            titleTerms[anchorOuterIndex][anchorInnerIndex],
+            titleTerms,
+            docStartLoc,
+            docEndLoc,
+            reader,
+            i);
 
-          insertionSort(topNdocs,urlRank); 
+          // Add weights to the score later
+          UrlRank urlRank = {doc->url, dynamic_score + title_score + doc->staticRank}; 
   
-          docObj = queryISR->NextDocument(); 
-      }
+          insertionSort(topNdocs, urlRank); 
+          currMatch = queryISR->NextDocument(currLoc); 
+          if (!currMatch) 
+          {
+            break;
+          }
+          if (j % 1000 == 0)
+          {
+            cout << j << '\n';
+          }
+          docObj = docISR->Seek(currMatch->location);
     }
+   
+    }
+    cout << "MATCHED DOCUMENTS:" << j << '\n';
     return topNdocs; 
 }

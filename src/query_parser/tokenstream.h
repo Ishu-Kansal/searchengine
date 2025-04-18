@@ -1,3 +1,6 @@
+// TokenStream.h
+// Parses a user search query string into individual tokens for a search engine.
+// Handles punctuation stripping, keyword detection, stopword filtering (except inside quotes)
 #pragma once
 
 #include <string>

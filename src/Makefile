@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++20 -Wall -pedantic -O0 -I/opt/homebrew/opt/openssl@3/include
+CXXFLAGS = -std=c++20 -Wall -pedantic -O3 -g -I/opt/homebrew/opt/openssl@3/include
 LDFLAGS = -L/opt/homebrew/opt/openssl@3/lib
 LIBS = -ldl -lssl -lcrypto
 
@@ -21,7 +21,7 @@ $(TARGETS): %: %.cpp $(COMMON_SRC)
 	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) $(LIBS) -o $@ 
 
 clean:
-	rm -f $(TARGETS)
+	rm -f $(TARGETS) debug
 
 debug: CXXFLAGS += -g3 -DDEBUG -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG
 debug: drivertest1.cpp $(COMMON_SRC)
