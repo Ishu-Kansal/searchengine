@@ -68,6 +68,10 @@ class PostingList {
   [[nodiscard]] const std::string & get_word() const {
     return word;
   }
+  [[nodiscard]] auto get_posting_list() const
+  {
+    return posting_list;
+  }
 
  private:
   // Linked list of posts

@@ -2,7 +2,7 @@
 
 #include <memory>
 #include "../inverted_index/IndexFileReader.h"
-
+#include <limits>
 typedef size_t Location; // Location 0 is the null location.
 typedef size_t FileOffset;
 
@@ -136,18 +136,11 @@ public:
         for (size_t i = 0; i < terms.size(); ++i)
         {
             SeekObj * seekObj = terms[i]->Seek(target);
-            if (!seekObj) 
-            {
-                currPost = nullptr;
-                nearestStartLocation = NULL_LOCATION;
-                nearestEndLocation = NULL_LOCATION;
-                return nullptr;
-            }
             SeekObj * nearestSeekResult = terms[nearestTerm]->GetCurrentPost();
             Location loc;
-            if (!nearestSeekResult) loc = 0;
+            if (!nearestSeekResult) loc = std::numeric_limits<Location>::max();
             else loc = nearestSeekResult->location;
-            if (seekObj->location < loc)
+            if (seekObj && seekObj->location < loc)
             {
                 nearestTerm = i;
                 SeekObj * docEnd = docEndISR->Seek(seekObj->location);

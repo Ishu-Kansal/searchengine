@@ -24,7 +24,7 @@
 #include "RAII_utils.h"
 
 /** @brief Size in bytes of a seek table entry for posting list (offset + location) */
-constexpr size_t ENTRY_SIZE = 16;
+constexpr size_t ENTRY_SIZE = 20;
 /** @brief Size in bytes of a seek table entry for URL lists (offset) */
 constexpr size_t URL_ENTRY_SIZE = 8;
 /** @brief Size in bytes used to store the size (in bytes) of the varint encoding the number of seek table entries */
@@ -69,6 +69,8 @@ private:
     std::vector<std::unique_ptr<MappedMemory>> mappedHashFiles;
 
     std::vector<const HashBlob*> hashBlobPtrs;   
+    mutable GroupVarintDecodeInfo g_groupVarintDecodeTable[256];
+    mutable bool g_groupVarintTableInitialized;
 
     size_t FileSize(int f)
     {
@@ -95,6 +97,15 @@ private:
         currentPtr += sizeof(uint64_t);
         return true;
     }
+    inline static bool readUint32_t(const uint8_t*& currentPtr, const uint8_t* endPtr, uint32_t& value) 
+    {
+        if (currentPtr == nullptr || endPtr == nullptr || currentPtr + sizeof(uint32_t) > endPtr) {
+            return false;
+        }
+        memcpy(&value, currentPtr, sizeof(uint32_t));
+        currentPtr += sizeof(uint32_t);
+        return true;
+    }
 
     bool findBestSeekEntry(
         const uint8_t* seekTableStart,
@@ -103,6 +114,7 @@ private:
         Location target,
         Location& outBestOffset,
         Location& outBestLocation,
+        Location& outBestDelta,
         uint64_t& outIndex,
         int& outTableIndex)
         const
@@ -110,8 +122,10 @@ private:
         outIndex = 0;
         uint64_t entryOffset = 0;
         uint64_t entryLocation = 0;
+        uint32_t entryDelta = 0;
         outBestOffset = entryOffset;
         outBestLocation = entryLocation;
+        outBestDelta = entryDelta;
         
         if (numSeekTableEntries > 0)
         {
@@ -123,7 +137,8 @@ private:
 
             if (!readUint64_t(tempPtr, fileEnd, entryOffset)) { return false; }
             if (!readUint64_t(tempPtr, fileEnd, entryLocation)) { return false; }
-
+            if (!readUint32_t(tempPtr, fileEnd, entryDelta)) { return false; }
+            
             while (cursor < numSeekTableEntries && target > entryLocation)
             {
                 jump *= 2;
@@ -133,6 +148,7 @@ private:
 
                 if (!readUint64_t(readPtr, fileEnd, entryOffset)) { return false; }
                 if (!readUint64_t(readPtr, fileEnd, entryLocation)) { return false; }
+                if (!readUint32_t(readPtr, fileEnd, entryDelta)) { return false; }
 
             }
 
@@ -146,16 +162,19 @@ private:
                 while (low <= high)
                 {
                     int mid = (low + high) / 2;
+
                     const uint8_t * readPtr = (ENTRY_SIZE * mid) + seekTableStart;
-    
+
                     if (!readUint64_t(readPtr, fileEnd, entryOffset)) { return false; }
                     if (!readUint64_t(readPtr, fileEnd, entryLocation)) { return false; }
+                    if (!readUint32_t(readPtr, fileEnd, entryDelta)) { return false; }
     
                     if (entryLocation <= target) 
                     {
                         best = mid;
                         outBestOffset = entryOffset;
                         outBestLocation = entryLocation;
+                        outBestDelta = entryDelta;
                         low = mid + 1;
                     }
                     else 
@@ -169,6 +188,7 @@ private:
             {
                 outBestOffset = 0;
                 outBestLocation = 0;
+                outBestDelta = 0;
                 outTableIndex = -1;
                 outIndex = 0;
                 return true;
@@ -246,6 +266,8 @@ public:
             hashBlobPtrs[i] = static_cast<const HashBlob*>(mappedHashFiles[i]->get());
 
         }
+        precomputeGroupVarintDecodeTable(g_groupVarintDecodeTable, g_groupVarintTableInitialized);
+        g_groupVarintTableInitialized = true;
     }
 
     /**
@@ -329,16 +351,21 @@ public:
         uint64_t index = 0;
         Location bestOffset = 0;
         Location bestLocation = 0;
-
-        bool found = findBestSeekEntry(seekTableStart, fileEnd, numSeekTableEntries, target, bestOffset, bestLocation, index, tableIndex);
+        Location bestDelta = 0;
+        bool found = findBestSeekEntry(seekTableStart, fileEnd, numSeekTableEntries, target, bestOffset, bestLocation, bestDelta, index, tableIndex);
 
         if (!found) return nullptr;
+
         postingListBuf += (ENTRY_SIZE * numSeekTableEntries) + bestOffset;
     
         uint64_t currentLocation = bestLocation;
         uint64_t currentOffset = bestOffset;
-
-        Location decodeCounter = 0;
+        if (currentLocation == target && target != 0)
+        {
+            return std::make_unique<SeekObj>(currentOffset, currentLocation, bestDelta, index, numPosts, tableIndex);
+        }
+        // Location decodeCounter = 0;
+        /*
         while (currentLocation <= target || target == 0)
         {
             decodeCounter++;
@@ -356,7 +383,35 @@ public:
             index++;
             if (index > numPosts) return nullptr;
         }
+        */
+        // vector<uint32_t> groupVarints;
+        std::array<uint32_t, 4> groupVarints; 
+        int w = 0;
+        while(currentLocation <= target || target == 0)
+        {
+            postingListBuf = decodeGroupVarint(postingListBuf, groupVarints.data(), g_groupVarintDecodeTable, g_groupVarintTableInitialized);
 
+            for (size_t i = 0; i < GROUP_SIZE; ++i)
+            {
+                uint32_t delta = groupVarints[i];
+                if (delta == 0) 
+                {
+                    return nullptr;
+                }
+                index++;
+                ++w;
+                currentLocation += delta;
+                //currentOffset += getBytesNeeded(delta);
+                if (currentLocation >= target)
+                {
+                    //cout << w << '\n';
+                    return std::make_unique<SeekObj>(currentOffset, currentLocation, delta, index, numPosts, tableIndex);
+                }
+              
+                if (index > numPosts) return nullptr;
+            }
+        }
+ 
         return nullptr;
     }
 
@@ -450,6 +505,7 @@ public:
         int tableIndex = -1) const
     {
         std::vector<Location> results;
+        results.reserve(1000);
         if (chunkNum >= mappedFiles.size() || !mappedFiles[chunkNum]) 
         {
             return results; 
@@ -523,41 +579,38 @@ public:
 
         Location currentLocation = 0;
         Location currentOffset = 0;
+        Location currentDelta = 0;
         uint64_t currentIndex = 0;
+
         const uint8_t * seekTableStart = postingListBuf;
-        bool found = findBestSeekEntry(seekTableStart, fileEnd, numSeekTableEntries, startLoc, currentOffset, currentLocation, currentIndex, tableIndex);
+
+        bool found = findBestSeekEntry(seekTableStart, fileEnd, numSeekTableEntries, startLoc, currentOffset, currentLocation, currentDelta, currentIndex, tableIndex);
 
         if (!found) return results;
         postingListBuf += (ENTRY_SIZE * numSeekTableEntries) + currentOffset;
-        while (currentIndex < numPosts && currentLocation < startLoc)
-        {
-             if (postingListBuf >= fileEnd) return results;
-             uint64_t delta = 0;
-             nextPtr = decodeVarint(postingListBuf, delta);
-             if (!nextPtr || nextPtr > fileEnd) return results;
 
-             postingListBuf = nextPtr;
-             currentLocation += delta;
-             currentIndex++;
-        }
-        
-        // load locations within the [startLoc, endLoc) range
+        // vector<uint32_t> groupVarints;
+        std::array<uint32_t, 4> groupVarints; 
         while (currentIndex < numPosts && currentLocation < endLoc)
         {
-             if (postingListBuf >= fileEnd) break;
+            postingListBuf = decodeGroupVarint(postingListBuf, groupVarints.data(), g_groupVarintDecodeTable, g_groupVarintTableInitialized);
 
-             uint64_t delta = 0;
-             nextPtr = decodeVarint(postingListBuf, delta);
-             if (!nextPtr || nextPtr > fileEnd) break; 
+            for (size_t i = 0; i < GROUP_SIZE; ++i)
+            {
+                uint32_t delta = groupVarints[i];
 
-             postingListBuf = nextPtr;
-             currentLocation += delta;
-             if (currentLocation < endLoc)
-             {
-                results.push_back(currentLocation);
-             }
-             currentIndex++;
-             
+                if (delta == 0) 
+                {
+                    return results;
+                }
+                currentLocation += delta;
+                currentOffset += getBytesNeeded(delta);
+                currentIndex++;
+                if (currentLocation >= startLoc && currentLocation < endLoc)
+                {
+                   results.push_back(currentLocation);
+                }
+            }
         }
 
         return results;

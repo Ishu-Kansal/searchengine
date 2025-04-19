@@ -55,6 +55,10 @@ constexpr uint32_t MAX_CHUNK_NUM = 99999;
  */
 constexpr uint8_t NO_SEEK_TABLE_MARKER = 0;
 
+/**
+ * @brief number of deltas we store for Group Varint Encoding
+ */
+constexpr uint8_t GROUP_SIZE = 4;
 // Didn't use pushVarint for some of them, because some of the values are one byte and I want the full range from 0 - 255.
 
 
@@ -202,6 +206,8 @@ class IndexFile {
         const vector<PostingList> &listOfPostingList,
         HashTable<const std::string, size_t> & dictionary)
     {   
+        std::vector<uint32_t> deltaGroup(4);
+
         for (const PostingList & postingList : listOfPostingList)
         {
             const std::string & word = postingList.get_word();
@@ -229,34 +235,76 @@ class IndexFile {
             pushVarint(dataBuffer, postingList.size());
 
             uint64_t prevLocation = 0;
-            uint32_t postingIndex = 0;
-            uint64_t absoluteLocation = 0;
-            uint64_t byteOffset = 0;
+            uint64_t absoluteLocation = 0;    
+            uint64_t numPostings = postingList.size();
+            uint32_t prevDelta = 0;
+
+            int groupIndex = 0;
+
             std::vector<uint8_t> tempBuffer;
             tempBuffer.reserve(POSTING_LIST_BUFFER_INITIAL_RESERVE); 
-            for (const Post & entry : postingList)
+
+            const auto & pl = postingList.get_posting_list();
+
+            for (size_t postingIndex = 0; postingIndex < numPostings; ++postingIndex)
             {
-                // We're making a seek table entry every BLOCK_SIZE words we encountered
-                // but since postingIndex is 0-indexed we have to add 1
-                if (postingList.size() >= BLOCK_SIZE && (postingIndex + 1) % BLOCK_SIZE == 0 && postingIndex != 0)
+                const Post & entry = pl[postingIndex];
+
+                uint64_t delta64 = entry.location - prevLocation;
+                absoluteLocation += delta64;
+    
+                if (delta64 > UINT32_MAX) [[unlikely]] 
+                {
+                     cout << "Error: Delta (" << delta64
+                          << ") exceeds UINT32_MAX for word '" << word
+                          << "' at index " << postingIndex
+                          << ". Cannot encode with uint32_t Group Varint." << endl;
+                     exit(EXIT_FAILURE);
+                }
+
+                uint32_t delta = static_cast<uint32_t>(delta64);
+                deltaGroup[groupIndex++] = delta;
+
+                if (groupIndex == 4) 
+                {
+                    uint8_t encodeBuf[17]; 
+                    uint8_t* ptr = encodeGroupVarint(deltaGroup.data(), encodeBuf);
+                    tempBuffer.insert(tempBuffer.end(), encodeBuf, ptr);
+                    groupIndex = 0;
+                }
+
+                prevDelta = delta;
+                prevLocation = entry.location;
+
+                if (numPostings >= BLOCK_SIZE && (postingIndex + 1) % BLOCK_SIZE == 0 && postingIndex != 0)
                 {
                     // Offset into posting list
+                    uint64_t byteOffset = tempBuffer.size();
                     uint8_t* bytes = reinterpret_cast<uint8_t*>(&byteOffset);
                     dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(byteOffset));
                     // absolute location of element at postingIndex
                     bytes = reinterpret_cast<uint8_t*>(&absoluteLocation);
                     dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(absoluteLocation));
-                }
 
-                uint64_t delta = entry.location - prevLocation;
-                absoluteLocation += delta;
-                uint8_t deltaSize = SizeOf(delta);
-       
-                byteOffset += deltaSize;
-                pushVarint(tempBuffer, delta);
-                prevLocation = entry.location;
-                ++postingIndex;
+                    bytes = reinterpret_cast<uint8_t*>(&prevDelta);
+                    {
+                        dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(prevDelta));
+                    }
+                }
             }
+            if (groupIndex > 0) 
+            {
+                for (int i = groupIndex; i < 4; ++i) 
+                {
+                    deltaGroup[i] = 0;
+                }
+            
+                uint8_t encodeBuf[17];
+                uint8_t* ptr = encodeGroupVarint(deltaGroup.data(), encodeBuf);
+
+                tempBuffer.insert(tempBuffer.end(), encodeBuf, ptr);
+            }
+  
             // adds all posts after seek table
             dataBuffer.insert(dataBuffer.end(), tempBuffer.begin(), tempBuffer.end()); 
 

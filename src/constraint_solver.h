@@ -24,9 +24,9 @@ struct UrlRank
   bool operator>=(const UrlRank& other) const { return rank >= other.rank; }
 
   UrlRank() : url(""), rank(0) {}
-  UrlRank(std::string u, int r) : url(std::move(u)), rank(r) {}
-  UrlRank(std::string_view u, int r) : url(u), rank(r) {}
-  UrlRank(std::string_view u, uint8_t r) : url(u), rank(r) {}
+  UrlRank(std::string u, int r) : rank(r), url(std::move(u)) {}
+  UrlRank(std::string_view u, int r) : rank(r), url(u) {}
+  UrlRank(std::string_view u, uint8_t r) : rank(r), url(u) {}
 
 };
 
@@ -147,6 +147,7 @@ std::vector<UrlRank> constraint_solver(
           UrlRank urlRank = {doc->url, dynamic_score + doc->staticRank}; 
   
           insertionSort(topNdocs, urlRank); 
+      
           currMatch = queryISR->NextDocument(currLoc); 
           if (!currMatch) 
           {
