@@ -57,7 +57,7 @@ constexpr uint32_t NUM_CHUNKS = 1;
 
 IndexChunk chunk{};
 
-const static int NUM_THREADS = 1024;  // start small
+const static int NUM_THREADS = 256;  // start small
 
 uint32_t STATIC_RANK = 0;  // temp global variable
 
@@ -99,9 +99,6 @@ std::string get_string() {
   if (recv(sock, &header, sizeof(header), 0) <= 0 || header == 0) return "";
   std::string result(header, 0);
   if (recv(sock, result.data(), result.size(), MSG_WAITALL) <= 0) return "";
-{
-  pthread_lock_guard guard{cout_lock};
-  std::cout << "GOT: " << result << std::endl;}
   return result;
 }
 
@@ -513,8 +510,7 @@ int main(int argc, char** argv) {
   for (int i = 0; i < NUM_THREADS; i++) {
     pthread_join(threads[i], NULL);
   }
-
-  exit(0);
+  
   std::cout << "FINISHED THREADS/...\n";
 
   IndexFile chunkFile(0, chunk);
