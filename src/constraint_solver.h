@@ -26,6 +26,7 @@ struct UrlRank
   UrlRank() : url(""), rank(0) {}
   UrlRank(std::string u, int r) : url(std::move(u)), rank(r) {}
   UrlRank(std::string_view u, int r) : url(u), rank(r) {}
+  UrlRank(std::string_view u, uint8_t r) : url(u), rank(r) {}
 
 };
 
@@ -86,7 +87,7 @@ std::vector<UrlRank> constraint_solver(
     std::vector<UrlRank> topNdocs;
     topNdocs.reserve(TOTAL_DOCS_TO_RETURN);
     int matchedDocs = 0;
-
+    /*
     // Copy orderedQueryTerms for the title terms
     std::vector<std::vector<std::unique_ptr<ISRWord>>> titleTerms;
     for (const auto& innerVec : orderedQueryTerms) {
@@ -98,6 +99,8 @@ std::vector<UrlRank> constraint_solver(
         }
         titleTerms.push_back(std::move(copiedInner));
     }
+    */
+
 
     AnchorTermIndex indices = get_anchor_ISR(orderedQueryTerms);
     int anchorOuterIndex = indices.outerIndex;
@@ -128,8 +131,8 @@ std::vector<UrlRank> constraint_solver(
             docEndLoc,
             reader,
             i);
-
-          // Dynamic score for title words
+          /*
+                 // Dynamic score for title words
           int title_score = get_dynamic_rank(
             titleTerms[anchorOuterIndex][anchorInnerIndex],
             titleTerms,
@@ -137,9 +140,11 @@ std::vector<UrlRank> constraint_solver(
             docEndLoc,
             reader,
             i);
+            */
+
 
           // Add weights to the score later
-          UrlRank urlRank = {doc->url, dynamic_score + title_score + doc->staticRank}; 
+          UrlRank urlRank = {doc->url, dynamic_score + doc->staticRank}; 
   
           insertionSort(topNdocs, urlRank); 
           currMatch = queryISR->NextDocument(currLoc); 

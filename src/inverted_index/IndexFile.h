@@ -21,9 +21,9 @@
 
 /**
  * @brief Number of bits used for byteOffset within block
- * Determines size of a block (2^BLOCK_OFFSET_BITS)
+ * Determines size of a block (2^BLOCK_OFFSET_BITS) 32 64 128 256
  */
-constexpr size_t BLOCK_OFFSET_BITS = 10;
+constexpr size_t BLOCK_OFFSET_BITS = 7;
 /**
  * @brief Used in seek table creation
  * New seek table entry every BLOCKS_SIZE elements in posting list

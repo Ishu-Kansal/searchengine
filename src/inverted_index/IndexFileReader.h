@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <string_view>
 #include <unordered_map>
 
 #include "../../HashTable/HashTableStarterFiles/HashBlob.h"
@@ -45,8 +46,8 @@ struct SeekObj {
     Location location;
     Location delta;
     Location index;
-    int seekTableIndex;
     unsigned numOccurrences;
+    int seekTableIndex;
 
     SeekObj() = default;
     SeekObj(Location off, Location loc, Location d, Location idx, unsigned num, int seekIdx)
@@ -85,7 +86,7 @@ private:
      * @param value Reference to a uint64_t where the read value will be stored
      * @return True if the read was successful, false if there was not enough space in the buffer
      */
-    static bool readUint64_t(const uint8_t*& currentPtr, const uint8_t* endPtr, uint64_t& value) 
+    inline static bool readUint64_t(const uint8_t*& currentPtr, const uint8_t* endPtr, uint64_t& value) 
     {
         if (currentPtr == nullptr || endPtr == nullptr || currentPtr + sizeof(uint64_t) > endPtr) {
             return false;
@@ -115,14 +116,11 @@ private:
         if (numSeekTableEntries > 0)
         {
 
-            int cursor = 0;
-            if (outTableIndex > 0)
-            {
-                cursor = outTableIndex;
-            }
+            int cursor = (outTableIndex > 0) ? outTableIndex : 0;
             int jump = 1;
+            const uint8_t* base = seekTableStart;
+            const uint8_t * tempPtr = base + cursor * ENTRY_SIZE;
 
-            const uint8_t * tempPtr = seekTableStart + cursor * ENTRY_SIZE;
             if (!readUint64_t(tempPtr, fileEnd, entryOffset)) { return false; }
             if (!readUint64_t(tempPtr, fileEnd, entryLocation)) { return false; }
 
@@ -213,6 +211,9 @@ public:
             {
                 fprintf(stderr, "WARNING: Couldn't mmap index file '%s': %s\n", indexFilename, strerror(errno));
                 continue;
+            }
+            if (madvise(map, fileSize, MADV_SEQUENTIAL) == -1) {
+                fprintf(stderr, "WARNING: madvise(MADV_SEQUENTIAL) failed for index file '%s': %s\n", indexFilename, strerror(errno));
             }
             mappedFiles[i] = std::make_unique<MappedMemory>(map, fileSize);
 
@@ -325,7 +326,6 @@ public:
 
         const uint8_t * seekTableStart = postingListBuf;
 
-
         uint64_t index = 0;
         Location bestOffset = 0;
         Location bestLocation = 0;
@@ -334,8 +334,6 @@ public:
 
         if (!found) return nullptr;
         postingListBuf += (ENTRY_SIZE * numSeekTableEntries) + bestOffset;
-        // Linearly scan if we don't have a seek table
-        // Or if index is 0 (means element is within the first 8192 entries)
     
         uint64_t currentLocation = bestLocation;
         uint64_t currentOffset = bestOffset;
@@ -413,6 +411,7 @@ public:
                 obj->url = std::string(reinterpret_cast<const char*>(urlPtr + 1), urlLen);
                 urlPtr += urlLen + 1;
                 obj->staticRank = *urlPtr;
+   
                 
                 return obj;
             }
@@ -429,13 +428,14 @@ public:
                 ++urlIndex;
             }
             if (urlIndex == index)
-            {
+            {        
+
                 auto obj = std::make_unique<Doc>();
                 uint8_t urlLen = *urlPtr;
                 obj->url = std::string(reinterpret_cast<const char*>(urlPtr + 1), urlLen);
                 urlPtr += urlLen + 1;
                 obj->staticRank = *urlPtr;
-                
+         
                 return obj;
             }
         }
