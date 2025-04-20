@@ -14,3 +14,6 @@ constexpr uint64_t SAVE_SUCCESS = 1;
 
 constexpr int SERVER_PORT = 8080;
 constexpr const char *const SERVER_PORT_STR = "8080";
+
+constexpr const char *filterName = "dispatcher_filter.bin";
+constexpr const char *queueName = "dispatcher_queue.bin";
