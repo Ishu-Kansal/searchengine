@@ -47,12 +47,15 @@ json run_query(std::string &query) {
 
   result["results"] = json::array();
   for (const std::string url : urls) {
-    std::cout << "Url: " << url << std::endl;
     result["results"].push_back({
         {"url", url},
         {"title", url},
         {"snippet", ""}
     });
+  }
+
+  if (urls.size() == 0) {
+    std::cout << "No results found" << std::endl;
   }
 
   return result;

@@ -131,7 +131,7 @@ int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors
             for (int i = 0; i < spans.size(); ++i)
             {   
                 Location & currentTotalSpan = spans[i];
-                if (currentTotalSpan < 10)
+                if (currentTotalSpan < 10 && currentTotalSpan != 0)
                 {
                     shortSpans++;
                 }
