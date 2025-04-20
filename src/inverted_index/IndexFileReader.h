@@ -529,17 +529,6 @@ public:
 
         if (!found) return results;
         postingListBuf += (ENTRY_SIZE * numSeekTableEntries) + currentOffset;
-        while (currentIndex < numPosts && currentLocation < startLoc)
-        {
-             if (postingListBuf >= fileEnd) return results;
-             uint64_t delta = 0;
-             nextPtr = decodeVarint(postingListBuf, delta);
-             if (!nextPtr || nextPtr > fileEnd) return results;
-
-             postingListBuf = nextPtr;
-             currentLocation += delta;
-             currentIndex++;
-        }
         
         // load locations within the [startLoc, endLoc) range
         while (currentIndex < numPosts && currentLocation < endLoc)
@@ -552,7 +541,7 @@ public:
 
              postingListBuf = nextPtr;
              currentLocation += delta;
-             if (currentLocation < endLoc)
+             if (currentLocation < endLoc && currentLocation > startLoc)
              {
                 results.push_back(currentLocation);
              }
@@ -561,5 +550,152 @@ public:
         }
 
         return results;
+    }
+    std::vector<Location> LoadChunkOfPostingListClosest(
+        const std::string& word,
+        uint32_t chunkNum,
+        const std::vector<Location>& targetLocations,
+        int tableIndex = -1) const
+    {
+        if (targetLocations.empty()) 
+        {
+            return {};
+        }
+
+        if (chunkNum >= mappedFiles.size() || !mappedFiles[chunkNum]) {
+            fprintf(stderr, "DEBUG: Chunk %u not loaded or out of bounds.\n", chunkNum);
+            return {}; 
+        }
+        if (!hashBlobPtrs[chunkNum]) 
+        {
+            fprintf(stderr, "DEBUG: Hash file %u was not mapped or is invalid.\n", chunkNum);
+            return {};
+        }
+        const HashBlob *hashblob = hashBlobPtrs[chunkNum];
+        if (!hashblob) 
+        {
+             fprintf(stderr, "DEBUG: Hash blob pointer null for chunk %u.\n", chunkNum);
+             return {};
+        }
+
+        const SerialTuple* tup = hashblob->Find(word.c_str());
+        if (!tup) 
+        {
+            return {};
+        }
+
+        const void* mapPtr = mappedFiles[chunkNum]->get();
+        size_t fileSize = mappedFiles[chunkNum]->size();
+        if (!mapPtr || fileSize == 0) 
+         {
+             fprintf(stderr, "ERROR: Mapped file for chunk %u is invalid or empty.\n", chunkNum);
+             return {};
+         }
+
+        const uint8_t* fileStart = static_cast<const uint8_t*>(mapPtr);
+        const uint8_t* fileEnd = fileStart + fileSize;
+
+        Location postingListOffset = tup->Value;
+        if (postingListOffset >= fileSize) 
+        {
+            fprintf(stderr, "ERROR: Offset %llu out of bounds (%zu) for word '%s' chunk %u.\n",
+            (unsigned long long)postingListOffset, fileSize, word.c_str(), chunkNum);
+            return {};
+        }
+
+        const uint8_t* postingListBuf = fileStart + postingListOffset;
+        if (postingListBuf >= fileEnd) 
+        {
+            fprintf(stderr, "ERROR: Posting list offset points beyond file end.\n");
+            return {};
+        }
+
+
+        if (postingListBuf + NUM_ENTRIES_SIZE_BYTES > fileEnd) 
+        {
+             fprintf(stderr, "ERROR: Buffer too small for numSeekTableEntriesSize byte.\n");
+             return {};
+        }
+        uint8_t numSeekTableEntriesSize = *postingListBuf;
+        postingListBuf += NUM_ENTRIES_SIZE_BYTES;
+
+        uint64_t numSeekTableEntries = 0;
+        uint64_t numPosts = 0;
+        const uint8_t* nextPtr = nullptr;
+        const uint8_t* seekTableStart = nullptr;
+
+        if (numSeekTableEntriesSize > 0) 
+        {
+            if (postingListBuf + numSeekTableEntriesSize > fileEnd) 
+            { 
+                fprintf(stderr, "ERROR: Not enough space for numSeekTableEntries varint (size byte = %u).\n", numSeekTableEntriesSize);
+                return {};
+            }
+            nextPtr = decodeVarint(postingListBuf, numSeekTableEntries);
+            if (!nextPtr || nextPtr > fileEnd) 
+            {
+                 fprintf(stderr, "ERROR: Failed decoding numSeekTableEntries or bounds error.\n");
+                 return {};
+            }
+            postingListBuf = nextPtr;
+
+            nextPtr = decodeVarint(postingListBuf, numPosts);
+             if (!nextPtr || nextPtr > fileEnd) 
+             {
+                  fprintf(stderr, "ERROR: Failed decoding numPosts or bounds error.\n");
+                  return {};
+             }
+             seekTableStart = postingListBuf; 
+             postingListBuf = nextPtr;
+        } 
+        else 
+        {
+            nextPtr = decodeVarint(postingListBuf, numPosts);
+            postingListBuf = nextPtr; 
+            seekTableStart = postingListBuf;        
+        }
+
+        Location currentLocation = 0;
+        Location currentOffset = 0;
+        uint64_t currentIndex = 0;
+
+        unsigned startLoc = (targetLocations[0] >= 25) ? targetLocations[0] - 25 : 0;
+        bool found = findBestSeekEntry(seekTableStart, fileEnd, numSeekTableEntries, startLoc, currentOffset, currentLocation, currentIndex, tableIndex);
+
+        if (!found) return {};
+
+        size_t numTargets = targetLocations.size();
+        std::vector<Location> locations(numTargets, 0);
+        std::vector<Location> minDifference(numTargets, numeric_limits<Location>::max());
+
+        postingListBuf += (ENTRY_SIZE * numSeekTableEntries) + currentOffset;
+
+        size_t targetIdx = 0;
+
+        while (currentIndex < numPosts && targetIdx < numTargets)
+        {
+            if (postingListBuf >= fileEnd) break;
+            Location target = targetLocations[targetIdx];
+            Location &minDist = minDifference[targetIdx];
+            int64_t distCurr = std::abs(static_cast<int64_t>(currentLocation) - static_cast<int64_t>(target));
+            if (distCurr < minDist)
+            {
+                minDist = distCurr;
+                locations[targetIdx] = currentLocation;
+                uint64_t delta = 0;
+                nextPtr = decodeVarint(postingListBuf, delta);
+                if (!nextPtr || nextPtr > fileEnd) break; 
+
+                postingListBuf = nextPtr;
+                currentLocation += delta;
+                currentIndex++;
+            }
+            else
+            {
+                ++targetIdx;
+            }
+            
+        }
+        return locations;
     }
 };
