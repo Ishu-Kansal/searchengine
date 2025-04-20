@@ -52,10 +52,11 @@ static constexpr std::string_view UNWANTED_LRM = "&lrm";
 static constexpr std::string_view UNWANTED_RLM = "&rlm";
 static constexpr size_t MAX_WORD_LENGTH = 50;
 
-constexpr uint32_t MAX_PROCESSED = 10000;
-constexpr uint32_t NUM_CHUNKS = 1;
+constexpr uint32_t MAX_PROCESSED = 1000;
+constexpr uint32_t NUM_CHUNKS = 4;
 
-IndexChunk chunk{};
+// IndexChunk chunk{};
+IndexChunk chunks[NUM_CHUNKS];
 
 const static int NUM_THREADS = 256;  // start small
 
@@ -67,6 +68,7 @@ std::vector<std::pair<std::string, uint32_t>> links_vector;
 pthread_mutex_t queue_lock{};
 pthread_mutex_t chunk_lock{};
 pthread_mutex_t cout_lock{};
+pthread_mutex_t chunk_lock_list[NUM_CHUNKS];
 sem_t* queue_sem;
 uint32_t num_processed{};
 std::mt19937 mt{std::random_device{}()};
@@ -336,11 +338,11 @@ struct Args {
 
 void* add_to_index(void* addr) {
     Args* arg = reinterpret_cast<Args*>(addr);
-
-    pthread_lock_guard _{chunk_lock};
+    pthread_lock_guard _{chunk_lock_list[arg->thread_id]};
+    IndexChunk* chunk = &chunks[arg->thread_id];
     if (arg->parser.isEnglish) {
         const uint16_t urlLength = arg->url.size();
-        chunk.add_url(arg->url, arg->static_rank);
+        chunk->add_url(arg->url, arg->static_rank);
 
         for (auto& word : arg->parser.titleWords) {
             cleanString(word);
@@ -350,7 +352,7 @@ void* add_to_index(void* addr) {
                 std::transform(part.begin(), part.end(), part.begin(),
                                [](unsigned char c) { return std::tolower(c); });
                 // std::cout << part << '\n';
-                chunk.add_word(part, false);
+                chunk->add_word(part, false);
             }
         }
 
@@ -362,11 +364,11 @@ void* add_to_index(void* addr) {
                 std::transform(part.begin(), part.end(), part.begin(),
                                [](unsigned char c) { return std::tolower(c); });
                 // std::cout << part << '\n';
-                chunk.add_word(part, false);
+                chunk->add_word(part, false);
             }
         }
 
-        chunk.add_enddoc();
+        chunk->add_enddoc();
     }
     delete arg;
     return NULL;
@@ -490,11 +492,12 @@ int main(int argc, char** argv) {
     signal(SIGPIPE, SIG_IGN);
 
     int id = atoi(argv[1]);
-
+    std::cout << "Started Crawler...\n";
     std::vector<std::string> sem_names{};
     for (int i = 0; i < NUM_CHUNKS; ++i) {
-        sem_names.push_back("/sem_" + std::to_string(i));
-        sem_unlink(sem_names[i].data());
+        std::cout << "Init mutex...\n";
+
+        pthread_mutex_init(&chunk_lock_list[i], NULL);
     }
 
     /*for (const auto& url : seed_urls) {
@@ -520,11 +523,16 @@ int main(int argc, char** argv) {
 
     std::cout << "FINISHED THREADS/...\n";
 
-    IndexFile chunkFile(id, chunk);
+    for (int i = 0; i < NUM_CHUNKS; i++) {
+        IndexFile chunkFile(4 * id + i, chunks[i]);
+    }
 
     pthread_mutex_destroy(&queue_lock);
     pthread_mutex_destroy(&chunk_lock);
     pthread_mutex_destroy(&cout_lock);
+    for (int k = 0; k < NUM_CHUNKS; k++) {
+        pthread_mutex_destroy(&chunk_lock_list[k]);
+    }
     // for (int i = 0; i < NUM_CHUNKS; ++i) IndexChunk::Write(chunks[i].chunk,
     // i);
 
