@@ -3,7 +3,7 @@ CXXFLAGS = -std=c++17 -Wall -Werror -Wno-deprecated-declarations -pedantic -O3 -
 LDFLAGS = -L/opt/homebrew/opt/openssl@3/lib
 LIBS = -ldl -lssl -lcrypto
 
-bf: main.cpp
+bf: main2.cpp
 	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) $(LIBS) -o $@
 
 clean:
