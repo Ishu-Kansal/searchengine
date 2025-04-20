@@ -121,8 +121,8 @@ int main()
     const uint32_t numChunks = 1; 
 
     const uint32_t chunkNum = 0; 
-/*
-    
+
+    /*
     IndexChunk indexChunk; 
     if (!build_index_from_file(data_filename, indexChunk)) 
     {
@@ -132,13 +132,17 @@ int main()
     IndexFile indexFile(chunkNum, indexChunk); 
 
     std::cout << "Creating IndexFileReader..." << std::endl;
-*/
+    */
     IndexFileReader reader(numChunks); 
 
     std::string test_query_1 = "apple banana"; 
     std::cout << "\n--- Running Query 1: [" << test_query_1 << "] ---" << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
     std::vector<UrlRank> results1 = run_engine(test_query_1, numChunks, reader);
+    std::vector<UrlRank> results2 = run_engine(test_query_1, numChunks, reader);
+    std::vector<UrlRank> results3 = run_engine(test_query_1, numChunks, reader);
+    std::vector<UrlRank> results4 = run_engine(test_query_1, numChunks, reader);
+    std::vector<UrlRank> results5 = run_engine(test_query_1, numChunks, reader);
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
     std::cout << "Query 1 execution time: " << elapsed.count() << " seconds" << std::endl;

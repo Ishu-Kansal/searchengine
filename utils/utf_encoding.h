@@ -37,6 +37,7 @@ inline uint8_t *encodeVarint(uint64_t val, uint8_t *buf) {
   return buf;
 }
 
+/*
 inline const uint8_t *decodeVarint(const uint8_t *buf, uint64_t &val) {
   val = 0;
   unsigned shift = 0;
@@ -47,4 +48,65 @@ inline const uint8_t *decodeVarint(const uint8_t *buf, uint64_t &val) {
     shift += 7;
   }
   assert(false);
+}
+*/
+
+inline const uint8_t *decodeVarint(const uint8_t *buf, uint64_t &val) 
+{
+    uint8_t byte;
+    val = 0;
+
+    do {
+        // Byte 1 (Shift 0)
+        byte = *buf++;
+    
+        val = (uint64_t(byte & 0x7F));
+        if ((byte & 0x80) == 0) break; 
+
+        // Byte 2 (Shift 7)
+        byte = *buf++;
+        val |= (uint64_t(byte & 0x7F) << 7);
+        if ((byte & 0x80) == 0) break;
+
+        // Byte 3 (Shift 14)
+        byte = *buf++;
+        val |= (uint64_t(byte & 0x7F) << 14);
+        if ((byte & 0x80) == 0) break; 
+
+        // Byte 4 (Shift 21)
+        byte = *buf++;
+        val |= (uint64_t(byte & 0x7F) << 21);
+        if ((byte & 0x80) == 0) break; 
+
+        // Byte 5 (Shift 28)
+        byte = *buf++;
+        val |= (uint64_t(byte & 0x7F) << 28);
+        if ((byte & 0x80) == 0) break;
+
+        // Byte 6 (Shift 35)
+        byte = *buf++;
+        val |= (uint64_t(byte & 0x7F) << 35);
+        if ((byte & 0x80) == 0) break;
+
+        // Byte 7 (Shift 42)
+        byte = *buf++;
+        val |= (uint64_t(byte & 0x7F) << 42);
+        if ((byte & 0x80) == 0) break; 
+
+        // Byte 8 (Shift 49)
+        byte = *buf++;
+        val |= (uint64_t(byte & 0x7F) << 49);
+        if ((byte & 0x80) == 0) break; 
+
+        // Byte 9 (Shift 56)
+        byte = *buf++;
+        val |= (uint64_t(byte & 0x7F) << 56);
+        if ((byte & 0x80) == 0) break; 
+
+        byte = *buf++;
+        val |= (uint64_t(byte & 0x7F) << 63); 
+        if ((byte & 0x80) == 0) break;
+
+    } while (false);
+    return buf;
 }
