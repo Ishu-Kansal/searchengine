@@ -171,13 +171,8 @@ std::vector<UrlRank> constraint_solver(
           {
             break;
           }
-<<<<<<< HEAD
-          docObj = docISR->Seek(currMatch->location);
-      }
-=======
           docObj = docISR->Seek(currMatch->location, i);
     }
->>>>>>> 9f4f43a (some fixes)
    
     }
     cout << "MATCHED DOCUMENTS:" << matchedDocs << '\n';

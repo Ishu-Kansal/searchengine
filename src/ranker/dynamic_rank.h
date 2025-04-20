@@ -105,6 +105,7 @@ int get_dynamic_rank(std::unique_ptr<ISRWord> &anchorTerm, vector<vector<std::un
         newEnd = min(anchorEnd + RANGE_TOLERANCE, Location(newEnd));
     }
 
+    
         // 3D vector, 1D is each phrase, 2D is the words in that phrase i, and 3D are all the locations for word j
         std::vector<std::vector<locationVector>> loadedPhrasePostings(phraseTerms.size());
 
@@ -268,6 +269,7 @@ int get_dynamic_rank(std::unique_ptr<ISRWord> &anchorTerm, vector<vector<std::un
 
     } // End loop over anchorLocations
 
+    
     return get_rank_score(shortSpans, orderedSpans, phraseMatches, topSpans, isBody);
 }
 
