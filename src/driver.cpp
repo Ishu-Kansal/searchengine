@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cassert>
+#include <sstream>
 
 #include "driver.h"
 #include "crawler/sockets.h"
@@ -33,6 +34,57 @@ std::string Driver::join_words(const std::vector<std::string>& words, size_t max
        if (i != count - 1) oss << ' ';
    }
    return oss.str();
+}
+
+
+std::string Driver::decode_html_entities(const std::string& input) {
+   static const std::unordered_map<std::string, char> named_entities = {
+       {"amp", '&'}, {"lt", '<'}, {"gt", '>'},
+       {"quot", '"'}, {"apos", '\''}, {"nbsp", ' '}
+   };
+
+   std::string output;
+   size_t i = 0;
+   while (i < input.length()) {
+       if (input[i] == '&') {
+           size_t semicolon = input.find(';', i + 1);
+           if (semicolon != std::string::npos) {
+               std::string entity = input.substr(i + 1, semicolon - i - 1);
+
+               // Check for numeric entity
+               if (!entity.empty() && entity[0] == '#') {
+                   char decoded_char = '?'; // fallback
+                   if (entity[1] == 'x' || entity[1] == 'X') {
+                       // Hexadecimal
+                       int code;
+                       std::stringstream ss;
+                       ss << std::hex << entity.substr(2);
+                       ss >> code;
+                       decoded_char = static_cast<char>(code);
+                   } else {
+                       // Decimal
+                       int code = std::stoi(entity.substr(1));
+                       decoded_char = static_cast<char>(code);
+                   }
+                   output += decoded_char;
+                   i = semicolon + 1;
+               } else if (named_entities.count(entity)) {
+                   output += named_entities.at(entity);
+                   i = semicolon + 1;
+               } else {
+                   output += '&'; // unknown entity
+                   ++i;
+               }
+           } else {
+               output += input[i];
+               ++i;
+           }
+       } else {
+           output += input[i];
+           ++i;
+       }
+   }
+   return output;
 }
 
 // Given a URL, fetch its HTML content and parse it into a SearchResult struct containing:
