@@ -138,9 +138,7 @@ void get_handler(int fd) {
   send(fd, &header, sizeof(header), 0);
   send(fd, next.data(), next.size(), 0);
   num_processed++;
-  if (num_processed % 1000 == 0) {
-    std::cout << num_processed << std::endl;
-  }
+  if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
   if (num_processed % 100000 == 0) saver();
 }
 
