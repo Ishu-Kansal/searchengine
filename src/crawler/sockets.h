@@ -25,15 +25,15 @@ class ParsedUrl {
 
     CompleteUrl = url;
 
-    pathBuffer = new char[strlen(url) + 1];
-    const char *f;
-    char *t;
+    pathBuffer = new char[strlen(url) + 1]{};
+    const char *f{};
+    char *t{};
     for (t = pathBuffer, f = url; *t++ = *f++;);
 
     Service = pathBuffer;
 
     const char Colon = ':', Slash = '/';
-    char *p;
+    char *p{};
     for (p = pathBuffer; *p && *p != Colon; p++);
 
     if (*p) {
@@ -75,7 +75,7 @@ class ParsedUrl {
 int runSocket(std::string req, std::string url_in, std::string &output) {
   ParsedUrl url(url_in.data());
   if (!url.Host || !url.Port || !url.CompleteUrl) return 1;
-  struct addrinfo hints, *address;
+  struct addrinfo hints{}, *address{};
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
