@@ -52,7 +52,7 @@ static constexpr std::string_view UNWANTED_LRM = "&lrm";
 static constexpr std::string_view UNWANTED_RLM = "&rlm";
 static constexpr size_t MAX_WORD_LENGTH = 50;
 
-constexpr uint32_t MAX_PROCESSED = 10'000;
+constexpr uint32_t MAX_PROCESSED = 100'000;
 constexpr uint32_t NUM_CHUNKS = 1;
 
 IndexChunk chunk{};

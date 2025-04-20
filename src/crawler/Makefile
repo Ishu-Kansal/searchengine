@@ -1,5 +1,5 @@
 CXX = g++ 
-CXXFLAGS = -std=c++20 -Wall -pedantic -O3 -I/opt/homebrew/opt/openssl@3/include
+CXXFLAGS = -std=c++20 -Wall -pedantic -O3 -ggdb -O0 -I/opt/homebrew/opt/openssl@3/include
 LDFLAGS = -L/opt/homebrew/opt/openssl@3/lib
 LIBS = -ldl -lssl -lcrypto -pthread
 

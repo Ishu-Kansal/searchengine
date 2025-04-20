@@ -16,8 +16,8 @@
 // #include "robotParser.h"
 class ParsedUrl {
    public:
-    const char *CompleteUrl;
-    char *Service, *Host, *Port, *Path;
+    const char *CompleteUrl{};
+    char *Service{}, *Host{}, *Port{}, *Path{};
 
     ParsedUrl(const char *url) {
         // Assumes url points to static text but
@@ -25,15 +25,15 @@ class ParsedUrl {
 
         CompleteUrl = url;
 
-        pathBuffer = new char[strlen(url) + 1];
-        const char *f;
-        char *t;
+        pathBuffer = new char[strlen(url) + 1]{};
+        const char *f{};
+        char *t{};
         for (t = pathBuffer, f = url; *t++ = *f++;);
 
         Service = pathBuffer;
 
         const char Colon = ':', Slash = '/';
-        char *p;
+        char *p{};
         for (p = pathBuffer; *p && *p != Colon; p++);
 
         if (*p) {
