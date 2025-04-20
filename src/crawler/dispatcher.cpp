@@ -131,17 +131,6 @@ std::string get_next_url() {
   }
 }
 
-void get_handler(int fd) {
-  pthread_lock_guard _{queue_lock};
-  const std::string next = get_next_url();
-  const size_t header = next.size();
-  send(fd, &header, sizeof(header), 0);
-  send(fd, next.data(), next.size(), 0);
-  num_processed++;
-  if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
-  if (num_processed % 100000 == 0) saver();
-}
-
 void saver() {
   pthread_lock_guard _{queue_lock};
   remove(filterName);
@@ -170,6 +159,17 @@ void saver() {
     ++ctr;
   }
   outputFile.flush();
+}
+
+void get_handler(int fd) {
+  pthread_lock_guard _{queue_lock};
+  const std::string next = get_next_url();
+  const size_t header = next.size();
+  send(fd, &header, sizeof(header), 0);
+  send(fd, next.data(), next.size(), 0);
+  num_processed++;
+  if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
+  if (num_processed % 1000 == 0) saver();
 }
 
 void add_handler(int fd, uint64_t size) {
