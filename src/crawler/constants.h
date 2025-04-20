@@ -17,4 +17,4 @@ constexpr const char *const SERVER_PORT_STR = "8080";
 
 constexpr const char *filterName = "dispatcher_filter.bin";
 constexpr const char *queueName = "dispatcher_queue.bin";
-constexpr const char *statsName = "stats.bin";
+constexpr const char *statsName = "dispatcher_stats.bin";
