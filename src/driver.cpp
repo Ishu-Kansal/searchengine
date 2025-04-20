@@ -20,6 +20,8 @@
 #include "../HtmlParser/HtmlParser.h"
 #include "./crawler/sockets.h"
 
+#include <thread>
+#include <chrono>
 
 Driver::Driver() { }
 
@@ -119,6 +121,10 @@ std::vector<std::string_view> Driver::run_engine(std::string& query) {
     urls.push_back(string_view("https://www.jhu.edu/"));
     urls.push_back(string_view("https://www.northwestern.edu/"));
     urls.push_back(string_view("https://www.uchicago.edu/"));
+
+    // DELETE THIS LATER - simulate constraint solver taking 3 seconds
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+
     return urls;
 
 }

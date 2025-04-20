@@ -1,9 +1,4 @@
 // engine.cpp
-// This file implements the plugin interface for a search API that accepts HTTP requests,
-// executes a query via the driver backend, fetches/parses matching URLs in parallel,
-// and returns structured search results as JSON.
-// The file also uses a custom PluginObject interface and Mutex wrapper for thread safety.
-
 #include <string>
 #include <pthread.h>
 #include <iostream>
@@ -26,9 +21,8 @@ struct ThreadData {
   int idx;
 };
 
-// Thread worker function
-// Each thread fetches and parses a single URL, then writes its result into the global `result` array
-void* thread_worker(void* arg) {
+// Thread worker function for fetching title and snippet
+void* snippet_thread_worker(void* arg) {
     ThreadData* data = static_cast<ThreadData*>(arg);
     SearchResult parsed = driver.get_url_and_parse(data->url);
 
@@ -46,31 +40,37 @@ void* thread_worker(void* arg) {
 }
 
 // Executes a query by calling the search backend (run_engine),
-// then concurrently fetching and parsing search results.
-// Returns the full JSON result of urls from user query.
+// then concurrently fetching the matching URLs.
+// This modified version returns just the URLs.
 json run_query(std::string &query) {
-
-  // call driver and return dict of results
   std::vector<std::string_view> urls = driver.run_engine(query);
 
-  if (urls.empty()) {
-    result["results"] = json::array();
-    return result;
+  result["results"] = json::array();
+  for (int i = 0; i < urls.size(); i++) {
+    result["results"].push_back({
+        {"url", urls[i]},
+        {"title", urls[i]},
+        {"snippet", ""}
+    });
   }
 
+  return result;
+}
+
+// Executes fetching of snippets for a given list of URLs
+json fetch_snippets(std::vector<std::string_view> &urls) {
   result["results"] = json::array();
 
   std::vector<pthread_t> threads;
 
-
-  // Create a thread for each URL
+  // Create a thread for each URL to fetch the snippet
   for (int i = 0; i < urls.size(); i++) {
       pthread_t thread;
-      ThreadData* data = new ThreadData{urls[i], i}; // Allocate thread-specific data
+      ThreadData* data = new ThreadData{urls[i], i};
 
-      if (pthread_create(&thread, nullptr, thread_worker, data) != 0) {
+      if (pthread_create(&thread, nullptr, snippet_thread_worker, data) != 0) {
           std::cerr << "Failed to create thread for URL: " << urls[i] << std::endl;
-          delete data; // Clean up if failed
+          delete data;
       } else {
           threads.push_back(thread);
       }
@@ -88,10 +88,11 @@ json run_query(std::string &query) {
 class SearchAPI : public PluginObject {
 private:
   Mutex lock;
-  const std::string endpoint = "/api/search/";
+  const std::string search_endpoint = "/api/search/";
+  const std::string snippets_endpoint = "/api/snippets/";
 
-
-  std::string handle(const std::string &req) {
+  // Handle search requests
+  std::string handle_search(const std::string &req) {
     size_t pos = req.find("\r\n\r\n");
     if (pos == std::string::npos) return error(400);
 
@@ -101,6 +102,22 @@ private:
 
     std::string q = j["query"].get<std::string>();
     json result = run_query(q);
+
+    std::string payload = result.dump(2);
+    return response(200, "OK", payload);
+  }
+
+  // Handle snippets requests
+  std::string handle_snippets(const std::string &req) {
+    size_t pos = req.find("\r\n\r\n");
+    if (pos == std::string::npos) return error(400);
+
+    std::string body = req.substr(pos + 4);
+    json j = json::parse(body, nullptr, false);
+    if (j.is_discarded() || !j.contains("urls")) return error(400);
+
+    std::vector<std::string_view> urls = j["urls"].get<std::vector<std::string_view>>();
+    json result = fetch_snippets(urls);
 
     std::string payload = result.dump(2);
     return response(200, "OK", payload);
@@ -126,15 +143,24 @@ public:
     Plugin = this;
   }
 
-  // Route matching logic: this plugin only responds to /api/search/
+  // Route matching logic: this plugin only responds to /api/search/ and /api/snippets/
   bool MagicPath(const std::string path) override {
-    return path == endpoint;
+    return path == search_endpoint || path == snippets_endpoint;
   }
 
-  // Main entry point for handling a search request
+  // Main entry point for handling a request
   std::string ProcessRequest(std::string request) override {
     lock.Lock();
-    std::string out = handle(request);
+    std::string out;
+
+    if (request.find(search_endpoint) != std::string::npos) {
+      out = handle_search(request);
+    } else if (request.find(snippets_endpoint) != std::string::npos) {
+      out = handle_snippets(request);
+    } else {
+      out = error(404);
+    }
+
     lock.Unlock();
     return out;
   }

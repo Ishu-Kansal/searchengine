@@ -1,5 +1,4 @@
-// import OpenAI from "openai";
-// const client = new OpenAI();
+import { OPENAI_API_KEY } from './config.js';
 
 let allResults = [];
 let currentPage = 0;
@@ -30,7 +29,7 @@ const submitButton = searchForm.querySelector('button[type="submit"]');
 let gifInterval = null; // To store the interval ID
 
 searchForm.addEventListener('submit', async function (e) {
-  e.preventDefault(); // Prevent default form submission
+  e.preventDefault();
 
   const query = queryInput.value.trim();
   if (!query) {
@@ -38,82 +37,72 @@ searchForm.addEventListener('submit', async function (e) {
     return;
   }
 
-  // Reset state for new search
+  // Reset UI and state
   currentPage = 0;
   allResults = [];
-  searchResultsContainer.innerHTML = ''; // Clear previous results immediately
+  searchResultsContainer.innerHTML = '';
   document.getElementById('aiSummaryContainer').style.display = 'none';
-  paginationControls.style.display = 'none'; // Hide pagination
+  paginationControls.style.display = 'none';
   toggleAISummary();
 
-  // --- UI Updates for Loading ---
   submitButton.classList.add('loading');
   submitButton.disabled = true;
-  loadingIndicator.style.display = 'block'; // Show loading section
+  loadingIndicator.style.display = 'block';
 
-  // Start cycling GIFs
-  let gifIndex = Math.floor(Math.random() * gifs.length); // Start with a random GIF
-  loadingGif.src = gifs[gifIndex]; // Set initial GIF immediately
-
+  let gifIndex = Math.floor(Math.random() * gifs.length);
+  loadingGif.src = gifs[gifIndex];
   gifInterval = setInterval(() => {
     gifIndex = (gifIndex + 1) % gifs.length;
     loadingGif.src = gifs[gifIndex];
-  }, 2000); // Change GIF every 2 seconds
+  }, 2000);
 
   let aiText = "";
 
   try {
-    const [aiResponse, searchResponse] = await Promise.all([
-      fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + env.OPENAI_API_KEY
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content: "You are a non-interactive information assistant. When given a search query, respond with one clear, neutral, and self-contained paragraph that explains the topic. Do not include links. Do not ask questions. Do not invite further interaction."
-            },
-            {
-              role: "user",
-              content: "Search engine query: " + query
-            }
-          ]
-        })
-      }),
-      fetch('/api/search/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8'
-        },
-        body: JSON.stringify({ query })
+    const aiPromise = fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + OPENAI_API_KEY
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are a non-interactive information assistant. When given a search query, respond with one clear, neutral, and self-contained paragraph that explains the topic. Do not include links. Do not ask questions. Do not invite further interaction."
+          },
+          {
+            role: "user",
+            content: "Search engine query: " + query
+          }
+        ]
       })
-    ]);
-  
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      throw new Error(`AI API error: ${aiResponse.status} - ${errorText}`);
-    }
-  
+    });
+
+    const searchPromise = fetch('/api/search/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8'
+      },
+      body: JSON.stringify({ query })
+    });
+
+    const [searchResponse] = await Promise.all([searchPromise]);
+
+    // Handle Search Results
     if (!searchResponse.ok) {
       const errorText = await searchResponse.text();
       throw new Error(`Search API error: ${searchResponse.status} - ${errorText}`);
     }
-  
-    const [aiData, searchData] = await Promise.all([
-      aiResponse.json(),
-      searchResponse.json()
-    ]);
-  
-    aiText = aiData.choices?.[0]?.message?.content || "";
-  
+
+    const searchData = await searchResponse.json();
+    console.log('Search API response completed');
+
     if (!Array.isArray(searchData.results)) {
       throw new Error("Invalid data format received from server.");
     }
-  
+
     if (searchData.results.length === 0) {
       searchResultsContainer.innerHTML = `
         <p style="text-align: center; color: #a58d8d; margin-top: 30px;">
@@ -121,29 +110,68 @@ searchForm.addEventListener('submit', async function (e) {
         </p>`;
     } else {
       allResults = searchData.results;
-      renderPage(0); // Render the first page
+
+      renderPage(0); // Show results right away
+
+      // Start fetching snippets immediately after search response
+      fetchSnippets().then(() => {
+        renderPage(currentPage); // Re-render with snippets
+        paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
+      }).catch(error => {
+        console.error('Snippet Fetch Error:', error);
+      });
+
       paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
     }
-  
+
+    const [aiResponse] = await Promise.all([aiPromise]);
+
+    // Handle AI response as soon as it's ready
+    aiResponse.json().then(aiData => {
+      console.log('OpenAI response completed');
+      aiText = aiData.choices?.[0]?.message?.content || "";
+      displayAISummary(aiText);
+    }).catch(error => {
+      console.error("AI Summary Error:", error);
+    });
+
   } catch (error) {
     console.error('Search Error:', error);
     searchResultsContainer.innerHTML = `
       <p style="text-align: center; color: #ec2225; margin-top: 30px;">
         An error occurred: ${error.message}. Please try again.
       </p>`;
-  }  
-  finally {
-    // --- Cleanup UI After Loading ---
-    clearInterval(gifInterval); // Stop changing GIFs
+  } finally {
+    clearInterval(gifInterval);
     gifInterval = null;
-    loadingIndicator.style.display = 'none'; // Hide loading section
+    loadingIndicator.style.display = 'none';
     submitButton.classList.remove('loading');
     submitButton.disabled = false;
-
-    displayAISummary(aiText); // guaranteed to have value if AI call succeeded
   }
 });
 
+async function fetchSnippets() {
+  try {
+    const snippetResponse = await fetch('/api/snippets/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8'
+      },
+      body: JSON.stringify({ urls: allResults.map(result => result.url) }) // Send list of URLs
+    });
+
+    if (!snippetResponse.ok) {
+      throw new Error(`Snippet API error: ${snippetResponse.status}`);
+    }
+
+    const snippetData = await snippetResponse.json();
+
+    allResults = snippetData.results;
+  }
+  catch (error) {
+    console.error('Snippet Fetch Error:', error);
+  }
+}
 
 function renderPage(page) {
   // Ensure page is within valid bounds
@@ -165,9 +193,9 @@ function renderPage(page) {
     div.className = 'result'; // Use the class defined in CSS
 
     // Sanitize content if it comes directly from user input or less trusted sources
-    const title = doc.title || 'Untitled';
+    const title = doc.title || doc.url;
     const url = doc.url || '#'; // Provide a fallback URL
-    const snippet = doc.snippet || 'No snippet available.';
+    const snippet = doc.snippet;
 
     // Use textContent for potentially unsafe data to prevent XSS
     const titleLink = document.createElement('a');
@@ -201,7 +229,6 @@ function renderPage(page) {
   searchResultsContainer.appendChild(fragment); // Append all results at once
   currentPage = page;
   updatePaginationButtons();
-
 }
 
 function updatePaginationButtons() {
@@ -248,6 +275,8 @@ function toggleAISummary() {
     icon.classList.add('glyphicon-chevron-down');
   }
 }
+
+window.toggleAISummary = toggleAISummary;
 
 function displayAISummary(summaryText) {
   const summaryContainer = document.getElementById('aiSummaryContainer');

@@ -36,3 +36,5 @@ settings.json
 .gitignore
 src/files/*
 vscode/
+
+FrontEnd/config.js
