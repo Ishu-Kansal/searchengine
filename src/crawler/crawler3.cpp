@@ -52,7 +52,7 @@ static constexpr std::string_view UNWANTED_LRM = "&lrm";
 static constexpr std::string_view UNWANTED_RLM = "&rlm";
 static constexpr size_t MAX_WORD_LENGTH = 50;
 
-constexpr uint32_t MAX_PROCESSED = 100'000;
+constexpr uint32_t MAX_PROCESSED = 10000;
 constexpr uint32_t NUM_CHUNKS = 1;
 
 IndexChunk chunk{};
@@ -489,7 +489,7 @@ void* runner(void*) {
 int main(int argc, char** argv) {
     signal(SIGPIPE, SIG_IGN);
 
-    int id = atoi(argv[0]);
+    int id = atoi(argv[1]);
 
     std::vector<std::string> sem_names{};
     for (int i = 0; i < NUM_CHUNKS; ++i) {
