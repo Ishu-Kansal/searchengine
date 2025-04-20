@@ -114,7 +114,7 @@ searchForm.addEventListener('submit', async function (e) {
       renderPage(0); // Show results right away
 
       // Start fetching snippets immediately after search response
-      fetchSnippets().then(() => {
+      fetchSnippetsForPage(0).then(() => {
         renderPage(currentPage); // Re-render with snippets
         paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
       }).catch(error => {
@@ -150,14 +150,28 @@ searchForm.addEventListener('submit', async function (e) {
   }
 });
 
-async function fetchSnippets() {
+const fetchedPages = new Set();
+
+async function fetchSnippetsForPage(pageIndex) {
+  const start = pageIndex * pageSize;
+  const end = Math.min(start + pageSize, allResults.length);
+  const pageResults = allResults.slice(start, end);
+
+  const urlsToFetch = pageResults
+    .filter(doc => !doc.snippet)
+    .map(doc => doc.url);
+
+  if (urlsToFetch.length === 0) {
+    return;
+  }
+
   try {
     const snippetResponse = await fetch('/api/snippets/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json; charset=utf-8'
       },
-      body: JSON.stringify({ urls: allResults.map(result => result.url) }) // Send list of URLs
+      body: JSON.stringify({ urls: urlsToFetch })
     });
 
     if (!snippetResponse.ok) {
@@ -166,9 +180,17 @@ async function fetchSnippets() {
 
     const snippetData = await snippetResponse.json();
 
-    allResults = snippetData.results;
-  }
-  catch (error) {
+    // Update allResults with fetched snippets
+    snippetData.results.forEach(updatedDoc => {
+      const index = allResults.findIndex(doc => doc.url === updatedDoc.url);
+      if (index !== -1) {
+        allResults[index].snippet = updatedDoc.snippet;
+        allResults[index].title = updatedDoc.title;
+      }
+    });
+
+    fetchedPages.add(pageIndex); // Mark this page as fetched
+  } catch (error) {
     console.error('Snippet Fetch Error:', error);
   }
 }
@@ -247,13 +269,31 @@ function updatePaginationButtons() {
 // Pagination Event Listeners
 prevButton.addEventListener('click', () => {
   if (currentPage > 0) {
-    renderPage(currentPage - 1);
+    let newPage = currentPage - 1;
+    renderPage(newPage);
+    if (!fetchedPages.has(newPage)) {
+      fetchSnippetsForPage(newPage).then(() => {
+        renderPage(newPage); // Re-render with snippets
+        paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
+      }).catch(error => {
+        console.error('Snippet Fetch Error:', error);
+      });
+    }
   }
 });
 
 nextButton.addEventListener('click', () => {
   if ((currentPage + 1) * pageSize < allResults.length) {
-    renderPage(currentPage + 1);
+    let newPage = currentPage + 1;
+    renderPage(newPage);
+    if (!fetchedPages.has(newPage)) {
+      fetchSnippetsForPage(newPage).then(() => {
+        renderPage(newPage); // Re-render with snippets
+        paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
+      }).catch(error => {
+        console.error('Snippet Fetch Error:', error);
+      });
+    }
   }
 });
 
@@ -285,6 +325,6 @@ function displayAISummary(summaryText) {
   summaryTextEl.textContent = summaryText;
   summaryContainer.style.display = 'block';
   document.getElementById('aiSummaryContent').style.display = 'block';
-  document.getElementById('aiToggleIcon').classList.remove('glyphicon-chevron-up');
-  document.getElementById('aiToggleIcon').classList.add('glyphicon-chevron-down');
+  document.getElementById('aiToggleIcon').classList.remove('glyphicon-chevron-down');
+  document.getElementById('aiToggleIcon').classList.add('glyphicon-chevron-up');
 }
