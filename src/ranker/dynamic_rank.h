@@ -22,7 +22,7 @@ struct AnchorTermIndex
 
 // Weights for computing the score of specific ranking components, enums for quick readjusting and no magic numbers
 enum DynamicWeights: int {
-    SHORTSPANSWEIGHT = 7, 
+    SHORTSPANSWEIGHT = 50, 
     ORDEREDSPANSWEIGHT = 10,
     PHRASEMATCHESWEIGHT = 20,
     TOPSPANSWEIGHT = 7
@@ -131,7 +131,7 @@ int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors
             for (int i = 0; i < spans.size(); ++i)
             {   
                 Location & currentTotalSpan = spans[i];
-                if (currentTotalSpan < 50)
+                if (currentTotalSpan < 10)
                 {
                     shortSpans++;
                 }
@@ -142,10 +142,8 @@ int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors
             }
             break;
         }
-    
-        return get_rank_score(shortSpans, orderedSpans, phraseMatches, topSpans, isBody);
     }
-
-    
+    /*std::cout << "shortSpans: " << shortSpans << ", orderedSpans: " << orderedSpans << "phraseMatches: " << phraseMatches << ", topSpans: " << topSpans << "isBody: " << isBody << '\n';*/
+    return get_rank_score(shortSpans, orderedSpans, phraseMatches, topSpans, isBody);
 }
 

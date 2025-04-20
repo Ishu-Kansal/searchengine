@@ -38,3 +38,7 @@ src/files/*
 vscode/
 
 FrontEnd/config.js
+
+src/HashFile*
+
+src/IndexChunk*

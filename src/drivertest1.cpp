@@ -118,7 +118,7 @@ std::vector<UrlRank> run_engine(
 int main()
 {
     const std::string data_filename = "websites_data.jsonl";
-    const uint32_t numChunks = 1; 
+    const uint32_t numChunks = 10; 
 
     const uint32_t chunkNum = 0; 
 
@@ -135,7 +135,7 @@ int main()
     */
     IndexFileReader reader(numChunks); 
 
-    std::string test_query_1 = "apple"; 
+    std::string test_query_1 = "umich engineering"; 
     std::cout << "\n--- Running Query 1: [" << test_query_1 << "] ---" << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
     std::vector<UrlRank> results1 = run_engine(test_query_1, numChunks, reader);

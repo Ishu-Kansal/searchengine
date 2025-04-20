@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string_view>
+#include <cctype>
 
 #include "isr/isr.h"
 #include "ranker/dynamic_rank.h"
@@ -123,10 +124,15 @@ std::vector<UrlRank> constraint_solver(
         titleTerms.push_back(std::move(copiedInner));
     }
 
-    SeekObj* currMatch = queryISR->Seek(0, 0);
+    
     for (int chunkNum = 0; chunkNum < numChunks; ++chunkNum)
     {
+      SeekObj* currMatch = queryISR->Seek(0, chunkNum);
       std::unique_ptr<ISREndDoc> docISR = make_unique<ISREndDoc>(reader); 
+      if (!currMatch)
+      {
+        continue;
+      }
       SeekObj * docObj = docISR->Seek(currMatch->location, chunkNum);
       while (docObj) 
       {
@@ -149,7 +155,7 @@ std::vector<UrlRank> constraint_solver(
             reader,
             chunkNum,
             true);
-          
+          // std::cout << "Dynamic rank: " << dynamic_score << '\n';
           // Dynamic score for title words
           /*
           int title_score = get_dynamic_rank(
@@ -170,21 +176,23 @@ std::vector<UrlRank> constraint_solver(
           {
             for (int j = 0; j < orderedQueryTerms[i].size(); j++)
             {
+              std::transform(doc->url.begin(), doc->url.end(), doc->url.begin(),
+              [](unsigned char c){ return std::tolower(c); });
               if (doc->url.find(orderedQueryTerms[i][j]->GetWord()) != string::npos) 
               {
-                url_score += 10; // Add 10 for each query term found in the url
+                url_score += 100; // Add 10 for each query term found in the url
               }
             }
           }
           
           // In case
           if (doc->staticRank > 30) {
-            doc->staticRank = 0;
+            doc->staticRank = 30;
           }
           
           // Add weights to the score later
-          UrlRank urlRank(doc->url, dynamic_score); /*title_score + url_score + doc->staticRank*/
-          
+          UrlRank urlRank(doc->url, dynamic_score + url_score); /*title_score + url_score + doc->staticRank*/
+          // cout << urlRank.rank << '\n';
           insertionSort(topNdocs, urlRank); 
           currMatch = queryISR->NextDocument(currLoc, chunkNum); 
           if (!currMatch) 
@@ -193,8 +201,7 @@ std::vector<UrlRank> constraint_solver(
           }
           docObj = docISR->Seek(currMatch->location, chunkNum);
     }
-   
     }
-    cout << "MATCHED DOCUMENTS:" << matchedDocs << '\n';
+    cout << "MATCHED DOCUMENTS: " << matchedDocs << '\n';
     return topNdocs; 
 }
