@@ -68,7 +68,7 @@ searchForm.addEventListener('submit', async function (e) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer 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"
+          "Authorization": "Bearer " + env.OPENAI_API_KEY
         },
         body: JSON.stringify({
           model: "gpt-4o-mini",

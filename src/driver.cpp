@@ -63,77 +63,62 @@ SearchResult Driver::get_url_and_parse(const std::string_view& url) {
 
 
 std::vector<std::string_view> Driver::run_engine(std::string& query) {
-   uint32_t numChunks = 1;
-   std::vector<std::vector<std::unique_ptr<ISRWord>>> sequences;
+//    uint32_t numChunks = 1;
+//    std::vector<std::vector<std::unique_ptr<ISRWord>>> sequences;
 
-   // Example document manually inserted
-   IndexChunk indexChunk;
-   std::string url = "http://example.com";
-   std::string wordApple = "apple";
-   std::string banana = "banana";
+//    // Example document manually inserted
+//    IndexChunk indexChunk;
+//    std::string url = "http://example.com";
+//    std::string wordApple = "apple";
+//    std::string banana = "banana";
 
-   indexChunk.add_url(url, 1);
-   for (int i = 0; i < 4; ++i) {
-       indexChunk.add_word(wordApple, false);
-   }
-   indexChunk.add_word(banana, false);
-   indexChunk.add_enddoc();
+//    indexChunk.add_url(url, 1);
+//    for (int i = 0; i < 4; ++i) {
+//        indexChunk.add_word(wordApple, false);
+//    }
+//    indexChunk.add_word(banana, false);
+//    indexChunk.add_enddoc();
 
-   assert(!indexChunk.get_posting_lists().empty());
+//    assert(!indexChunk.get_posting_lists().empty());
 
-   IndexFile indexFile(0, indexChunk);
-   IndexFileReader reader(numChunks);
+//    IndexFile indexFile(0, indexChunk);
+//    IndexFileReader reader(numChunks);
 
-   QueryParser parser(query, numChunks, reader);
-   std::unique_ptr<Constraint> c = parser.Parse();
+//    QueryParser parser(query, numChunks, reader);
+//    std::unique_ptr<Constraint> c = parser.Parse();
 
-   if (!c) return {};
+//    if (!c) return {};
 
-   std::unique_ptr<ISR> isrs = c->Eval(sequences);
-   std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, 1, reader);
+//    std::unique_ptr<ISR> isrs = c->Eval(sequences);
+//    std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, 1, reader);
 
    std::vector<std::string_view> urls;
-   urls.reserve(raw_results.size());
-   std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(urls),
-                  [](const UrlRank& p) { return p.url; });
+//    urls.reserve(raw_results.size());
+//    std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(urls),
+//                   [](const UrlRank& p) { return p.url; });
 
-   return urls;
-}
+//    return urls;
+// }
    
-   //  urls.push_back(cstring_view("https://www.pubmed.gov/"));
-   //  urls.push_back(cstring_view("https://www.plos.org/"));
-   //  urls.push_back(cstring_view("https://www.biomedcentral.com/"));
-   //  urls.push_back(cstring_view("https://www.pbs.org/"));
-   //  urls.push_back(cstring_view("https://developer.mozilla.org/en-US/"));
-   //  urls.push_back(cstring_view("https://git-scm.com/"));
-   //  urls.push_back(cstring_view("https://redis.io/"));
-   //  urls.push_back(cstring_view("https://www.postgresql.org/"));
-   //  urls.push_back(cstring_view("https://www.mysql.com/"));
-   //  urls.push_back(cstring_view("https://www.php.net/"));
-   //  urls.push_back(cstring_view("https://www.ibm.com/"));
-   //  urls.push_back(cstring_view("https://www.intel.com/content/www/us/en/homepage.html"));
-   //  urls.push_back(cstring_view("https://about.google/"));
-   //  urls.push_back(cstring_view("https://news.microsoft.com/"));
-   //  urls.push_back(cstring_view("https://www.cisco.com/"));
-   //  urls.push_back(cstring_view("https://www.oracle.com/index.html"));
-   //  urls.push_back(cstring_view("https://www.dell.com/en-us"));
-   //  urls.push_back(cstring_view("https://www.hp.com/us-en/home.html"));
-   //  urls.push_back(cstring_view("https://www.nationalgeographic.org/"));
-   //  urls.push_back(cstring_view("https://www.amnh.org/"));
-   //  urls.push_back(cstring_view("https://www.metmuseum.org/"));
-   //  urls.push_back(cstring_view("https://www.moma.org/"));
-   //  urls.push_back(cstring_view("https://www.weather.gov/"));
-   //  urls.push_back(cstring_view("https://www.accuweather.com/"));
-   //  urls.push_back(cstring_view("https://www.wunderground.com/"));
-   //  urls.push_back(cstring_view("https://www.nist.gov/"));
-   //  urls.push_back(cstring_view("https://www.ieee.org/"));
-   //  urls.push_back(cstring_view("https://www.acm.org/"));
-   //  urls.push_back(cstring_view("https://www.ucla.edu/"));
-   //  urls.push_back(cstring_view("https://www.utexas.edu/"));
-   //  urls.push_back(cstring_view("https://www.psu.edu/"));
-   //  urls.push_back(cstring_view("https://www.cornell.edu/"));
-   //  urls.push_back(cstring_view("https://www.duke.edu/"));
-   //  urls.push_back(cstring_view("https://www.jhu.edu/"));
-   //  urls.push_back(cstring_view("https://www.northwestern.edu/"));
-   //  urls.push_back(cstring_view("https://www.uchicago.edu/"));
-   //  return urls;
+
+    urls.push_back(string_view("https://www.nationalgeographic.org/"));
+    urls.push_back(string_view("https://www.amnh.org/"));
+    urls.push_back(string_view("https://www.metmuseum.org/"));
+    urls.push_back(string_view("https://www.moma.org/"));
+    urls.push_back(string_view("https://www.weather.gov/"));
+    urls.push_back(string_view("https://www.accuweather.com/"));
+    urls.push_back(string_view("https://www.wunderground.com/"));
+    urls.push_back(string_view("https://www.nist.gov/"));
+    urls.push_back(string_view("https://www.ieee.org/"));
+    urls.push_back(string_view("https://www.acm.org/"));
+    urls.push_back(string_view("https://www.ucla.edu/"));
+    urls.push_back(string_view("https://www.utexas.edu/"));
+    urls.push_back(string_view("https://www.psu.edu/"));
+    urls.push_back(string_view("https://www.cornell.edu/"));
+    urls.push_back(string_view("https://www.duke.edu/"));
+    urls.push_back(string_view("https://www.jhu.edu/"));
+    urls.push_back(string_view("https://www.northwestern.edu/"));
+    urls.push_back(string_view("https://www.uchicago.edu/"));
+    return urls;
+
+}
