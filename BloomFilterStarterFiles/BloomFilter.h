@@ -43,10 +43,10 @@ class Bloomfilter {
     // numBytes
     /*std::vector<unsigned char> bytes(numBytes);
     read(handle, reinterpret_cast<char *>(bytes.data()), numBytes);*/
-    bloomFilter.reserve(sizeInBits);
+    bloomFilter.resize(sizeInBits);
 
     for (size_t i = 0; i < sizeInBits; ++i) {
-      bloomFilter[i] = (bytes[i / 8] >> (i % 8)) & 1;
+      bloomFilter[i] = bool(bytes[i / 8] & (1 << (i % 8))); // (bytes[i / 8] >> (i % 8)) & 1;
     }
     munmap((char *)bytes - sizeof(header), sizeof(header) + numBytes);
   }
@@ -57,6 +57,7 @@ class Bloomfilter {
 
     // Pack bits into a byte then add to vector
     size_t numBytes = (sizeInBits + 7) / 8;
+    ftruncate(handle, numBytes + sizeof(header));
     char *bytes = static_cast<char *>(mmap(nullptr, sizeof(header) + numBytes,
                                            PROT_WRITE, MAP_PRIVATE, handle, 0));
     assert(bytes != MAP_FAILED);
@@ -81,7 +82,7 @@ class Bloomfilter {
 
     // Use double hashing to get unique bit, and repeat for each hash function.
 
-    for (int i = 0; i < numHashFuncs; ++i) {
+    for (uint64_t i = 0; i < numHashFuncs; ++i) {
       bloomFilter[(hash1 + i * hash2) % sizeInBits] = true;
     }
   }
@@ -100,7 +101,7 @@ class Bloomfilter {
     std::pair<uint64_t, uint64_t> hashVals = hash(s);
     uint64_t hash1 = hashVals.first;
     uint64_t hash2 = hashVals.second;
-    for (int i = 0; i < numHashFuncs; ++i) {
+    for (auto i = 0; i < numHashFuncs; ++i) {
       if (!bloomFilter[(hash1 + i * hash2) % sizeInBits]) return false;
     }
     return true;
