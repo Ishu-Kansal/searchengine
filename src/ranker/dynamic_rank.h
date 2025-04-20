@@ -10,6 +10,13 @@
 #include "../isr/isr.h"
 #include "../inverted_index/IndexFileReader.h"
 
+struct AnchorTermIndex
+{
+  int outerIndex;
+  int innerIndex;
+
+  AnchorTermIndex(int o, int i) : outerIndex(o), innerIndex(i) {} 
+};
 // TO DO: WEIGHTS ARE ALL 0 RIGHT NOW, WILL NEED TO SET THEM TO REAL VALUES SOON AND DEBUG THEM TO FIND WHICH WEIGHTS ARE THE BEST FOR 
 //       OUR RESULTS FOR THE ENGINE
 
@@ -30,14 +37,13 @@ enum SectionWeights: int {
 
 // enum class for requirements of what is considered a short span or a top span
 enum Requirements: int {
-    SHORTSPANSIZE = 10,
     TOPSPANSIZE = 100
 };
 
 using locationVector = std::vector<Location>;
 
 constexpr Location RANGE_TOLERANCE = 25;
-constexpr Location NO_OCCURENCE_PENALTY = 1000;
+
 // given all of the occurences assigns the weights and returns the actual dynamic rank
 // ***RME CLAUSE***
 // Requires: The number of short spans, ordered spans, phrase matches, top spans, and the type of section this is being scored on
@@ -74,202 +80,72 @@ int get_rank_score(int shortSpans, int orderedSpans, int phraseMatches, int topS
 //           Needs a start location so we can seek to that location
 // Modifies: Nothing.
 // Effect: Returns the dynamic rank score for a single document.
-int get_dynamic_rank(std::unique_ptr<ISRWord> &anchorTerm, vector<vector<std::unique_ptr<ISRWord>>> &phraseTerms, uint64_t startLocation, uint64_t endLocation, const IndexFileReader & reader, uint32_t currChunk, bool isBody) 
+int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors, vector<vector<std::unique_ptr<ISRWord>>> &phraseTerms, uint64_t startLocation, uint64_t endLocation, const IndexFileReader & reader, uint32_t currChunk, bool isBody) 
 
 {
-
     int shortSpans = 0;
     int orderedSpans = 0;
     int phraseMatches = 0;
     int topSpans = 0; 
 
-    // Gets all locations for anchor in this document
-
-    locationVector anchorLocations = reader.LoadChunkOfPostingList(
-        anchorTerm->GetWord(), 
-        currChunk,   
-        startLocation,
-        endLocation,
-        anchorTerm->GetSeekTableIndex()
-    );
-
-    Location newStart = startLocation;
-    Location newEnd = endLocation;
-
-    if (!anchorLocations.empty())
+    for (int anchorTermIdx = 0; anchorTermIdx < rarestAnchorTermVectors.size(); ++anchorTermIdx)
     {
-        Location anchorStart = anchorLocations.front();
-        Location anchorEnd = anchorLocations.back();
+        auto & anchorTerm = phraseTerms[rarestAnchorTermVectors[anchorTermIdx].outerIndex][rarestAnchorTermVectors[anchorTermIdx].innerIndex];
+
+        const std::string & anchorWord = anchorTerm->GetWord();
+        locationVector anchorLocations = reader.LoadChunkOfPostingList(
+            anchorWord, 
+            currChunk,   
+            startLocation,
+            endLocation,
+            anchorTerm->GetSeekTableIndex()
+        );
     
-        newStart = max(anchorStart + RANGE_TOLERANCE, Location(newStart));
-        newEnd = min(anchorEnd + RANGE_TOLERANCE, Location(newEnd));
+        if (!anchorLocations.empty())
+        {
+            locationVector spans(anchorLocations.size(), 0);
+    
+            for (int i = 0; i < phraseTerms.size(); ++i)
+            {
+                for (int j = 0; j < phraseTerms[i].size(); ++j)
+                {
+                    const std::string & word = phraseTerms[i][j]->GetWord();
+                    if (word != anchorWord)
+                    {
+                        locationVector currPhraseMinDiffs = reader.LoadChunkOfPostingListClosest
+                        (
+                        word,
+                        currChunk,
+                        anchorLocations,
+                        endLocation,
+                        phraseTerms[i][j]->GetSeekTableIndex()
+                        );
+                        for (int k = 0; k < spans.size(); ++k)
+                        {
+                            spans[k] += currPhraseMinDiffs[k];
+                        }
+                    }
+                    
+                }
+            }
+            for (int i = 0; i < spans.size(); ++i)
+            {   
+                Location & currentTotalSpan = spans[i];
+                if (currentTotalSpan < 50)
+                {
+                    shortSpans++;
+                }
+                if (anchorLocations[i] < startLocation + Requirements::TOPSPANSIZE) 
+                {
+                    topSpans++;
+                }
+            }
+            break;
+        }
+    
+        return get_rank_score(shortSpans, orderedSpans, phraseMatches, topSpans, isBody);
     }
 
     
-        // 3D vector, 1D is each phrase, 2D is the words in that phrase i, and 3D are all the locations for word j
-        std::vector<std::vector<locationVector>> loadedPhrasePostings(phraseTerms.size());
-
-        for (int i = 0; i < phraseTerms.size(); ++i) 
-        {
-            // Resize it to the number of words in that phrase
-            loadedPhrasePostings[i].resize(phraseTerms[i].size());
-            for (int j = 0; j < phraseTerms[i].size(); ++j) 
-            {
-                if (phraseTerms[i][j]->GetWord() == anchorTerm->GetWord()) 
-                {
-                    loadedPhrasePostings[i][j] = anchorLocations;
-                } 
-                else 
-                {
-                    // Load chunk for term (i, j)
-                    loadedPhrasePostings[i][j] = reader.LoadChunkOfPostingList(
-                        phraseTerms[i][j]->GetWord(),
-                        currChunk,                   
-                        newStart,
-                        newEnd,
-                        phraseTerms[i][j]->GetSeekTableIndex()
-                    );
-                }
-            }
-        }
-        // Indices to keep track of the current position in each posting list
-        std::vector<std::vector<size_t>> currentIndices(phraseTerms.size());
-        for (int i = 0; i < phraseTerms.size(); ++i) {
-            currentIndices[i].resize(phraseTerms[i].size(), 0);
-        }
-
-        for (const Location currentAnchorLoc : anchorLocations) 
-        {
-            int64_t currentTotalSpan = 0;
-            bool allTermsNearTop = true; 
-            std::vector<std::vector<Location>> synchronizedLocations(phraseTerms.size());
-
-            
-            for (int i = 0; i < phraseTerms.size(); ++i) 
-            {
-                synchronizedLocations[i].resize(phraseTerms[i].size(), static_cast<Location>(-1));
-                for (int j = 0; j < phraseTerms[i].size(); ++j) 
-                {
-                    if (loadedPhrasePostings[i][j].empty()) 
-                    {
-                        synchronizedLocations[i][j] = static_cast<Location>(-1);
-                        continue; 
-                    }
-
-                    size_t& currentIdx = currentIndices[i][j];
-
-                    // advance we find a location >= currentAnchorLoc
-                    while (currentIdx < loadedPhrasePostings[i][j].size() &&
-                        loadedPhrasePostings[i][j][currentIdx] < currentAnchorLoc) 
-                    {
-                        currentIdx++;
-                    }
-
-                    if (currentIdx >= loadedPhrasePostings[i][j].size())
-                    {
-                        currentIdx = loadedPhrasePostings[i][j].size() - 1;
-                    }
-
-                    if (loadedPhrasePostings[i][j][currentIdx] >= endLocation) {
-                        synchronizedLocations[i][j] = static_cast<Location>(-1);
-                        continue; // Continue to next term j
-                    }
-                    if (currentIdx != 0) 
-                    {
-                        // Will always be less than currentAnchorLoc
-                        Location offsetBeforeAnchor = currentAnchorLoc - loadedPhrasePostings[i][j][currentIdx - 1];
-
-                        // Will always be greater or equal to currentAnchorLoc
-                        Location offsetAfterAnchor = loadedPhrasePostings[i][j][currentIdx] - currentAnchorLoc;
-
-                        if (offsetBeforeAnchor < offsetAfterAnchor)
-                        {
-                            currentIdx -= 1;
-                        }
-                    }
-                    Location termLoc = loadedPhrasePostings[i][j][currentIdx];
-                    synchronizedLocations[i][j] = termLoc;
-                    
-                    bool isAnchorTerm = (phraseTerms[i][j]->GetWord() == anchorTerm->GetWord());
-
-                    // Add to total span (if not the anchor term itself)
-                    if (!isAnchorTerm) 
-                    {
-                        currentTotalSpan += std::abs(static_cast<int64_t>(currentAnchorLoc) - static_cast<int64_t>(termLoc));
-                    }
-
-                    // Check if this term's location is near the top
-                    if (termLoc >= startLocation + Requirements::TOPSPANSIZE) 
-                    {
-                        allTermsNearTop = false;
-                    }
-
-                } // End inner loop (j) for terms within a phrase
-            } // End outer loop (i) for phrases
-
-            // Check for short span (using the total span calculated)
-            if (currentTotalSpan < Requirements::SHORTSPANSIZE) 
-            {
-                shortSpans++;
-            }
-
-            // Check if this anchor position initiated a "top span"
-            // This requires *all* found terms to be near the top.
-            if (allTermsNearTop) 
-            {
-                topSpans++;
-            }
-
-            // Check order and phrase matches using the synchronizedLocations
-            for (int i = 0; i < phraseTerms.size(); ++i) 
-            {
-                if (phraseTerms[i].size() > 1) 
-                {
-                    bool phraseInOrder = true;
-                    bool exactPhraseMatch = true;
-
-                    for (int j = 0; j < phraseTerms[i].size() - 1; ++j) 
-                    {
-                        Location loc1 = synchronizedLocations[i][j];
-                        Location loc2 = synchronizedLocations[i][j + 1];
-
-                        // Check if both locations were successfully found
-                        if (loc1 == static_cast<Location>(-1) || loc2 == static_cast<Location>(-1)) 
-                        {
-                            phraseInOrder = false;
-                            exactPhraseMatch = false;
-                            break;
-                        }
-
-                        // Check order
-                        if (loc1 >= loc2) 
-                        {
-                            phraseInOrder = false;
-                            exactPhraseMatch = false;
-                            break;
-                        }
-
-                        // Check exact phrase match distance
-                        if (static_cast<int64_t>(loc2) - static_cast<int64_t>(loc1) != 1) 
-                        {
-                            exactPhraseMatch = false;
-                        }
-                    } // End loop checking pairs (j, j+1)
-
-                    if (phraseInOrder) 
-                    {
-                        orderedSpans++;
-                        if (exactPhraseMatch) 
-                        {
-                            phraseMatches++;
-                        }
-                    }
-                } // End if phrase size > 1
-            } // End loop over phrases (i) for order/phrase check
-
-    } // End loop over anchorLocations
-
-    
-    return get_rank_score(shortSpans, orderedSpans, phraseMatches, topSpans, isBody);
 }
 

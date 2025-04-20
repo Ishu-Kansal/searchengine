@@ -7,13 +7,6 @@
 
 constexpr size_t TOTAL_DOCS_TO_RETURN = 100;
 
-struct AnchorTermIndex
-{
-  int outerIndex;
-  int innerIndex;
-
-  AnchorTermIndex(int o, int i) : outerIndex(o), innerIndex(i) {} 
-};
 struct UrlRank 
 {
   int rank;
@@ -25,10 +18,58 @@ struct UrlRank
 
   UrlRank() : rank(0), url("") {}
   UrlRank(std::string u, int r) : rank(r), url(std::move(u)) {}
-  UrlRank(std::string_view u, int r) : rank(r), url(u) {}
-  UrlRank(std::string_view u, uint8_t r) : rank(r), url(u) {}
+  // UrlRank(std::string_view u, int r) : rank(r), url(u) {}
+  // UrlRank(std::string_view u, uint8_t r) : rank(r), url(u) {}
 
 };
+
+struct WordSortInfo {
+  int outerIndex;
+  int innerIndex;
+  int occurrences;
+
+bool operator<(const WordSortInfo& other) const 
+{
+      if (occurrences != other.occurrences) 
+      {
+          return occurrences < other.occurrences;
+      }
+      if (outerIndex != other.outerIndex) 
+      {
+          return outerIndex < other.outerIndex;
+      }
+      return innerIndex < other.innerIndex;
+  }
+};
+
+std::vector<AnchorTermIndex> getRarestIndices(
+  const std::vector<std::vector<std::unique_ptr<ISRWord>>>& orderedQueryTerms)
+{
+  std::vector<WordSortInfo> allWordInfo;
+  allWordInfo.reserve(orderedQueryTerms.size() * 10);
+  for (int i = 0; i < orderedQueryTerms.size(); ++i) 
+  {
+      for (int j = 0; j < orderedQueryTerms[i].size(); ++j) 
+      {
+          if (orderedQueryTerms[i][j]) 
+          {
+               int occurrences = orderedQueryTerms[i][j]->GetNumberOfOccurrences();
+               allWordInfo.push_back({i, j, occurrences});
+          } 
+      }
+  }
+
+  std::sort(allWordInfo.begin(), allWordInfo.end());
+
+  std::vector<AnchorTermIndex> sortedIndices;
+  sortedIndices.reserve(allWordInfo.size()); 
+  for (const auto& info : allWordInfo) {
+      sortedIndices.push_back({info.outerIndex, info.innerIndex});
+  }
+
+  return sortedIndices;
+}
+
 
 void insertionSort(vector<UrlRank> & topRankedDocs, UrlRank & rankedDoc) 
 {
@@ -56,33 +97,15 @@ void insertionSort(vector<UrlRank> & topRankedDocs, UrlRank & rankedDoc)
   topRankedDocs[pos] = std::move(docToInsert);
 }
 
-AnchorTermIndex get_anchor_ISR(vector<vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms) {
-     // Loop over ISR words vector to get the anchor term
-     int anchorOuterIndex = -1;
-     int anchorInnerIndex = -1; 
-     int minOccurences = INT_MAX; 
-     for (int i = 0; i < orderedQueryTerms.size(); i++) {
-         for (int j = 0; j < orderedQueryTerms[i].size(); j++) {
-            int occurences = orderedQueryTerms[i][j]->GetNumberOfOccurrences();
-            if (occurences < minOccurences) {
-                anchorOuterIndex = i;
-                anchorInnerIndex = j;
-                minOccurences = occurences;
-            }
-         }
-     }
-     assert(anchorOuterIndex != -1);
-     assert(anchorInnerIndex != -1);
-     return {anchorOuterIndex, anchorInnerIndex}; 
-}
-
 // actual constraint solver function
 std::vector<UrlRank> constraint_solver(
   std::unique_ptr<ISR> &queryISR,
   vector<vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms,
   uint32_t numChunks,
-  IndexFileReader& reader) 
+  IndexFileReader& reader
+) 
   {
+    auto rarestTermInOrder = getRarestIndices(orderedQueryTerms);
     // create an ISR for document seeking
     std::vector<UrlRank> topNdocs;
     topNdocs.reserve(TOTAL_DOCS_TO_RETURN);
@@ -100,15 +123,11 @@ std::vector<UrlRank> constraint_solver(
         titleTerms.push_back(std::move(copiedInner));
     }
 
-    AnchorTermIndex indices = get_anchor_ISR(orderedQueryTerms);
-    int anchorOuterIndex = indices.outerIndex;
-    int anchorInnerIndex = indices.innerIndex;
-
     SeekObj* currMatch = queryISR->Seek(0, 0);
-    for (int i = 0; i < numChunks; ++i)
+    for (int chunkNum = 0; chunkNum < numChunks; ++chunkNum)
     {
       std::unique_ptr<ISREndDoc> docISR = make_unique<ISREndDoc>(reader); 
-      SeekObj * docObj = docISR->Seek(currMatch->location, i);
+      SeekObj * docObj = docISR->Seek(currMatch->location, chunkNum);
       while (docObj) 
       {
           ++matchedDocs;
@@ -120,27 +139,28 @@ std::vector<UrlRank> constraint_solver(
           int docStartLoc = currLoc - currDelta;
   
           // use the index to get relevant doc data
-          unique_ptr<Doc> doc = reader.FindUrl(index, i);
+          unique_ptr<Doc> doc = reader.FindUrl(index, chunkNum);
           
           int dynamic_score = get_dynamic_rank(
-            orderedQueryTerms[anchorOuterIndex][anchorInnerIndex],
+            rarestTermInOrder,
             orderedQueryTerms, 
             docStartLoc, 
             docEndLoc,
             reader,
-            i,
+            chunkNum,
             true);
           
           // Dynamic score for title words
+          /*
           int title_score = get_dynamic_rank(
             titleTerms[anchorOuterIndex][anchorInnerIndex],
             titleTerms,
             docStartLoc,
             docEndLoc,
             reader,
-            i,
+            chunkNum,
             false);
-
+            */
           // if (title_score > 0) {
           //   std::cout << "Title score: " << title_score << " URL: " << doc->url << std::endl;
           // }
@@ -163,15 +183,15 @@ std::vector<UrlRank> constraint_solver(
           }
           
           // Add weights to the score later
-          UrlRank urlRank = {doc->url, dynamic_score + title_score + url_score/* + doc->staticRank*/}; 
-  
+          UrlRank urlRank(doc->url, dynamic_score); /*title_score + url_score + doc->staticRank*/
+          
           insertionSort(topNdocs, urlRank); 
-          currMatch = queryISR->NextDocument(currLoc, i); 
+          currMatch = queryISR->NextDocument(currLoc, chunkNum); 
           if (!currMatch) 
           {
             break;
           }
-          docObj = docISR->Seek(currMatch->location, i);
+          docObj = docISR->Seek(currMatch->location, chunkNum);
     }
    
     }

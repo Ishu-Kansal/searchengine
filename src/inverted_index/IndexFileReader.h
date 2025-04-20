@@ -33,7 +33,10 @@ constexpr size_t NUM_ENTRIES_SIZE_BYTES = 1;
 constexpr size_t URL_ENTRY_HEADER_BYTES = 1;
 /** @brief Size in bytes for the static rank within a URL entry. */
 constexpr size_t URL_ENTRY_RANK_BYTES = 1;
+
 typedef size_t Location;
+
+constexpr Location NO_OCCURENCE_PENALTY = 1000;
 
 /**
  * @struct SeekObj
@@ -526,6 +529,7 @@ public:
         Location currentOffset = 0;
         uint64_t currentIndex = 0;
         const uint8_t * seekTableStart = postingListBuf;
+        
         bool found = findBestSeekEntry(seekTableStart, fileEnd, numSeekTableEntries, startLoc, currentOffset, currentLocation, currentIndex, tableIndex);
 
         if (!found) return results;
@@ -556,33 +560,36 @@ public:
         const std::string& word,
         uint32_t chunkNum,
         const std::vector<Location>& targetLocations,
+        Location endLoc,
         int tableIndex = -1) const
     {
+
         if (targetLocations.empty()) 
         {
+            // Won't happen
             return {};
         }
 
         if (chunkNum >= mappedFiles.size() || !mappedFiles[chunkNum]) {
             fprintf(stderr, "DEBUG: Chunk %u not loaded or out of bounds.\n", chunkNum);
-            return {}; 
+            return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
         }
         if (!hashBlobPtrs[chunkNum]) 
         {
             fprintf(stderr, "DEBUG: Hash file %u was not mapped or is invalid.\n", chunkNum);
-            return {};
+            return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
         }
         const HashBlob *hashblob = hashBlobPtrs[chunkNum];
         if (!hashblob) 
         {
              fprintf(stderr, "DEBUG: Hash blob pointer null for chunk %u.\n", chunkNum);
-             return {};
+             return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
         }
 
         const SerialTuple* tup = hashblob->Find(word.c_str());
         if (!tup) 
         {
-            return {};
+            return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
         }
 
         const void* mapPtr = mappedFiles[chunkNum]->get();
@@ -590,7 +597,7 @@ public:
         if (!mapPtr || fileSize == 0) 
          {
              fprintf(stderr, "ERROR: Mapped file for chunk %u is invalid or empty.\n", chunkNum);
-             return {};
+             return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
          }
 
         const uint8_t* fileStart = static_cast<const uint8_t*>(mapPtr);
@@ -601,73 +608,67 @@ public:
         {
             fprintf(stderr, "ERROR: Offset %llu out of bounds (%zu) for word '%s' chunk %u.\n",
             (unsigned long long)postingListOffset, fileSize, word.c_str(), chunkNum);
-            return {};
+            return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
         }
 
         const uint8_t* postingListBuf = fileStart + postingListOffset;
         if (postingListBuf >= fileEnd) 
         {
             fprintf(stderr, "ERROR: Posting list offset points beyond file end.\n");
-            return {};
+            return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
         }
-
 
         if (postingListBuf + NUM_ENTRIES_SIZE_BYTES > fileEnd) 
         {
              fprintf(stderr, "ERROR: Buffer too small for numSeekTableEntriesSize byte.\n");
-             return {};
+             return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
         }
+        
         uint8_t numSeekTableEntriesSize = *postingListBuf;
         postingListBuf += NUM_ENTRIES_SIZE_BYTES;
 
         uint64_t numSeekTableEntries = 0;
         uint64_t numPosts = 0;
+     
         const uint8_t* nextPtr = nullptr;
-        const uint8_t* seekTableStart = nullptr;
 
-        if (numSeekTableEntriesSize > 0) 
+        if (numSeekTableEntriesSize) 
         {
             if (postingListBuf + numSeekTableEntriesSize > fileEnd) 
-            { 
-                fprintf(stderr, "ERROR: Not enough space for numSeekTableEntries varint (size byte = %u).\n", numSeekTableEntriesSize);
-                return {};
+            {
+                fprintf(stderr, "ERROR: Not enough space for numSeekTableEntries varint encoding.\n");
+                return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
             }
             nextPtr = decodeVarint(postingListBuf, numSeekTableEntries);
-            if (!nextPtr || nextPtr > fileEnd) 
-            {
-                 fprintf(stderr, "ERROR: Failed decoding numSeekTableEntries or bounds error.\n");
-                 return {};
-            }
+            if (!nextPtr || nextPtr > fileEnd) return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
             postingListBuf = nextPtr;
 
             nextPtr = decodeVarint(postingListBuf, numPosts);
-             if (!nextPtr || nextPtr > fileEnd) 
-             {
-                  fprintf(stderr, "ERROR: Failed decoding numPosts or bounds error.\n");
-                  return {};
-             }
-             seekTableStart = postingListBuf; 
-             postingListBuf = nextPtr;
-        } 
+            if (!nextPtr || nextPtr > fileEnd) return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
+            postingListBuf = nextPtr;
+        }
         else 
         {
             nextPtr = decodeVarint(postingListBuf, numPosts);
-            postingListBuf = nextPtr; 
-            seekTableStart = postingListBuf;        
+            if (!nextPtr || nextPtr > fileEnd) return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
+            postingListBuf = nextPtr;
         }
+
+        if (numPosts == 0) return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
 
         Location currentLocation = 0;
         Location currentOffset = 0;
         uint64_t currentIndex = 0;
+        const uint8_t * seekTableStart = postingListBuf;
 
         unsigned startLoc = (targetLocations[0] >= 25) ? targetLocations[0] - 25 : 0;
         bool found = findBestSeekEntry(seekTableStart, fileEnd, numSeekTableEntries, startLoc, currentOffset, currentLocation, currentIndex, tableIndex);
 
-        if (!found) return {};
+        if (!found) return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);;
 
         size_t numTargets = targetLocations.size();
-        std::vector<Location> locations(numTargets, 0);
-        std::vector<Location> minDifference(numTargets, numeric_limits<Location>::max());
+        // std::vector<Location> locations(numTargets, 0);
+        std::vector<Location> minDifference(numTargets, std::numeric_limits<Location>::max());
 
         postingListBuf += (ENTRY_SIZE * numSeekTableEntries) + currentOffset;
 
@@ -682,21 +683,33 @@ public:
             if (distCurr < minDist)
             {
                 minDist = distCurr;
-                locations[targetIdx] = currentLocation;
+                // locations[targetIdx] = currentLocation;
                 uint64_t delta = 0;
                 nextPtr = decodeVarint(postingListBuf, delta);
                 if (!nextPtr || nextPtr > fileEnd) break; 
-
                 postingListBuf = nextPtr;
                 currentLocation += delta;
                 currentIndex++;
+                if (currentLocation >= endLoc)
+                {
+                    currentLocation -= delta;
+                    break;
+                }
             }
             else
             {
                 ++targetIdx;
             }
-            
         }
-        return locations;
+        for (; targetIdx < numTargets; ++targetIdx) 
+        {
+            Location target = targetLocations[targetIdx];
+            Location &minDist = minDifference[targetIdx];
+            int64_t distCurr = std::abs(static_cast<int64_t>(currentLocation) - static_cast<int64_t>(target));
+
+            // locations[targetIdx] = currentLocation;
+            minDist = distCurr;
+        }
+        return minDifference;
     }
 };

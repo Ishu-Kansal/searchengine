@@ -75,7 +75,7 @@ public:
         if (!currPost) return 0;
         return currPost->seekTableIndex;
     }
-    const std::string GetWord() const {
+    const std::string& GetWord() const {
         return word;
     }
 
