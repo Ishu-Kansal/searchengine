@@ -104,7 +104,6 @@ std::vector<UrlRank> run_engine(
             return {};
         }
 
-        const size_t K_RESULTS = 10;
         std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, numChunks, reader);
 
         return raw_results;
