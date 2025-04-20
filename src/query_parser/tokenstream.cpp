@@ -185,7 +185,31 @@ TokenStream::TokenStream( std::string &query ) : location( 0 ) {
          }
       }
    
-      tokens = std::move(filtered);
+      bool containsNonStopword = false;
+      bool containsQuoted = false;
+
+      for (const std::string& token : filtered) {
+         if (token == "\"" || token == "'") {
+            inQuotes = !inQuotes;
+            containsQuoted = true;  // Just mark that any quote block exists
+            continue;
+         }
+      
+         if (keywords.count(token)) continue;
+      
+         if (inQuotes || stopWords.find(token) == stopWords.end()) {
+            containsNonStopword = true;
+         }
+      }
+
+      if (!containsNonStopword && !containsQuoted && !tokens.empty()) {
+         std::string first = tokens[0];
+         std::transform(first.begin(), first.end(), first.begin(), ::tolower);
+         tokens = {first};
+      } else {
+         tokens = std::move(filtered);
+      }
+
    }
    else {
       std::transform(tokens[0].begin(), tokens[0].end(), tokens[0].begin(), ::tolower);
