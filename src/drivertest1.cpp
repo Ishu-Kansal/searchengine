@@ -104,7 +104,6 @@ std::vector<UrlRank> run_engine(
             return {};
         }
 
-        const size_t K_RESULTS = 10;
         std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, numChunks, reader);
 
         return raw_results;
@@ -123,6 +122,7 @@ int main()
 
     const uint32_t chunkNum = 0; 
 
+    /*
     IndexChunk indexChunk; 
     if (!build_index_from_file(data_filename, indexChunk)) 
     {
@@ -132,13 +132,17 @@ int main()
     IndexFile indexFile(chunkNum, indexChunk); 
 
     std::cout << "Creating IndexFileReader..." << std::endl;
-
+    */
     IndexFileReader reader(numChunks); 
 
     std::string test_query_1 = "apple banana"; 
     std::cout << "\n--- Running Query 1: [" << test_query_1 << "] ---" << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
     std::vector<UrlRank> results1 = run_engine(test_query_1, numChunks, reader);
+    std::vector<UrlRank> results2 = run_engine(test_query_1, numChunks, reader);
+    std::vector<UrlRank> results3 = run_engine(test_query_1, numChunks, reader);
+    std::vector<UrlRank> results4 = run_engine(test_query_1, numChunks, reader);
+    std::vector<UrlRank> results5 = run_engine(test_query_1, numChunks, reader);
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
     std::cout << "Query 1 execution time: " << elapsed.count() << " seconds" << std::endl;
@@ -148,7 +152,7 @@ int main()
         std::cout << "Found " << results1.size() << " results for query 1 (showing top " << results1.size() << "):" << std::endl;
         for (const auto& url_sv : results1)
         {
-            std::cout << "  " << url_sv.url << std::endl;
+            std::cout << "  Rank: " << url_sv.rank << " - " << url_sv.url << std::endl;
         }
     }
 

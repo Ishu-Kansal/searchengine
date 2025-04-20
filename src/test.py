@@ -4,7 +4,7 @@ import json
 import sys
 
 # --- Configuration ---
-NUM_WEBSITES = 100000
+NUM_WEBSITES = 1000000
 OUTPUT_FILE = "websites_data.jsonl" 
 
 # --- Data Generation Parameters ---
@@ -29,8 +29,8 @@ WORDS = [
     "example", "test", "debug", "run", "build", "compile", "execute", "performance",
     "memory", "cpu", "storage", "system", "os", "linux", "windows", "macos"
 ]
-MIN_WORDS_PER_PAGE = 50   # Min number of words on a simulated page
-MAX_WORDS_PER_PAGE = 600  # Max number of words on a simulated page
+MIN_WORDS_PER_PAGE = 200   # Min number of words on a simulated page
+MAX_WORDS_PER_PAGE = 1200  # Max number of words on a simulated page
 MIN_DOMAIN_LEN = 5
 MAX_DOMAIN_LEN = 15
 MIN_PATH_LEN = 0          # Allow no path

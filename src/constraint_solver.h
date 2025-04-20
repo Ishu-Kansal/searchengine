@@ -23,9 +23,10 @@ struct UrlRank
   bool operator>(const UrlRank& other) const { return rank > other.rank; }
   bool operator>=(const UrlRank& other) const { return rank >= other.rank; }
 
-  UrlRank() : url(""), rank(0) {}
-  UrlRank(std::string u, int r) : url(std::move(u)), rank(r) {}
-  UrlRank(std::string_view u, int r) : url(u), rank(r) {}
+  UrlRank() : rank(0), url("") {}
+  UrlRank(std::string u, int r) : rank(r), url(std::move(u)) {}
+  UrlRank(std::string_view u, int r) : rank(r), url(u) {}
+  UrlRank(std::string_view u, uint8_t r) : rank(r), url(u) {}
 
 };
 
@@ -85,15 +86,15 @@ std::vector<UrlRank> constraint_solver(
     // create an ISR for document seeking
     std::vector<UrlRank> topNdocs;
     topNdocs.reserve(TOTAL_DOCS_TO_RETURN);
-    int j = 0;
-
+    int matchedDocs = 0;
+    
     // Copy orderedQueryTerms for the title terms
     std::vector<std::vector<std::unique_ptr<ISRWord>>> titleTerms;
     for (const auto& innerVec : orderedQueryTerms) {
         std::vector<std::unique_ptr<ISRWord>> copiedInner;
         for (const auto& termPtr : innerVec) {
             if (termPtr) {
-                copiedInner.emplace_back(std::make_unique<ISRWord>(termPtr->GetWord() + "!"));
+                copiedInner.emplace_back(std::make_unique<ISRWord>(termPtr->GetWord() + "!", reader));
             }
         }
         titleTerms.push_back(std::move(copiedInner));
@@ -103,19 +104,18 @@ std::vector<UrlRank> constraint_solver(
     int anchorOuterIndex = indices.outerIndex;
     int anchorInnerIndex = indices.innerIndex;
 
-    SeekObj* currMatch = queryISR->Seek(0);
+    SeekObj* currMatch = queryISR->Seek(0, 0);
     for (int i = 0; i < numChunks; ++i)
     {
       std::unique_ptr<ISREndDoc> docISR = make_unique<ISREndDoc>(reader); 
-      SeekObj * docObj = docISR->Seek(currMatch->location);
+      SeekObj * docObj = docISR->Seek(currMatch->location, i);
       while (docObj) 
       {
-        ++j;
+          ++matchedDocs;
           int currLoc = docObj->location;
           int currDelta = docObj->delta;
           int index = docObj->index;
 
-  
           int docEndLoc = currLoc;
           int docStartLoc = currLoc - currDelta;
   
@@ -128,8 +128,9 @@ std::vector<UrlRank> constraint_solver(
             docStartLoc, 
             docEndLoc,
             reader,
-            i);
-
+            i,
+            true);
+          
           // Dynamic score for title words
           int title_score = get_dynamic_rank(
             titleTerms[anchorOuterIndex][anchorInnerIndex],
@@ -137,25 +138,43 @@ std::vector<UrlRank> constraint_solver(
             docStartLoc,
             docEndLoc,
             reader,
-            i);
+            i,
+            false);
 
+          // if (title_score > 0) {
+          //   std::cout << "Title score: " << title_score << " URL: " << doc->url << std::endl;
+          // }
+
+          int url_score = 0;
+          for (int i = 0; i < orderedQueryTerms.size(); i++)
+          {
+            for (int j = 0; j < orderedQueryTerms[i].size(); j++)
+            {
+              if (doc->url.find(orderedQueryTerms[i][j]->GetWord()) != string::npos) 
+              {
+                url_score += 10; // Add 10 for each query term found in the url
+              }
+            }
+          }
+          
+          // In case
+          if (doc->staticRank > 30) {
+            doc->staticRank = 0;
+          }
+          
           // Add weights to the score later
-          UrlRank urlRank = {doc->url, dynamic_score + title_score + doc->staticRank}; 
+          UrlRank urlRank = {doc->url, dynamic_score + title_score + url_score/* + doc->staticRank*/}; 
   
           insertionSort(topNdocs, urlRank); 
-          currMatch = queryISR->NextDocument(currLoc); 
+          currMatch = queryISR->NextDocument(currLoc, i); 
           if (!currMatch) 
           {
             break;
           }
-          if (j % 1000 == 0)
-          {
-            cout << j << '\n';
-          }
-          docObj = docISR->Seek(currMatch->location);
+          docObj = docISR->Seek(currMatch->location, i);
     }
    
     }
-    cout << "MATCHED DOCUMENTS:" << j << '\n';
+    cout << "MATCHED DOCUMENTS:" << matchedDocs << '\n';
     return topNdocs; 
 }

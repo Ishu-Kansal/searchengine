@@ -1,2 +1,0 @@
-@seedlist
-https://www.wikipedia.org/

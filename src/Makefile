@@ -23,7 +23,7 @@ $(TARGETS): %: %.cpp $(COMMON_SRC)
 clean:
 	rm -f $(TARGETS) debug
 
-debug: CXXFLAGS += -g3 -DDEBUG -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG
+debug: CXXFLAGS += -g3 -DDEBUG -D_GLIBCXX_DEBUG
 debug: drivertest1.cpp $(COMMON_SRC)
 	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) $(LIBS) -o debug
 
