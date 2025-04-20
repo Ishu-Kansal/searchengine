@@ -132,16 +132,17 @@ std::string get_next_url() {
 }
 
 void saver() {
-  pthread_lock_guard _{queue_lock};
   remove(filterName);
   remove(queueName);
-
+  std::cout << "Writing filter...\n";
   bf.writeBFtoFile(filterName);
+  std::cout << "Finished writing filter...\n";
 
   std::ofstream outputFile{queueName};
 
   int ctr = 0;
   std::queue<std::string> temp_queue{};
+  std::cout << "Writing queue...\n";
   while (ctr < 1000 && !explore_queue.empty()) {
     outputFile << explore_queue.front() << '\n';
     temp_queue.push(std::move(explore_queue.front()));
@@ -159,6 +160,10 @@ void saver() {
     ++ctr;
   }
   outputFile.flush();
+  std::cout << "Finished writing queue...\n";
+  std::ofstream statsFile{statsName};
+  statsFile << num_processed;
+  statsFile.flush();
 }
 
 void get_handler(int fd) {
@@ -216,11 +221,12 @@ void *handler(void *fd) {
 }
 
 void init_dispatcher() {
-  std::ifstream if1{queueName};
+  std::ifstream if1{queueName}, if2{statsName};
   if (if1.good()) {
     bf = Bloomfilter(filterName);
     std::string url;
     while (if1 >> url) explore_queue.push(url);
+    if2 >> num_processed;
   } else {
     bf = Bloomfilter(MAX_EXPECTED_LINKS, MAX_FALSE_POSITIVE_RATE);
     std::ifstream infile("seed_list.txt");
