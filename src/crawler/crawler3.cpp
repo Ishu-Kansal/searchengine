@@ -375,7 +375,8 @@ void* add_to_index(void* addr) {
 void* runner(void*) {
     // const static thread_local pid_t thread_id = syscall(SYS_gettid);
     const static thread_local auto thread_id = rand() % NUM_CHUNKS;
-    while (num_processed < MAX_PROCESSED) {
+    bool done = false;
+    while (!done) {
         // Get the next url to be processed
         std::string url = get_string();
         if (url.empty()) {
@@ -417,6 +418,7 @@ void* runner(void*) {
             num_processed++;
             if (num_processed % 1000 == 0)
                 std::cout << num_processed << std::endl;
+            if (num_processed > MAX_PROCESSED) done = true;
 
             if (links_vector.size() < MAX_QUEUE_SIZE) {
                 for (auto& link : parser.links) {
@@ -487,6 +489,8 @@ void* runner(void*) {
 int main(int argc, char** argv) {
     signal(SIGPIPE, SIG_IGN);
 
+    int id = atoi(argv[0]);
+
     std::vector<std::string> sem_names{};
     for (int i = 0; i < NUM_CHUNKS; ++i) {
         sem_names.push_back("/sem_" + std::to_string(i));
@@ -516,7 +520,7 @@ int main(int argc, char** argv) {
 
     std::cout << "FINISHED THREADS/...\n";
 
-    IndexFile chunkFile(0, chunk);
+    IndexFile chunkFile(id, chunk);
 
     pthread_mutex_destroy(&queue_lock);
     pthread_mutex_destroy(&chunk_lock);
