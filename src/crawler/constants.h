@@ -1,6 +1,6 @@
 #include <cstdint>
 
-constexpr int MAX_EXPECTED_LINKS = 1000'000;
+constexpr int MAX_EXPECTED_LINKS = 1'000'000;
 constexpr uint64_t MAX_QUEUE_SIZE = 100'000;
 constexpr uint64_t MAX_VECTOR_SIZE = 20'000;
 constexpr uint64_t NUM_RANDOM = 10'000;

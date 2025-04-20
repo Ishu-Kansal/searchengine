@@ -202,9 +202,7 @@ void *handler(void *fd) {
   static const cstring_view ADD_COMMAND{"ADD"};
   static const cstring_view SAVE_COMMAND{"SAVE"};
   static const cstring_view SAVE_CONFIRMED{"CONFIRMED"};*/
-  int *t = reinterpret_cast<int *>(fd);
-  const int sock = *t;
-  std::unique_ptr<int> _{t};
+  int sock = (uint64_t)(fd);
   SocketWrapper sock_{sock};
   header_t val;
   if (recv(sock, &val, sizeof(val), 0) <= 0) {
@@ -233,7 +231,7 @@ int main(int argc, char **argv) {
   std::string line;
   std::uniform_int_distribution<> pushDist(1, 25);
   while (std::getline(infile, line)) {
-    if (line.empty() || pushDist(mt) != 1) continue;
+    if (line.empty() || pushDist(mt) == 1) continue;
     explore_queue.push(line);
     bf.insert(line);
   }
@@ -265,7 +263,7 @@ int main(int argc, char **argv) {
                        reinterpret_cast<socklen_t *>(&len));
     if (newfd == -1) continue;
     pthread_t temp;
-    pthread_create(&temp, NULL, handler, new int{newfd});
+    pthread_create(&temp, NULL, handler, (void *)(uint64_t)(newfd));
     pthread_detach(temp);
   }
 }
