@@ -142,5 +142,32 @@ int main(int argc, char** argv) {
     }
   }
 
+<<<<<<< HEAD
   return 0;
+=======
+    IndexFile indexFile(chunkNum, indexChunk); 
+
+    std::cout << "Creating IndexFileReader..." << std::endl;
+    */
+    IndexFileReader reader(numChunks); 
+
+    std::string test_query_1 = "apple"; 
+    std::cout << "\n--- Running Query 1: [" << test_query_1 << "] ---" << std::endl;
+    auto start = std::chrono::high_resolution_clock::now();
+    std::vector<UrlRank> results1 = run_engine(test_query_1, numChunks, reader);
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "Query 1 execution time: " << elapsed.count() << " seconds" << std::endl;
+
+    if (!results1.empty())
+    {
+        std::cout << "Found " << results1.size() << " results for query 1 (showing top " << results1.size() << "):" << std::endl;
+        for (const auto& url_sv : results1)
+        {
+            std::cout << "  Rank: " << url_sv.rank << " - " << url_sv.url << std::endl;
+        }
+    }
+
+    return 0;
+>>>>>>> 5b32455 (ranking fixes)
 }

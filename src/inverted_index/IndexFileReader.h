@@ -115,7 +115,7 @@ private:
         uint64_t entryLocation = 0;
         outBestOffset = entryOffset;
         outBestLocation = entryLocation;
-        
+
         if (numSeekTableEntries > 0)
         {
 
@@ -143,9 +143,12 @@ private:
             if (cursor != 0)
             {
                 int low = cursor - jump;
-                int high = min(cursor, static_cast<int>(numSeekTableEntries - 1));
-
-    
+                int high = cursor;
+                if (cursor > (numSeekTableEntries - 1))
+                {
+                    high = numSeekTableEntries - 1;
+               
+                }
                 while (low <= high)
                 {
                     int mid = (low + high) / 2;
@@ -176,6 +179,7 @@ private:
                 outIndex = 0;
                 return true;
             }
+
             outIndex = (best + 1) * BLOCK_SIZE;
             outTableIndex = best;
         }
@@ -384,6 +388,7 @@ public:
 
         uint8_t numSeekTableEntriesSize = fileStart[0];
         size_t tableIndex = (index + 1) >> BLOCK_OFFSET_BITS;
+
         uint64_t numSeekTableEntries = 0;
         if (numSeekTableEntriesSize) 
         {
@@ -392,6 +397,7 @@ public:
         }
         if (numSeekTableEntriesSize && tableIndex != 0)
         {
+            tableIndex = std::min(uint64_t(tableIndex), numSeekTableEntries);
             const uint8_t* seekTable = fileStart + 1;
             const uint8_t* entryPtr = seekTable + ((tableIndex - 1) * URL_ENTRY_SIZE)+ numSeekTableEntriesSize;
 
@@ -401,11 +407,13 @@ public:
 
             const uint8_t* urlPtr = seekTable + (URL_ENTRY_SIZE * numSeekTableEntries) + entryOffset + numSeekTableEntriesSize;
             uint64_t urlIndex = (tableIndex * BLOCK_SIZE) - 1;
+        
             while (urlIndex < index)
             {
                 uint64_t bytesToSkip = *urlPtr + 2;
                 urlPtr += bytesToSkip;
                 ++urlIndex;
+
             }
             if (urlIndex == index)
             {
@@ -413,7 +421,7 @@ public:
                 uint8_t urlLen = *urlPtr;
                 obj->url = std::string(reinterpret_cast<const char*>(urlPtr + 1), urlLen);
                 urlPtr += urlLen + 1;
-                obj->staticRank = *urlPtr;
+                obj->staticRank = static_cast<uint8_t>(*urlPtr);
    
                 
                 return obj;
@@ -567,7 +575,7 @@ public:
         if (targetLocations.empty()) 
         {
             // Won't happen
-            return {};
+            return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
         }
 
         if (chunkNum >= mappedFiles.size() || !mappedFiles[chunkNum]) {
@@ -634,6 +642,7 @@ public:
 
         if (numSeekTableEntriesSize) 
         {
+           
             if (postingListBuf + numSeekTableEntriesSize > fileEnd) 
             {
                 fprintf(stderr, "ERROR: Not enough space for numSeekTableEntries varint encoding.\n");

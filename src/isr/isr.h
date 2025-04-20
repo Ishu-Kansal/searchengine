@@ -35,7 +35,7 @@ public:
 
 protected:
     unique_ptr<SeekObj> currPost = nullptr;
-
+    int currChunk = -1;
     Location postingListOffset = NULL_LOCATION;
     Location nearestStartLocation = NULL_LOCATION;
     Location nearestEndLocation = NULL_LOCATION;
@@ -51,6 +51,12 @@ public:
     SeekObj* Seek(Location target, int chunkNum) override {
         auto curr = GetCurrentPost();
         uint32_t seekTableIdx = curr ? curr->seekTableIndex : 0;
+
+        if (currChunk != chunkNum)
+        {
+            seekTableIdx = 0;
+            currChunk = chunkNum;
+        }
 
         currPost = reader_.Find(word, target, chunkNum, seekTableIdx);
 

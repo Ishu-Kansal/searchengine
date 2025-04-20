@@ -86,7 +86,8 @@ void insertionSort(vector<UrlRank> & topRankedDocs, UrlRank & rankedDoc)
   { 
     topRankedDocs.emplace_back();
     pos = curSize;
-  } else 
+  } 
+  else 
   {
     pos = curSize - 1;
   }
@@ -146,7 +147,7 @@ std::vector<UrlRank> constraint_solver(
   
           // use the index to get relevant doc data
           unique_ptr<Doc> doc = reader.FindUrl(index, chunkNum);
-          
+
           int dynamic_score = get_dynamic_rank(
             rarestTermInOrder,
             orderedQueryTerms, 
@@ -178,18 +179,20 @@ std::vector<UrlRank> constraint_solver(
             {
               std::transform(doc->url.begin(), doc->url.end(), doc->url.begin(),
               [](unsigned char c){ return std::tolower(c); });
+
               if (doc->url.find(orderedQueryTerms[i][j]->GetWord()) != string::npos) 
               {
-                url_score += 100; // Add 10 for each query term found in the url
+                url_score += 100; // Add 100 for each query term found in the url
               }
+
             }
           }
           
           // In case
           if (doc->staticRank > 30) {
-            doc->staticRank = 30;
+            doc->staticRank = 0;
           }
-          
+
           // Add weights to the score later
           UrlRank urlRank(doc->url, dynamic_score + url_score); /*title_score + url_score + doc->staticRank*/
           // cout << urlRank.rank << '\n';

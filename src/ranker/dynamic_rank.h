@@ -1,6 +1,8 @@
 #pragma once
 
+
 #include <stdint.h>
+
 
 #include <algorithm>
 #include <vector>
@@ -10,140 +12,156 @@
 #include "../isr/isr.h"
 #include "../inverted_index/IndexFileReader.h"
 
+
 struct AnchorTermIndex
 {
-  int outerIndex;
-  int innerIndex;
+ int outerIndex;
+ int innerIndex;
 
-  AnchorTermIndex(int o, int i) : outerIndex(o), innerIndex(i) {} 
+
+ AnchorTermIndex(int o, int i) : outerIndex(o), innerIndex(i) {}
 };
-// TO DO: WEIGHTS ARE ALL 0 RIGHT NOW, WILL NEED TO SET THEM TO REAL VALUES SOON AND DEBUG THEM TO FIND WHICH WEIGHTS ARE THE BEST FOR 
+// TO DO: WEIGHTS ARE ALL 0 RIGHT NOW, WILL NEED TO SET THEM TO REAL VALUES SOON AND DEBUG THEM TO FIND WHICH WEIGHTS ARE THE BEST FOR
 //       OUR RESULTS FOR THE ENGINE
+
 
 // Weights for computing the score of specific ranking components, enums for quick readjusting and no magic numbers
 enum DynamicWeights: int {
-    SHORTSPANSWEIGHT = 50, 
-    ORDEREDSPANSWEIGHT = 10,
-    PHRASEMATCHESWEIGHT = 20,
-    TOPSPANSWEIGHT = 7
-}; 
+   SHORTSPANSWEIGHT = 64,
+   TOPSPANSWEIGHT = 32,
+   NEARTOPWEIGHT = 2,
+};
+
 
 // Weights for the section the dynamic ranking heuristic is being ranked on, e.g if its being ran on the URL of a document or the body
-// enums for quick readjusting and no magic numbers once again 
+// enums for quick readjusting and no magic numbers once again
 enum SectionWeights: int {
-    TITLEWEIGHT = 4,
-    BODYWEIGHT = 1
+   TITLEWEIGHT = 4,
+   BODYWEIGHT = 1
 };
+
 
 // enum class for requirements of what is considered a short span or a top span
 enum Requirements: int {
-    TOPSPANSIZE = 100
+   TOPSPANSIZE = 128
 };
+
 
 using locationVector = std::vector<Location>;
 
-constexpr Location RANGE_TOLERANCE = 25;
+
+constexpr Location RANGE_TOLERANCE = 32;
+
 
 // given all of the occurences assigns the weights and returns the actual dynamic rank
 // ***RME CLAUSE***
 // Requires: The number of short spans, ordered spans, phrase matches, top spans, and the type of section this is being scored on
 // Modifies: Nothing
 // Effect: Scores a given rank of the document using weights with the given numbers above.
-int get_rank_score(int shortSpans, int orderedSpans, int phraseMatches, int topSpans, bool isBody) {
-    // TODO: make a hashtable/array for the type weights
-    int sectionWeight = -1;
-    // assign the weights based on what we are running the ranker on
-    // urls will get higher weights than titles, titles will get higher weights than body, and body gets a normal weight
-    if (isBody) {
-        sectionWeight = BODYWEIGHT;
-    }
-    else {
-        sectionWeight = TITLEWEIGHT;
-    }
-    assert(sectionWeight != -1); 
+int get_rank_score(int nearTopAnchorCount, int shortSpans, int topSpans, bool isBody) {
+   // TODO: make a hashtable/array for the type weights
+   int sectionWeight = -1;
+   // assign the weights based on what we are running the ranker on
+   // urls will get higher weights than titles, titles will get higher weights than body, and body gets a normal weight
+   if (isBody) {
+       sectionWeight = BODYWEIGHT;
+   }
+   else {
+       sectionWeight = TITLEWEIGHT;
+   }
+   assert(sectionWeight != -1);
 
-    // declare individual ints below for debugging purposes
-    int shortSpansResult = shortSpans * SHORTSPANSWEIGHT;
-    int orderedSpansResult = orderedSpans * ORDEREDSPANSWEIGHT;
-    int phraseMatchesResult = phraseMatches * PHRASEMATCHESWEIGHT;
-    int topSpansResult = topSpans * TOPSPANSWEIGHT;
-    
-    // multiply by the type weight and the added up weights of the spans
-    return sectionWeight * (shortSpansResult + orderedSpansResult + phraseMatchesResult + topSpansResult); 
+
+   // declare individual ints below for debugging purposes
+   int shortSpansResult = shortSpans * SHORTSPANSWEIGHT;
+   int nearTopAnchorResult = nearTopAnchorCount * NEARTOPWEIGHT;
+   int topSpansResult = topSpans * TOPSPANSWEIGHT;
+   // multiply by the type weight and the added up weights of the spans
+   return sectionWeight * (shortSpansResult + nearTopAnchorResult + topSpansResult);
 }
+
 
 // computes all of the variables that is needed for the rank score function using a variety of ISR'S pertaining to a SPECIFIC document
 // ***RME CLAUSE***
 // Requires: The rarest word's ISR as the anchor term, and vector of ISR's all other terms w/the anchor term being in the vector as well
-//           the int is the index of the phrase term in the search query to check for ordering. 
+//           the int is the index of the phrase term in the search query to check for ordering.
 //           phraseTerms should be ordered like they are in the query, need a vector of vectors incase we have multiplle phraes in the query tree
 //           Needs a start location so we can seek to that location
 // Modifies: Nothing.
 // Effect: Returns the dynamic rank score for a single document.
-int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors, vector<vector<std::unique_ptr<ISRWord>>> &phraseTerms, uint64_t startLocation, uint64_t endLocation, const IndexFileReader & reader, uint32_t currChunk, bool isBody) 
+int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors, vector<vector<std::unique_ptr<ISRWord>>> &phraseTerms, uint64_t startLocation, uint64_t endLocation, const IndexFileReader & reader, uint32_t currChunk, bool isBody)
+
 
 {
-    int shortSpans = 0;
-    int orderedSpans = 0;
-    int phraseMatches = 0;
-    int topSpans = 0; 
+   int shortSpans = 0;
+   int topSpans = 0;
+   int totalSpans = 0;
+   int nearTopAnchor = 0;
+   for (int anchorTermIdx = 0; anchorTermIdx < rarestAnchorTermVectors.size(); ++anchorTermIdx)
+   {
+       auto & anchorTerm = phraseTerms[rarestAnchorTermVectors[anchorTermIdx].outerIndex][rarestAnchorTermVectors[anchorTermIdx].innerIndex];
 
-    for (int anchorTermIdx = 0; anchorTermIdx < rarestAnchorTermVectors.size(); ++anchorTermIdx)
-    {
-        auto & anchorTerm = phraseTerms[rarestAnchorTermVectors[anchorTermIdx].outerIndex][rarestAnchorTermVectors[anchorTermIdx].innerIndex];
 
-        const std::string & anchorWord = anchorTerm->GetWord();
-        locationVector anchorLocations = reader.LoadChunkOfPostingList(
-            anchorWord, 
-            currChunk,   
-            startLocation,
-            endLocation,
-            anchorTerm->GetSeekTableIndex()
-        );
-    
-        if (!anchorLocations.empty())
-        {
-            locationVector spans(anchorLocations.size(), 0);
-    
-            for (int i = 0; i < phraseTerms.size(); ++i)
-            {
-                for (int j = 0; j < phraseTerms[i].size(); ++j)
-                {
-                    const std::string & word = phraseTerms[i][j]->GetWord();
-                    if (word != anchorWord)
-                    {
-                        locationVector currPhraseMinDiffs = reader.LoadChunkOfPostingListClosest
-                        (
-                        word,
-                        currChunk,
-                        anchorLocations,
-                        endLocation,
-                        phraseTerms[i][j]->GetSeekTableIndex()
-                        );
-                        for (int k = 0; k < spans.size(); ++k)
-                        {
-                            spans[k] += currPhraseMinDiffs[k];
-                        }
-                    }
-                    
-                }
-            }
-            for (int i = 0; i < spans.size(); ++i)
-            {   
-                Location & currentTotalSpan = spans[i];
-                if (currentTotalSpan < 10 && currentTotalSpan != 0)
-                {
-                    shortSpans++;
-                }
-                if (anchorLocations[i] < startLocation + Requirements::TOPSPANSIZE) 
-                {
-                    topSpans++;
-                }
-            }
-            break;
-        }
-    }
-    /*std::cout << "shortSpans: " << shortSpans << ", orderedSpans: " << orderedSpans << "phraseMatches: " << phraseMatches << ", topSpans: " << topSpans << "isBody: " << isBody << '\n';*/
-    return get_rank_score(shortSpans, orderedSpans, phraseMatches, topSpans, isBody);
+       const std::string & anchorWord = anchorTerm->GetWord();
+       locationVector anchorLocations = reader.LoadChunkOfPostingList(
+           anchorWord,
+           currChunk,  
+           startLocation,
+           endLocation,
+           anchorTerm->GetSeekTableIndex()
+       );
+  
+       if (!anchorLocations.empty())
+       {
+           locationVector spans(anchorLocations.size(), 0);
+  
+           for (int i = 0; i < phraseTerms.size(); ++i)
+           {
+               for (int j = 0; j < phraseTerms[i].size(); ++j)
+               {
+                   const std::string & word = phraseTerms[i][j]->GetWord();
+                   if (word != anchorWord)
+                   {
+                       locationVector currPhraseMinDiffs = reader.LoadChunkOfPostingListClosest
+                       (
+                       word,
+                       currChunk,
+                       anchorLocations,
+                       endLocation,
+                       phraseTerms[i][j]->GetSeekTableIndex()
+                       );
+                       for (int k = 0; k < spans.size(); ++k)
+                       {
+                           spans[k] += currPhraseMinDiffs[k];
+                       }
+                   }
+                  
+               }
+           }
+
+
+           for (int i = 0; i < spans.size(); ++i)
+           {  
+               Location & currentTotalSpan = spans[i];
+
+
+               if (currentTotalSpan < 10 && currentTotalSpan != 0)
+               {
+                   shortSpans++;
+                   if (anchorLocations[i] < startLocation + Requirements::TOPSPANSIZE)
+                   {
+                       topSpans++;
+                   }
+               }
+               if (anchorLocations[i] < startLocation + Requirements::TOPSPANSIZE)
+               {
+                   ++nearTopAnchor;
+               }
+              
+           }
+           break;
+       }
+   }
+   /*std::cout << "shortSpans: " << shortSpans << ", orderedSpans: " << orderedSpans << "phraseMatches: " << phraseMatches << ", topSpans: " << topSpans << "isBody: " << isBody << '\n';*/
+   return get_rank_score(nearTopAnchor, shortSpans , topSpans, isBody);
 }
-
