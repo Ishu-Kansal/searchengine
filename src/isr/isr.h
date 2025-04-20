@@ -72,7 +72,7 @@ public:
     }
 
     SeekObj* NextDocument(Location docEnd = 0) override {
-        return nullptr;
+        return Seek(docEnd + 1);
     }
 
     unsigned GetNumberOfOccurrences() const{

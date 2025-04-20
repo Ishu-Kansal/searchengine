@@ -87,20 +87,18 @@ std::vector<UrlRank> constraint_solver(
     std::vector<UrlRank> topNdocs;
     topNdocs.reserve(TOTAL_DOCS_TO_RETURN);
     int matchedDocs = 0;
-    /*
+    
     // Copy orderedQueryTerms for the title terms
     std::vector<std::vector<std::unique_ptr<ISRWord>>> titleTerms;
     for (const auto& innerVec : orderedQueryTerms) {
         std::vector<std::unique_ptr<ISRWord>> copiedInner;
         for (const auto& termPtr : innerVec) {
             if (termPtr) {
-                copiedInner.emplace_back(std::make_unique<ISRWord>(termPtr->GetWord() + "!"));
+                copiedInner.emplace_back(std::make_unique<ISRWord>(termPtr->GetWord() + "!", reader));
             }
         }
         titleTerms.push_back(std::move(copiedInner));
     }
-    */
-
 
     AnchorTermIndex indices = get_anchor_ISR(orderedQueryTerms);
     int anchorOuterIndex = indices.outerIndex;
@@ -130,21 +128,42 @@ std::vector<UrlRank> constraint_solver(
             docStartLoc, 
             docEndLoc,
             reader,
-            i);
-          /*
-                 // Dynamic score for title words
+            i,
+            true);
+          
+          // Dynamic score for title words
           int title_score = get_dynamic_rank(
             titleTerms[anchorOuterIndex][anchorInnerIndex],
             titleTerms,
             docStartLoc,
             docEndLoc,
             reader,
-            i);
-            */
+            i,
+            false);
 
+          // if (title_score > 0) {
+          //   std::cout << "Title score: " << title_score << " URL: " << doc->url << std::endl;
+          // }
 
+          int url_score = 0;
+          for (int i = 0; i < orderedQueryTerms.size(); i++)
+          {
+            for (int j = 0; j < orderedQueryTerms[i].size(); j++)
+            {
+              if (doc->url.find(orderedQueryTerms[i][j]->GetWord()) != string::npos) 
+              {
+                url_score += 10; // Add 10 for each query term found in the url
+              }
+            }
+          }
+          
+          // In case
+          if (doc->staticRank > 30) {
+            doc->staticRank = 0;
+          }
+          
           // Add weights to the score later
-          UrlRank urlRank = {doc->url, dynamic_score + doc->staticRank}; 
+          UrlRank urlRank = {doc->url, dynamic_score + title_score + url_score/* + doc->staticRank*/}; 
   
           insertionSort(topNdocs, urlRank); 
           currMatch = queryISR->NextDocument(currLoc); 
@@ -153,7 +172,7 @@ std::vector<UrlRank> constraint_solver(
             break;
           }
           docObj = docISR->Seek(currMatch->location);
-    }
+      }
    
     }
     cout << "MATCHED DOCUMENTS:" << matchedDocs << '\n';

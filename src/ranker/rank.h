@@ -231,9 +231,14 @@ double get_static_rank(cstring_view url, const HtmlParser &parser) {
   // std::cout << "Document length weight: " << parser.words.size() << " -> " << get_document_length_weight(parser.words) << std::endl;
   // std::cout << "URL length weight: " << url.size() << " -> " << get_url_length_weight(url.size()) << std::endl;
 
-  return get_numImages_weight(parser.img_count) +
-         get_numLinks_weight(parser.links.size()) +
-         get_domain_weight(get_top_level_domain(url)) +
-         get_document_length_weight(parser.words) +
-         get_url_length_weight(url.size());
+  int static_rank = get_numImages_weight(parser.img_count) +
+                    get_numLinks_weight(parser.links.size()) +
+                    get_domain_weight(get_top_level_domain(url)) +
+                    get_document_length_weight(parser.words) +
+                    get_url_length_weight(url.size());
+  
+  if (static_rank >= 0) {
+    return static_rank;
+  }
+  return 0;
 }

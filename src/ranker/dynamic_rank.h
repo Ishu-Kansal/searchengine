@@ -15,23 +15,23 @@
 
 // Weights for computing the score of specific ranking components, enums for quick readjusting and no magic numbers
 enum DynamicWeights: int {
-    SHORTSPANSWEIGHT = 0, 
-    ORDEREDSPANSWEIGHT = 0,
-    PHRASEMATCHESWEIGHT = 0,
-    TOPSPANSWEIGHT = 0
+    SHORTSPANSWEIGHT = 7, 
+    ORDEREDSPANSWEIGHT = 10,
+    PHRASEMATCHESWEIGHT = 20,
+    TOPSPANSWEIGHT = 7
 }; 
 
 // Weights for the section the dynamic ranking heuristic is being ranked on, e.g if its being ran on the URL of a document or the body
 // enums for quick readjusting and no magic numbers once again 
 enum SectionWeights: int {
-    TITLEWEIGHT = 0,
-    BODYWEIGHT = 0
+    TITLEWEIGHT = 4,
+    BODYWEIGHT = 1
 };
 
 // enum class for requirements of what is considered a short span or a top span
 enum Requirements: int {
-    SHORTSPANSIZE = 0,
-    TOPSPANSIZE = 0
+    SHORTSPANSIZE = 10,
+    TOPSPANSIZE = 100
 };
 
 using locationVector = std::vector<Location>;
@@ -42,25 +42,27 @@ constexpr Location RANGE_TOLERANCE = 25;
 // Requires: The number of short spans, ordered spans, phrase matches, top spans, and the type of section this is being scored on
 // Modifies: Nothing
 // Effect: Scores a given rank of the document using weights with the given numbers above.
-int get_rank_score(int shortSpans, int orderedSpans, int phraseMatches, int topSpans) {
-    // TO DO: make a hashtable/array for the type weights
-    // int sectionWeight = -1;
-    // // assign the weights based on what we are running the ranker on
-    // // urls will get higher weights than titles, titles will get higher weights than body, and body gets a normal weight
-    // if (type == "body") {
-    //     sectionWeight =  BODYWEIGHT;
-    // }
-    // else if (type == "title") {
-    //     sectionWeight = TITLEWEIGHT;
-    // }
-    // assert(sectionWeight != -1); 
+int get_rank_score(int shortSpans, int orderedSpans, int phraseMatches, int topSpans, bool isBody) {
+    // TODO: make a hashtable/array for the type weights
+    int sectionWeight = -1;
+    // assign the weights based on what we are running the ranker on
+    // urls will get higher weights than titles, titles will get higher weights than body, and body gets a normal weight
+    if (isBody) {
+        sectionWeight = BODYWEIGHT;
+    }
+    else {
+        sectionWeight = TITLEWEIGHT;
+    }
+    assert(sectionWeight != -1); 
+
     // declare individual ints below for debugging purposes
     int shortSpansResult = shortSpans * SHORTSPANSWEIGHT;
     int orderedSpansResult = orderedSpans * ORDEREDSPANSWEIGHT;
     int phraseMatchesResult = phraseMatches * PHRASEMATCHESWEIGHT;
     int topSpansResult = topSpans * TOPSPANSWEIGHT;
+    
     // multiply by the type weight and the added up weights of the spans
-    return  shortSpansResult + orderedSpansResult + phraseMatchesResult + topSpansResult; 
+    return sectionWeight * (shortSpansResult + orderedSpansResult + phraseMatchesResult + topSpansResult); 
 }
 
 // computes all of the variables that is needed for the rank score function using a variety of ISR'S pertaining to a SPECIFIC document
@@ -71,7 +73,7 @@ int get_rank_score(int shortSpans, int orderedSpans, int phraseMatches, int topS
 //           Needs a start location so we can seek to that location
 // Modifies: Nothing.
 // Effect: Returns the dynamic rank score for a single document.
-int get_dynamic_rank(std::unique_ptr<ISRWord> &anchorTerm, vector<vector<std::unique_ptr<ISRWord>>> &phraseTerms, uint64_t startLocation, uint64_t endLocation, const IndexFileReader & reader, uint32_t currChunk) {
+int get_dynamic_rank(std::unique_ptr<ISRWord> &anchorTerm, vector<vector<std::unique_ptr<ISRWord>>> &phraseTerms, uint64_t startLocation, uint64_t endLocation, const IndexFileReader & reader, uint32_t currChunk, bool isBody) {
 
     // Gets all locations for anchor in this document
     locationVector anchorLocations = reader.LoadChunkOfPostingList(
@@ -268,5 +270,5 @@ int get_dynamic_rank(std::unique_ptr<ISRWord> &anchorTerm, vector<vector<std::un
 
     } // End loop over anchorLocations
 
-    return get_rank_score(shortSpans, orderedSpans, phraseMatches, topSpans);
+    return get_rank_score(shortSpans, orderedSpans, phraseMatches, topSpans, isBody);
 }

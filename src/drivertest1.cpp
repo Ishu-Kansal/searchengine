@@ -149,7 +149,7 @@ int main()
         std::cout << "Found " << results1.size() << " results for query 1 (showing top " << results1.size() << "):" << std::endl;
         for (const auto& url_sv : results1)
         {
-            std::cout << "  " << url_sv.url << std::endl;
+            std::cout << "  Rank: " << url_sv.rank << " - " << url_sv.url << std::endl;
         }
     }
 
