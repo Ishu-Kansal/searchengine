@@ -26,4 +26,6 @@ class Driver {
         // Utility for joining words into a space-separated string
         std::string join_words(const std::vector<std::string>& words, size_t max_words = SIZE_MAX);
 
+        std::string decode_html_entities(const std::string& input);
+
     };
