@@ -23,10 +23,10 @@ struct UrlRank
   bool operator>(const UrlRank& other) const { return rank > other.rank; }
   bool operator>=(const UrlRank& other) const { return rank >= other.rank; }
 
-  UrlRank() : url(""), rank(0) {}
-  UrlRank(std::string u, int r) : url(std::move(u)), rank(r) {}
-  UrlRank(std::string_view u, int r) : url(u), rank(r) {}
-  UrlRank(std::string_view u, uint8_t r) : url(u), rank(r) {}
+  UrlRank() : rank(0), url("") {}
+  UrlRank(std::string u, int r) : rank(r), url(std::move(u)) {}
+  UrlRank(std::string_view u, int r) : rank(r), url(u) {}
+  UrlRank(std::string_view u, uint8_t r) : rank(r), url(u) {}
 
 };
 
@@ -104,11 +104,11 @@ std::vector<UrlRank> constraint_solver(
     int anchorOuterIndex = indices.outerIndex;
     int anchorInnerIndex = indices.innerIndex;
 
-    SeekObj* currMatch = queryISR->Seek(0);
+    SeekObj* currMatch = queryISR->Seek(0, 0);
     for (int i = 0; i < numChunks; ++i)
     {
       std::unique_ptr<ISREndDoc> docISR = make_unique<ISREndDoc>(reader); 
-      SeekObj * docObj = docISR->Seek(currMatch->location);
+      SeekObj * docObj = docISR->Seek(currMatch->location, i);
       while (docObj) 
       {
           ++matchedDocs;
@@ -166,13 +166,18 @@ std::vector<UrlRank> constraint_solver(
           UrlRank urlRank = {doc->url, dynamic_score + title_score + url_score/* + doc->staticRank*/}; 
   
           insertionSort(topNdocs, urlRank); 
-          currMatch = queryISR->NextDocument(currLoc); 
+          currMatch = queryISR->NextDocument(currLoc, i); 
           if (!currMatch) 
           {
             break;
           }
+<<<<<<< HEAD
           docObj = docISR->Seek(currMatch->location);
       }
+=======
+          docObj = docISR->Seek(currMatch->location, i);
+    }
+>>>>>>> 9f4f43a (some fixes)
    
     }
     cout << "MATCHED DOCUMENTS:" << matchedDocs << '\n';

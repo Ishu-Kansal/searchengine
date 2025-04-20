@@ -450,6 +450,7 @@ public:
         int tableIndex = -1) const
     {
         std::vector<Location> results;
+        results.reserve(128);
         if (chunkNum >= mappedFiles.size() || !mappedFiles[chunkNum]) 
         {
             return results; 

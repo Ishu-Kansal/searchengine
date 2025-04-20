@@ -14,11 +14,10 @@ static std::string endDoc = "!#$%!#13513sfas";
 class ISR {
 public:
 
-    virtual SeekObj* Seek(Location target) = 0;
+    virtual SeekObj* Seek(Location target, int chunkNum) = 0;
+    virtual SeekObj* NextDocument(Location docEnd, int chunkNum) = 0;
 
-    virtual SeekObj* NextDocument(Location docEnd = 0) = 0;
-
-    virtual SeekObj* Next() = 0;
+    virtual SeekObj* Next(int chunkNum) = 0;
    
     virtual Location getStartLocation() const {
         return nearestStartLocation;
@@ -47,32 +46,24 @@ class ISRWord : public ISR {
 public:
     ISRWord() = delete;
     ISRWord(std::string word_in, const IndexFileReader& reader)
-        : reader_(reader), word(std::move(word_in)) {
-            Seek(0);
-        }
+        : reader_(reader), word(std::move(word_in)) {}
     
-    SeekObj* Seek(Location target) override {
+    SeekObj* Seek(Location target, int chunkNum) override {
         auto curr = GetCurrentPost();
-        if (!curr)
-        {
-            currPost = reader_.Find(word, target, 0);
-        }
-        else
-        {
-            currPost = reader_.Find(word, target, 0, curr->seekTableIndex);
-        }
-        
-        // postingListOffset = currPost->offset;
+        uint32_t seekTableIdx = curr ? curr->seekTableIndex : 0;
+
+        currPost = reader_.Find(word, target, chunkNum, seekTableIdx);
+
         return currPost.get();
     }
 
-    SeekObj* Next() override {
-        if (!currPost) return Seek(0);
-        return Seek(currPost->location + 1);
+    SeekObj* Next(int chunkNum) override {
+        if (!currPost) return Seek(0, chunkNum);
+        return Seek(currPost->location + 1, chunkNum);
     }
 
-    SeekObj* NextDocument(Location docEnd = 0) override {
-        return Seek(docEnd + 1);
+    SeekObj* NextDocument(Location docEnd, int chunkNum) override {
+        return Seek(docEnd + 1, chunkNum);
     }
 
     unsigned GetNumberOfOccurrences() const{
@@ -96,11 +87,10 @@ protected:
 class ISREndDoc : public ISRWord {
 public:
     ISREndDoc(const IndexFileReader& reader)
-        : ISRWord(endDoc, reader) {
-        }
+        : ISRWord(endDoc, reader) {}
         
-    SeekObj* Seek(Location target) override {
-        return ISRWord::Seek(target);
+    SeekObj* Seek(Location target, int chunkNum) override {
+        return ISRWord::Seek(target, chunkNum);
     }
 
     unsigned GetDocumentLength() const {
@@ -118,10 +108,9 @@ public:
     ISROr(std::vector<std::unique_ptr<ISR>> childISRs, const IndexFileReader& reader)
     : terms(std::move(childISRs)), nearestTerm(0) {
         docEndISR = make_unique<ISREndDoc>(reader);
-        Seek(0);
     }
 
-    SeekObj* Seek(Location target) override {
+    SeekObj* Seek(Location target, int chunkNum) override {
         if (terms.empty()) 
         {
             currPost = nullptr;
@@ -135,7 +124,7 @@ public:
         nearestTerm = 0;
         for (size_t i = 0; i < terms.size(); ++i)
         {
-            SeekObj * seekObj = terms[i]->Seek(target);
+            SeekObj * seekObj = terms[i]->Seek(target, chunkNum);
             if (!seekObj) 
             {
                 currPost = nullptr;
@@ -150,7 +139,7 @@ public:
             if (seekObj->location < loc)
             {
                 nearestTerm = i;
-                SeekObj * docEnd = docEndISR->Seek(seekObj->location);
+                SeekObj * docEnd = docEndISR->Seek(seekObj->location, chunkNum);
                 if (!docEnd) 
                 {
                     currPost = nullptr;
@@ -166,22 +155,22 @@ public:
         return nearest;
     }
 
-    SeekObj* Next() override {
+    SeekObj* Next(int chunkNum) override {
         // Do a next on the nearest term, then return
         // the new nearest match.
         SeekObj * seekObj = terms[nearestTerm]->GetCurrentPost();
-        if (!seekObj) return Seek(0);
-        return Seek(seekObj->location + 1);
+        if (!seekObj) return Seek(0, chunkNum);
+        return Seek(seekObj->location + 1, chunkNum);
     }
-    SeekObj* NextDocument(Location docEnd = 0)  override {
+    SeekObj* NextDocument(Location docEnd, int chunkNum)  override {
         // Seek all the ISRs to the first occurrence just past
         // the end of this document.
         if (docEnd) 
         {
-            return Seek(docEnd + 1);
+            return Seek(docEnd + 1, chunkNum);
         }
         Location currEnd = getEndLocation();
-        return Seek(currEnd + 1);
+        return Seek(currEnd + 1, chunkNum);
     }
 
 private:
@@ -196,10 +185,9 @@ public:
     ISRAnd(std::vector<std::unique_ptr<ISR>> childISRs, const IndexFileReader& reader)
         : terms(std::move(childISRs)), nearestTerm(0), farthestTerm(0) {
             docEndISR = make_unique<ISREndDoc>(reader);
-            Seek(0);
-    }
+        }
 
-    SeekObj * Seek(Location target) override {
+    SeekObj * Seek(Location target, int chunkNum) override {
         if (terms.empty()) 
         {
             currPost = nullptr;
@@ -218,7 +206,7 @@ public:
         for (size_t i = 0; i < terms.size(); ++i)
         {
             // 1. Seek all the ISRs to the first occurrence beginning at the target location.
-            SeekObj * seekObj = terms[i]->Seek(target);
+            SeekObj * seekObj = terms[i]->Seek(target, chunkNum);
             
             // 5. If any ISR reaches the end, there is no match.
             if (!seekObj) 
@@ -253,7 +241,7 @@ public:
         {
             // 2. Move the document end ISR to just past the furthest word, then calculate the document begin location.
             anotherOne = false;
-            SeekObj * docEnd = docEndISR->Seek(farthestPost->location);
+            SeekObj * docEnd = docEndISR->Seek(farthestPost->location, chunkNum);
             if (!docEnd) 
             {
                 currPost = nullptr;
@@ -266,7 +254,7 @@ public:
             // 3. Seek all the other terms to past the document begin.
             for (size_t i = 0; i < terms.size(); ++i)
             {                                       
-                SeekObj * seekObj = terms[i]->Seek(nearestStartLocation + 1);
+                SeekObj * seekObj = terms[i]->Seek(nearestStartLocation + 1, chunkNum);
                 if (i == 0) nearestTerm = 0;
                 // 5. If any ISR reaches the end, there is no match.
                 if (!seekObj) 
@@ -281,7 +269,7 @@ public:
                 {
                     farthestTerm = i;
                     anotherOne = true;
-                    docEnd = docEndISR->Seek(seekObj->location);
+                    docEnd = docEndISR->Seek(seekObj->location, chunkNum);
                     nearestStartLocation = docEnd->location - docEndISR->GetDocumentLength();
                     nearestEndLocation = docEnd->location;
                     break;
@@ -300,20 +288,20 @@ public:
         return nullptr;
     
 }
-    SeekObj * Next() override 
+    SeekObj * Next(int chunkNum) override 
     {
         SeekObj * seekObj = terms[nearestTerm]->GetCurrentPost();
-        if (!seekObj) return Seek(0);
-        auto seekResult = Seek(seekObj->location + 1);
+        if (!seekObj) return Seek(0, chunkNum);
+        auto seekResult = Seek(seekObj->location + 1, chunkNum);
         return seekResult;
     }
-    SeekObj * NextDocument(Location docEnd) override
+    SeekObj * NextDocument(Location docEnd, int chunkNum) override
     {   
         if (docEnd) 
         {
-            return Seek(docEnd + 1);
+            return Seek(docEnd + 1, chunkNum);
         }
-        auto seekResult = Seek(nearestEndLocation + 1);
+        auto seekResult = Seek(nearestEndLocation + 1, chunkNum);
         return seekResult;
     }
 
@@ -333,7 +321,7 @@ public:
         : terms(std::move(childISRs)), farthestTerm(0), farthestTermLocation(0) {
         docEndISR = std::make_unique<ISREndDoc>(reader);
     }
-    SeekObj * Seek(Location target) override {
+    SeekObj * Seek(Location target, int chunkNum) override {
         if (terms.empty())
         {
             currPost = nullptr;
@@ -346,7 +334,7 @@ public:
         // 1. Seek all ISRs to the first occurrence beginning at the target location.
         for (size_t i = 0; i < terms.size(); ++i)
         {
-            SeekObj * seekObj = terms[i]->Seek(target);
+            SeekObj * seekObj = terms[i]->Seek(target, chunkNum);
             if (!seekObj)
             {
                 currPost = nullptr;
@@ -370,7 +358,7 @@ public:
                 {
                     // Finds what relative order it should be at
                     Location relativePos = farthestTermLocation + i - farthestTerm;
-                    SeekObj * tempObj = terms[i]->Seek(relativePos);
+                    SeekObj * tempObj = terms[i]->Seek(relativePos, chunkNum);
                     if (!tempObj)       
                     {
                         currPost = nullptr;
@@ -390,7 +378,7 @@ public:
             if (!anotherOne) break;
             // 3. If any term is past the desired location, return to step 2.
         }
-        SeekObj * docEnd = docEndISR->Seek(farthestTermLocation);
+        SeekObj * docEnd = docEndISR->Seek(farthestTermLocation, chunkNum);
         if (!docEnd)
         {
             currPost = nullptr;
@@ -404,20 +392,20 @@ public:
 
         return terms[farthestTerm]->GetCurrentPost();
     }   
-    SeekObj * Next() override {
+    SeekObj * Next(int chunkNum) override {
         // Finds overlapping phrase matches.
         auto firstPost =  terms[0]->GetCurrentPost();
-        if (!firstPost) return Seek(0);
-        auto seekResult = Seek(firstPost->location + 1);
+        if (!firstPost) return Seek(0, chunkNum);
+        auto seekResult = Seek(firstPost->location + 1, chunkNum);
         return seekResult;
     }
-    SeekObj * NextDocument(Location docEnd) override
+    SeekObj * NextDocument(Location docEnd, int chunkNum) override
     {   
         if (docEnd) 
         {
-            return Seek(docEnd + 1);
+            return Seek(docEnd + 1, chunkNum);
         }
-        auto seekResult = Seek(nearestEndLocation + 1);
+        auto seekResult = Seek(nearestEndLocation + 1, chunkNum);
         return seekResult;
     }
 private:
@@ -438,7 +426,7 @@ public:
     }
     unsigned CountContained, CountExcluded;
 
-    SeekObj * Seek(Location target) override {
+    SeekObj * Seek(Location target, int chunkNum) override {
         //1. Seek all the included ISRs to the first occurrence beginning at the target location.
         if (terms.empty())
         {
@@ -452,7 +440,7 @@ public:
             excludedNotFound = true;
             for (size_t i = 0; i < terms.size(); ++i)
             {
-                SeekObj * seekObj = terms[i]->Seek(target);
+                SeekObj * seekObj = terms[i]->Seek(target, chunkNum);
                 if (!seekObj)
                 {
                     currPost = nullptr;
@@ -479,7 +467,7 @@ public:
                 }
             }
             // 2. Move the document end ISR to just past the furthest contained ISR, then calculate the document begin location.
-            SeekObj * docEnd = docEndISR->Seek(terms[farthestTerm]->GetCurrentPost()->location + 1);
+            SeekObj * docEnd = docEndISR->Seek(terms[farthestTerm]->GetCurrentPost()->location + 1, chunkNum);
             if (!docEnd)
             {
                 currPost = nullptr;
@@ -502,10 +490,10 @@ public:
                 anotherOne = false;
                 for (size_t i = 0; i < terms.size(); ++i)
                 {                                       
-                    SeekObj * seekObj = terms[i]->Seek(nearestStartLocation+ 1);
+                    SeekObj * seekObj = terms[i]->Seek(nearestStartLocation+ 1, chunkNum);
                     // 5. If any ISR reaches the end, there is no match.
                     if (!seekObj)
-                           {
+            {
                 currPost = nullptr;
                 nearestStartLocation = NULL_LOCATION;
                 nearestEndLocation = NULL_LOCATION;
@@ -526,7 +514,7 @@ public:
             }
             for (size_t i = 0; i < excluded.size(); ++i)
             {
-                SeekObj * excludedObj = excluded[i]->Seek(nearestStartLocation + 1);
+                SeekObj * excludedObj = excluded[i]->Seek(nearestStartLocation + 1, chunkNum);
                 if (!excludedObj) continue;
                 if (excludedObj->location < nearestEndLocation) 
                 {
@@ -539,21 +527,21 @@ public:
         }
         return terms[nearestTerm]->GetCurrentPost();
     }
-    SeekObj * Next() override 
+    SeekObj * Next(int chunkNum) override 
     {
         SeekObj * seekObj = terms[nearestTerm]->GetCurrentPost();
-        if (!seekObj) return Seek(0);
+        if (!seekObj) return Seek(0, chunkNum);
         
-        auto seekResult = Seek(seekObj->location + 1);
+        auto seekResult = Seek(seekObj->location + 1, chunkNum);
         return seekResult;
     }
-    SeekObj * NextDocument(Location docEnd) override
+    SeekObj * NextDocument(Location docEnd, int chunkNum) override
     {   
         if (docEnd) 
         {
-            return Seek(docEnd + 1);
+            return Seek(docEnd + 1, chunkNum);
         }
-        auto seekResult = Seek(nearestEndLocation + 1);
+        auto seekResult = Seek(nearestEndLocation + 1, chunkNum);
         return seekResult;
     }
  private:
