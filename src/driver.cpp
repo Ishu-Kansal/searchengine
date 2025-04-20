@@ -1,29 +1,28 @@
-// driver.cpp
-// This file implements the main logic for the search engine backend.
-// It defines how queries are parsed, how matching URLs are fetched and parsed for content,
-// and how title/snippet results are prepared for use by the front-end in engine.cpp.
-// It connects the query parser, HTML fetcher, and HTML parser modules into a coherent workflow.
+#include <vector>
+#include <string_view>
+#include <string>
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <stdexcept>
+#include <algorithm>
+#include <cassert>
 
 #include "driver.h"
-
-#include <sstream>
-#include <iostream>
-#include <fstream>
-#include <cassert>
-#include <vector>
-#include <memory>
-#include <algorithm>
-
+#include "crawler/sockets.h"
+#include "../utils/cstring_view.h"
 #include "constraint_solver.h"
 #include "query_parser/parser.h"
 #include "inverted_index/Index.h"
 #include "../HtmlParser/HtmlParser.h"
-#include "./crawler/sockets.h"
+#include "json.hpp"
 
 #include <thread>
 #include <chrono>
 
-Driver::Driver() { }
+using json = nlohmann::json;
+
+Driver::Driver() {}
 
 // Joins up to max_words into a space-separated string
 std::string Driver::join_words(const std::vector<std::string>& words, size_t max_words) {
@@ -40,7 +39,7 @@ std::string Driver::join_words(const std::vector<std::string>& words, size_t max
 // - the raw URL,
 // - a parsed title,
 // - and a snippet (short preview of the page content).
-SearchResult Driver::get_url_and_parse(const std::string_view& url) {
+SearchResult Driver::get_url_and_parse(const std::string& url) {
    std::string url_str(url.data(), url.size());
    std::string html;
 
@@ -56,7 +55,8 @@ SearchResult Driver::get_url_and_parse(const std::string_view& url) {
        HtmlParser parser(html.data(), html.size());
        result.title = join_words(parser.titleWords);
        result.snippet = join_words(parser.description, 30);
-   } catch (...) {
+   }
+   catch (...) {
        std::cerr << "Parsing failed for: " << url_str << std::endl;
    }
 
@@ -64,67 +64,89 @@ SearchResult Driver::get_url_and_parse(const std::string_view& url) {
 }
 
 
-std::vector<std::string_view> Driver::run_engine(std::string& query) {
-//    uint32_t numChunks = 1;
-//    std::vector<std::vector<std::unique_ptr<ISRWord>>> sequences;
+std::vector<UrlRank> run_engine_helper(
+    std::string &query,
+    uint32_t numChunks,
+    IndexFileReader &reader)
+{
+   std::vector<std::vector<std::unique_ptr<ISRWord>>> sequences;
 
-//    // Example document manually inserted
-//    IndexChunk indexChunk;
-//    std::string url = "http://example.com";
-//    std::string wordApple = "apple";
-//    std::string banana = "banana";
+   QueryParser parser(query, numChunks, reader);
+   std::unique_ptr<Constraint> constraint = parser.Parse();
 
-//    indexChunk.add_url(url, 1);
-//    for (int i = 0; i < 4; ++i) {
-//        indexChunk.add_word(wordApple, false);
-//    }
-//    indexChunk.add_word(banana, false);
-//    indexChunk.add_enddoc();
+   if (constraint)
+   {
+      std::unique_ptr<ISR> isrs = constraint->Eval(sequences);
 
-//    assert(!indexChunk.get_posting_lists().empty());
+      if (!isrs)
+      {
+         std::cerr << "Warning: Constraint evaluation returned null ISR." << std::endl;
+         return {};
+      }
 
-//    IndexFile indexFile(0, indexChunk);
-//    IndexFileReader reader(numChunks);
+      std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, numChunks, reader);
 
-//    QueryParser parser(query, numChunks, reader);
-//    std::unique_ptr<Constraint> c = parser.Parse();
+      return raw_results;
+   }
+   else
+   {
+      std::cerr << "Query parsing failed for: " << query << std::endl;
+      return {};
+   }
+}
 
-//    if (!c) return {};
+std::vector<std::string> Driver::run_engine(std::string& query) {
+   const std::string data_filename = "websites_data.jsonl";
+   const uint32_t numChunks = 1;
 
-//    std::unique_ptr<ISR> isrs = c->Eval(sequences);
-//    std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, 1, reader);
+   const uint32_t chunkNum = 0;
 
-   std::vector<std::string_view> urls;
-//    urls.reserve(raw_results.size());
-//    std::transform(raw_results.begin(), raw_results.end(), std::back_inserter(urls),
-//                   [](const UrlRank& p) { return p.url; });
+   IndexFileReader reader(numChunks);
 
-//    return urls;
-// }
+   std::cout << "\n--- Running Query: [" << query << "] ---" << std::endl;
+   auto start = std::chrono::high_resolution_clock::now();
+   std::vector<UrlRank> results = run_engine_helper(query, numChunks, reader);
+   auto end = std::chrono::high_resolution_clock::now();
+   std::chrono::duration<double> elapsed = end - start;
+   std::cout << "Query execution time: " << elapsed.count() << " seconds" << std::endl;
+
+   std::vector<std::string> urls;
+   if (!results.empty())
+   {
+      std::cout << "Found " << results.size() << " results for query (showing top " << results.size() << "):" << std::endl;
+      for (const auto &url_sv : results)
+      {
+         std::cout << "  Rank: " << url_sv.rank << " - " << url_sv.url << std::endl;
+         urls.emplace_back(url_sv.url);
+      }
+   }
+
+   return urls;
    
 
-    urls.push_back(string_view("https://www.nationalgeographic.org/"));
-    urls.push_back(string_view("https://www.amnh.org/"));
-    urls.push_back(string_view("https://www.metmuseum.org/"));
-    urls.push_back(string_view("https://www.moma.org/"));
-    urls.push_back(string_view("https://www.weather.gov/"));
-    urls.push_back(string_view("https://www.accuweather.com/"));
-    urls.push_back(string_view("https://www.wunderground.com/"));
-    urls.push_back(string_view("https://www.nist.gov/"));
-    urls.push_back(string_view("https://www.ieee.org/"));
-    urls.push_back(string_view("https://www.acm.org/"));
-    urls.push_back(string_view("https://www.ucla.edu/"));
-    urls.push_back(string_view("https://www.utexas.edu/"));
-    urls.push_back(string_view("https://www.psu.edu/"));
-    urls.push_back(string_view("https://www.cornell.edu/"));
-    urls.push_back(string_view("https://www.duke.edu/"));
-    urls.push_back(string_view("https://www.jhu.edu/"));
-    urls.push_back(string_view("https://www.northwestern.edu/"));
-    urls.push_back(string_view("https://www.uchicago.edu/"));
+   // std::vector<std::string_view> urls;
 
-    // DELETE THIS LATER - simulate constraint solver taking 3 seconds
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+   // urls.push_back(string_view("https://www.nationalgeographic.org/"));
+   // urls.push_back(string_view("https://www.amnh.org/"));
+   // urls.push_back(string_view("https://www.metmuseum.org/"));
+   // urls.push_back(string_view("https://www.moma.org/"));
+   // urls.push_back(string_view("https://www.weather.gov/"));
+   // urls.push_back(string_view("https://www.accuweather.com/"));
+   // urls.push_back(string_view("https://www.wunderground.com/"));
+   // urls.push_back(string_view("https://www.nist.gov/"));
+   // urls.push_back(string_view("https://www.ieee.org/"));
+   // urls.push_back(string_view("https://www.acm.org/"));
+   // urls.push_back(string_view("https://www.ucla.edu/"));
+   // urls.push_back(string_view("https://www.utexas.edu/"));
+   // urls.push_back(string_view("https://www.psu.edu/"));
+   // urls.push_back(string_view("https://www.cornell.edu/"));
+   // urls.push_back(string_view("https://www.duke.edu/"));
+   // urls.push_back(string_view("https://www.jhu.edu/"));
+   // urls.push_back(string_view("https://www.northwestern.edu/"));
+   // urls.push_back(string_view("https://www.uchicago.edu/"));
 
-    return urls;
+   // // DELETE THIS LATER - simulate constraint solver taking 3 seconds
+   // std::this_thread::sleep_for(std::chrono::seconds(3));
 
+   // return urls;
 }

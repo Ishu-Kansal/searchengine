@@ -17,7 +17,7 @@ Driver driver;
 
 // Struct used to pass URL and index info to each thread
 struct ThreadData {
-  std::string_view url;
+  std::string url;
   int idx;
 };
 
@@ -43,13 +43,14 @@ void* snippet_thread_worker(void* arg) {
 // then concurrently fetching the matching URLs.
 // This modified version returns just the URLs.
 json run_query(std::string &query) {
-  std::vector<std::string_view> urls = driver.run_engine(query);
+  std::vector<std::string> urls = driver.run_engine(query);
 
   result["results"] = json::array();
-  for (int i = 0; i < urls.size(); i++) {
+  for (const std::string url : urls) {
+    std::cout << "Url: " << url << std::endl;
     result["results"].push_back({
-        {"url", urls[i]},
-        {"title", urls[i]},
+        {"url", url},
+        {"title", url},
         {"snippet", ""}
     });
   }
@@ -58,7 +59,7 @@ json run_query(std::string &query) {
 }
 
 // Executes fetching of snippets for a given list of URLs
-json fetch_snippets(std::vector<std::string_view> &urls) {
+json fetch_snippets(std::vector<std::string> &urls) {
   result["results"] = json::array();
 
   std::vector<pthread_t> threads;
@@ -116,7 +117,7 @@ private:
     json j = json::parse(body, nullptr, false);
     if (j.is_discarded() || !j.contains("urls")) return error(400);
 
-    std::vector<std::string_view> urls = j["urls"].get<std::vector<std::string_view>>();
+    std::vector<std::string> urls = j["urls"].get<std::vector<std::string>>();
     json result = fetch_snippets(urls);
 
     std::string payload = result.dump(2);
