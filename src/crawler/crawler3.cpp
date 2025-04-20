@@ -52,10 +52,9 @@ static constexpr std::string_view UNWANTED_LRM = "&lrm";
 static constexpr std::string_view UNWANTED_RLM = "&rlm";
 static constexpr size_t MAX_WORD_LENGTH = 50;
 
-constexpr uint32_t MAX_PROCESSED = 10'000;
-constexpr uint32_t NUM_CHUNKS = 1;
+constexpr uint32_t MAX_PROCESSED = 5000;
 
-const static int NUM_THREADS = 32;  // start small
+constexpr static int NUM_THREADS = 16;  // start small
 IndexChunk chunks[NUM_THREADS];
 
 uint32_t STATIC_RANK = 0;  // temp global variable
@@ -377,7 +376,7 @@ void* runner(void* arg) {
     // Get the next url to be processed
     std::string url = get_string();
     if (url.empty()) {
-      sleep(10);
+      sleep(1);
       continue;
     }
 
@@ -486,7 +485,7 @@ int main(int argc, char** argv) {
   const int process_id = atoi(argv[1]) * 1000;
 
   std::vector<std::string> sem_names{};
-  for (int i = 0; i < NUM_CHUNKS; ++i) {
+  for (int i = 0; i < NUM_THREADS; ++i) {
     sem_names.push_back("/sem_" + std::to_string(i));
     sem_unlink(sem_names[i].data());
   }

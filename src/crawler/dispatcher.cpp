@@ -1,8 +1,8 @@
 #include <fcntl.h>
 #include <netdb.h>
 #include <pthread.h>
-#include <sys/socket.h>
 #include <signal.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 #include <cstdint>
@@ -176,7 +176,11 @@ void save_handler(int sock) {
 }
 
 void add_handler(int fd, uint64_t size) {
-  if (size <= sizeof(uint64_t)) return;
+  {
+    pthread_lock_guard _{queue_lock};
+    if (size <= sizeof(uint64_t) || links_vector.size() > MAX_VECTOR_SIZE)
+      return;
+  }
   std::string req(size, 0);
   ssize_t bytes = 0;
   uint64_t rank = 0;
