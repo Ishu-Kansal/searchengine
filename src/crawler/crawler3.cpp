@@ -55,9 +55,8 @@ static constexpr size_t MAX_WORD_LENGTH = 50;
 constexpr uint32_t MAX_PROCESSED = 10'000;
 constexpr uint32_t NUM_CHUNKS = 1;
 
-IndexChunk chunk{};
-
-const static int NUM_THREADS = 256;  // start small
+const static int NUM_THREADS = 32;  // start small
+IndexChunk chunks[NUM_THREADS];
 
 uint32_t STATIC_RANK = 0;  // temp global variable
 
@@ -336,7 +335,7 @@ struct Args {
 void* add_to_index(void* addr) {
   Args* arg = reinterpret_cast<Args*>(addr);
 
-  pthread_lock_guard _{chunk_lock};
+  auto& chunk = chunks[arg->thread_id];
   if (arg->parser.isEnglish) {
     const uint16_t urlLength = arg->url.size();
     chunk.add_url(arg->url, arg->static_rank);
@@ -371,9 +370,9 @@ void* add_to_index(void* addr) {
   return NULL;
 }
 
-void* runner(void*) {
+void* runner(void* arg) {
   // const static thread_local pid_t thread_id = syscall(SYS_gettid);
-  const static thread_local auto thread_id = rand() % NUM_CHUNKS;
+  const uint32_t thread_id = (uint64_t)arg;
   while (num_processed < MAX_PROCESSED) {
     // Get the next url to be processed
     std::string url = get_string();
@@ -484,6 +483,8 @@ void* runner(void*) {
 int main(int argc, char** argv) {
   signal(SIGPIPE, SIG_IGN);
 
+  const int process_id = atoi(argv[1]) * 1000;
+
   std::vector<std::string> sem_names{};
   for (int i = 0; i < NUM_CHUNKS; ++i) {
     sem_names.push_back("/sem_" + std::to_string(i));
@@ -504,16 +505,18 @@ int main(int argc, char** argv) {
 
   pthread_t threads[NUM_THREADS];
   for (int i = 0; i < NUM_THREADS; i++) {
-    pthread_create(threads + i, NULL, runner, NULL);
+    pthread_create(threads + i, NULL, runner, (void*)(i));
   }
   std::cout << "STARTED THREADS...\n";
   for (int i = 0; i < NUM_THREADS; i++) {
     pthread_join(threads[i], NULL);
   }
-  
+
   std::cout << "FINISHED THREADS/...\n";
 
-  IndexFile chunkFile(0, chunk);
+  for (size_t i = 0; i < NUM_THREADS; ++i) {
+    IndexFile(process_id + i, chunks[i]);
+  }
 
   pthread_mutex_destroy(&queue_lock);
   pthread_mutex_destroy(&chunk_lock);

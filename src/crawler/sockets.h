@@ -83,19 +83,19 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
 
   if (getaddrinfo(url.Host, (*url.Port ? url.Port : "443"), &hints, &address) !=
       0) {
-    // std::cerr << "Failed to resolve host" << std::endl;
+    // // << "Failed to resolve host" << std::endl;
     return 2;
   }
   // Create a socket
   int socketFD = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (socketFD < 0) {
-    std::cerr << "Failed to create socket" << std::endl;
+    // << "Failed to create socket" << std::endl;
     freeaddrinfo(address);
     return 3;
   }
   // Connect the socket
   if (connect(socketFD, address->ai_addr, address->ai_addrlen) < 0) {
-    std::cerr << "Failed to connect to host" << std::endl;
+    // << "Failed to connect to host" << std::endl;
     close(socketFD);
     freeaddrinfo(address);
     return 4;
@@ -107,14 +107,14 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   assert(SSLv23_method() != nullptr);
   SSL_CTX *ctx = SSL_CTX_new(SSLv23_method());
   if (!ctx) {
-    std::cerr << "Failed to create SSL context" << std::endl;
+    // << "Failed to create SSL context" << std::endl;
     close(socketFD);
     return 5;
   }
 
   SSL *ssl = SSL_new(ctx);
   if (ssl == nullptr) {
-    std::cerr << "could not create ssl object" << std::endl;
+    // << "could not create ssl object" << std::endl;
     SSL_CTX_free(ctx);
     close(socketFD);
     return 6;
@@ -127,7 +127,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
                        sizeof tv);
 
   if (ret != 0) {
-    std::cerr << "Failed to set socket timeout" << std::endl;
+    // << "Failed to set socket timeout" << std::endl;
     SSL_free(ssl);
     SSL_CTX_free(ctx);
     close(socketFD);
@@ -138,7 +138,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   ret = setsockopt(socketFD, SOL_SOCKET, SO_NOSIGPIPE, &val, sizeof(val));
 
   if (ret != 0) {
-    std::cerr << "Failed to set socket timeout" << std::endl;
+    // << "Failed to set socket timeout" << std::endl;
     SSL_free(ssl);
     SSL_CTX_free(ctx);
     close(socketFD);
@@ -148,7 +148,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   SSL_set_fd(ssl, socketFD);
 
   if (SSL_connect(ssl) <= 0) {
-    // std::cerr << "Failed to establish SSL connection" << std::endl;
+    // // << "Failed to establish SSL connection" << std::endl;
     // ERR_print_errors_fp(stderr);
     SSL_free(ssl);
     SSL_CTX_free(ctx);
@@ -157,7 +157,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   }
 
   if (SSL_write(ssl, req.c_str(), req.length()) <= 0) {
-    // std::cerr << "Failed to send request" << std::endl;
+    // // << "Failed to send request" << std::endl;
     // SSL_shutdown(ssl);
     SSL_free(ssl);
     SSL_CTX_free(ctx);
@@ -232,7 +232,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   }
 
   if (bytes < 0) {
-    // std::cerr << "Error reading from SSL socket" << std::endl;
+    // // << "Error reading from SSL socket" << std::endl;
   }
 
   // Clean up
