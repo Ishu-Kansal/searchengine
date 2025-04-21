@@ -54,7 +54,6 @@ static constexpr std::string_view UNWANTED_LRM = "&lrm";
 static constexpr std::string_view UNWANTED_RLM = "&rlm";
 static constexpr size_t MAX_WORD_LENGTH = 50;
 
-constexpr uint32_t MAX_PROCESSED = 100'000;
 constexpr uint32_t NUM_CHUNKS = 1;
 
 IndexChunk chunk{};
@@ -106,7 +105,7 @@ std::string get_string() {
 
 void add_url(cstring_view url, uint64_t rank) {
   int sock = get_socket(1);
-  if (sock == -1) return;
+  if (sock == -1 || url.empty()) return;
   SocketWrapper _{sock};
   header_t header = sizeof(rank) + url.size();
   send(sock, &header, sizeof(header), 0);
@@ -423,68 +422,35 @@ void* runner(void*) {
       num_processed++;
       if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
       if (num_processed > MAX_PROCESSED) done = true;
+    }
 
-      if (links_vector.size() < MAX_QUEUE_SIZE) {
-        for (auto& link : parser.links) {
-          std::string next_url = std::move(link.URL);
+    for (auto& link : parser.links) {
+      std::string next_url = std::move(link.URL);
 
-          // Ignore links that begin with '#' or '?'
-          if (next_url[0] == '#' || next_url[0] == '?') {
-            continue;
-          }
-
-          // If link starts with '/', add the domain to the beginning
-          // of it
-          if (next_url[0] == '/') {
-            next_url = url.substr(0, 8) + getHostFromUrl(url) + next_url;
-          }
-
-          if (!check_url(next_url)) {
-            continue;
-          }
-
-          // If link has not been seen before, add it to the bf and
-          // links vector
-          add_url(next_url, static_rank);
-          /*if (!bf.contains(next_url)) {
-            bf.insert(next_url);
-            links_vector.emplace_back(next_url,
-                                      static_rank);  //
-          STATIC_RANK++}); sem_post(queue_sem);
-          }*/
-        }
-      }
-      // --------------------------------------------------
-      // For debugging (not needed for crawler to function)
-      /*std::string filename =
-          "./files/file" + std::to_string(num_processed) + ".txt";
-      std::ofstream output_file(filename);
-
-      if (!output_file) {
-        // std::cerr << "Error opening file!\n" << std::endl;
-        // std::cerr << url << std::endl;
+      // Ignore links that begin with '#' or '?'
+      if (next_url[0] == '#' || next_url[0] == '?') {
         continue;
       }
 
-      output_file << url << "\n\n";
-      /*output_file << "Number of links in queue: "
-                  << explore_queue.size() + links_vector.size() << "\n\n";
-      output_file << parser.words.size() << " words\n";
-      output_file << parser.links.size() << " links\n\n";
-      output_file << html;
-      output_file << "\n\n";
-      for (auto& word : parser.words) output_file << word << ' ';
+      // If link starts with '/', add the domain to the beginning
+      // of it
+      if (next_url[0] == '/') {
+        next_url = url.substr(0, 8) + getHostFromUrl(url) + next_url;
+      }
 
-      output_file.close();
-       */
-      // --------------------------------------------------
-      pthread_t t;
-      pthread_create(
-          &t, NULL, add_to_index,
-          new Args{std::move(parser), std::move(url), static_rank, thread_id});
-      pthread_detach(t);
-      // std::cout << '\n';
+      if (!check_url(next_url)) {
+        continue;
+      }
+
+      add_url(next_url, static_rank);
     }
+
+    // --------------------------------------------------
+    pthread_t t;
+    pthread_create(
+        &t, NULL, add_to_index,
+        new Args{std::move(parser), std::move(url), static_rank, thread_id});
+    pthread_detach(t);
   }
   return NULL;
 }

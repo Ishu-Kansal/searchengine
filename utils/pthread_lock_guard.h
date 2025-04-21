@@ -2,7 +2,7 @@
 
 #include <pthread.h>
 
-struct adopt_lock_t {};
+struct padopt_lock_t {};
 
 class pthread_lock_guard {
  public:
@@ -10,7 +10,7 @@ class pthread_lock_guard {
     pthread_mutex_lock(&lock);
   }
 
-  pthread_lock_guard(pthread_mutex_t &lock, adopt_lock_t) : lock{lock} {}
+  pthread_lock_guard(pthread_mutex_t &lock, padopt_lock_t) : lock{lock} {}
   pthread_lock_guard(const pthread_mutex_t &) = delete;
   pthread_lock_guard &operator=(const pthread_mutex_t &) = delete;
 

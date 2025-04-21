@@ -1,8 +1,11 @@
+#pragma once
+
 #include <cstdint>
 
-constexpr int MAX_EXPECTED_LINKS = 1000'000;
-constexpr uint64_t MAX_QUEUE_SIZE = 100'000;
-constexpr uint64_t MAX_VECTOR_SIZE = 20'000;
+constexpr int MAX_EXPECTED_LINKS = 1'000'000;
+constexpr uint32_t MAX_PROCESSED = 10;
+// constexpr uint64_t MAX_QUEUE_SIZE = 100'000;
+constexpr uint64_t MAX_VECTOR_SIZE = 100'000;
 constexpr uint64_t NUM_RANDOM = 10'000;
 constexpr uint64_t TOP_K_ELEMENTS = 7'500;
 constexpr double MAX_FALSE_POSITIVE_RATE = 1e-2;

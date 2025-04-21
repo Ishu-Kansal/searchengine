@@ -1,10 +1,16 @@
 #include <pthread.h>
+#include <semaphore.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <cassert>
 #include <cstdint>
 #include <iostream>
 #include <string>
+
+#include "constants.h"
+
+sem_t *sem{};
 
 void *spawner(void *arg) {
   const uint32_t id = (uint64_t)(arg);
@@ -18,6 +24,7 @@ void *spawner(void *arg) {
       execl("./crawler", "crawler", id_str.c_str(), NULL);
     }
   }
+  sem_post(sem);
   return NULL;
 }
 
@@ -35,20 +42,32 @@ void *create_dispatcher(void *) {
 }
 
 int main(int argc, char **argv) {
-  if (argc != 2) {
-    std::cerr << "Usage: ./script [num_crawlers]";
+  if (argc != 3) {
+    std::cerr << "Usage: ./script [num_batches] [crawlers_per_batch]";
     return 1;
   }
 
   pthread_t dispatcher;
   pthread_create(&dispatcher, NULL, create_dispatcher, NULL);
 
-  const int NUM_CRAWLERS = atoi(argv[1]);
-  pthread_t threads[NUM_CRAWLERS];
-  for (uint64_t i = 0; i < NUM_CRAWLERS; ++i) {
+  const int NUM_BATCHES = atoi(argv[1]);
+  const int CRAWLERS_PER_BATCH = atoi(argv[2]);
+  const int TOTAL = NUM_BATCHES * CRAWLERS_PER_BATCH;
+
+  assert(TOTAL * MAX_PROCESSED == 10);
+
+  pthread_t threads[TOTAL];
+
+  sem_unlink("/script_sem");
+  sem = sem_open("/script_sem", O_CREAT, 0666, CRAWLERS_PER_BATCH);
+  assert(sem != SEM_FAILED);
+
+  for (int i = 0; i < TOTAL; ++i) {
+    sem_wait(sem);
     pthread_create(threads + i, NULL, spawner, (void *)(i));
   }
-  for (uint64_t i = 0; i < NUM_CRAWLERS; ++i) {
+
+  for (uint64_t i = 0; i < TOTAL; ++i) {
     pthread_join(threads[i], NULL);
   }
 
