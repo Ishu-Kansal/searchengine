@@ -54,14 +54,15 @@ static constexpr std::string_view UNWANTED_LRM = "&lrm";
 static constexpr std::string_view UNWANTED_RLM = "&rlm";
 static constexpr size_t MAX_WORD_LENGTH = 50;
 
-IndexChunk chunk{};
-
 const static int NUM_THREADS = 16;  // start small
+const static int NUM_CHUNKS = 10;   // start small
 
 uint32_t STATIC_RANK = 0;  // temp global variable
 
 std::queue<std::string> explore_queue{};
 std::vector<std::pair<std::string, uint32_t>> links_vector;
+IndexChunk chunks[NUM_CHUNKS];
+pthread_mutex_t chunk_locks[NUM_CHUNKS];
 sem_t* sems[NUM_THREADS];
 
 pthread_mutex_t queue_lock{};
@@ -340,8 +341,11 @@ void* add_to_index(void* addr) {
   return NULL;
 #endif
 
+  auto idx = arg->thread_id % NUM_CHUNKS;
+  auto& chunk = chunks[idx];
+
   if (arg->parser.isEnglish) {
-    pthread_lock_guard guard{chunk_lock};
+    pthread_lock_guard guard{chunk_locks[idx]};
     const uint16_t urlLength = arg->url.size();
     chunk.add_url(arg->url, arg->static_rank);
 
@@ -451,12 +455,16 @@ int main(int argc, char** argv) {
   signal(SIGPIPE, SIG_IGN);
 
   int id = atoi(argv[0]);
+  assert(id < 100);
 
   std::vector<std::string> sem_names{};
   for (int i = 0; i < NUM_THREADS; ++i) {
     sem_names.push_back("/sem_" + std::to_string(i));
     sem_unlink(sem_names[i].data());
   }
+
+  for (int i = 0; i < NUM_CHUNKS; ++i)
+    pthread_mutex_init(chunk_locks + i, NULL);
 
   /*for (const auto& url : seed_urls) {
     explore_queue.push(url);
@@ -483,13 +491,12 @@ int main(int argc, char** argv) {
 
   std::cout << "FINISHED THREADS...\n";
 
-  IndexFile chunkFile(id, chunk);
+  // IndexFile chunkFile(id, chunk);
 
   pthread_mutex_destroy(&queue_lock);
   pthread_mutex_destroy(&chunk_lock);
   pthread_mutex_destroy(&cout_lock);
-  // for (int i = 0; i < NUM_CHUNKS; ++i) IndexChunk::Write(chunks[i].chunk,
-  // i);
+  for (int i = 0; i < NUM_CHUNKS; ++i) IndexFile(id * 100 + i, chunks[i]);
 
   // std::cout << "Time taken: " << duration.count() << " ms" << std::endl;
   return 0;
