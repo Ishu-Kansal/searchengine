@@ -56,7 +56,7 @@ enum DomainWeights : int {
   LESSRELEVANT = 1,
   RELEVANT = 2,
   ORG = 3,
-  IMPORTANT = 4
+  IMPORTANT = 2
 };
 
 enum UrlLengths : int {
@@ -148,7 +148,6 @@ struct DomainWeight {
   int weight;
 };
 
-
 // branchless
 int get_domain_weight(cstring_view domain) {
   if (domain.size() < 2) return NONRECOGNIZED;
@@ -225,18 +224,23 @@ get_domain_weight(key);
 // computes the static rank of an individual page given the URl and the parser
 // object
 double get_static_rank(cstring_view url, const HtmlParser &parser) {
-  // std::cout << std::endl << "Num images weight: " << parser.img_count << " -> " << get_numImages_weight(parser.img_count) << std::endl;
-  // std::cout << "Num links weight: " << parser.links.size() << " -> " << get_numLinks_weight(parser.links.size()) << std::endl;
-  // std::cout << "Domain weight: " << get_top_level_domain(url) << " -> " << get_domain_weight(get_top_level_domain(url)) << std::endl;
-  // std::cout << "Document length weight: " << parser.words.size() << " -> " << get_document_length_weight(parser.words) << std::endl;
-  // std::cout << "URL length weight: " << url.size() << " -> " << get_url_length_weight(url.size()) << std::endl;
+  // std::cout << std::endl << "Num images weight: " << parser.img_count << " ->
+  // " << get_numImages_weight(parser.img_count) << std::endl; std::cout << "Num
+  // links weight: " << parser.links.size() << " -> " <<
+  // get_numLinks_weight(parser.links.size()) << std::endl; std::cout << "Domain
+  // weight: " << get_top_level_domain(url) << " -> " <<
+  // get_domain_weight(get_top_level_domain(url)) << std::endl; std::cout <<
+  // "Document length weight: " << parser.words.size() << " -> " <<
+  // get_document_length_weight(parser.words) << std::endl; std::cout << "URL
+  // length weight: " << url.size() << " -> " <<
+  // get_url_length_weight(url.size()) << std::endl;
 
   int static_rank = get_numImages_weight(parser.img_count) +
                     get_numLinks_weight(parser.links.size()) +
                     get_domain_weight(get_top_level_domain(url)) +
                     get_document_length_weight(parser.words) +
                     get_url_length_weight(url.size());
-  
+
   if (static_rank >= 0) {
     return static_rank;
   }

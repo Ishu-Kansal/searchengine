@@ -174,25 +174,23 @@ void get_handler(int fd) {
   send(fd, next.data(), next.size(), 0);
   num_processed++;
   if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
-  if (num_processed % 1000 == 0) saver();
+  if (num_processed % DISPATCHER_SAVE_RATE == 0) saver();
 }
 
 void add_handler(int fd, uint64_t size) {
   {
-    pthread_lock_guard _{queue_lock};
+    pthread_lock_guard guard{queue_lock};
     if (size <= sizeof(uint64_t) || links_vector.size() > MAX_VECTOR_SIZE)
       return;
   }
-  std::string req(size, 0);
-  ssize_t bytes = 0;
   uint64_t rank = 0;
-  if ((bytes = recv(fd, req.data(), req.size(), MSG_WAITALL)) <= 0) {
-    return;
-  }
-  memcpy(&rank, req.data(), sizeof(rank));
-  auto url = req.substr(sizeof(rank));
+  ssize_t bytes = 0;
+  std::string url(size - sizeof(rank), 0);
+  if (url.size() == 0) return;
+  if ((bytes = recv(fd, &rank, sizeof(rank), MSG_WAITALL)) <= 0) return;
+  if ((bytes = recv(fd, url.data(), url.size(), MSG_WAITALL)) <= 0) return;
 
-  pthread_lock_guard _{queue_lock};
+  pthread_lock_guard guard{queue_lock};
   if (links_vector.size() < MAX_VECTOR_SIZE && !bf.contains(url)) {
     bf.insert(url);
     links_vector.emplace_back(std::move(url), rank);
@@ -200,13 +198,7 @@ void add_handler(int fd, uint64_t size) {
 }
 
 void *handler(void *fd) {
-  /*static const cstring_view GET_COMMAND{"GET"};
-  static const cstring_view ADD_COMMAND{"ADD"};
-  static const cstring_view SAVE_COMMAND{"SAVE"};
-  static const cstring_view SAVE_CONFIRMED{"CONFIRMED"};*/
-  int *t = reinterpret_cast<int *>(fd);
-  const int sock = *t;
-  std::unique_ptr<int> _{t};
+  int sock = (uint64_t)(fd);
   SocketWrapper sock_{sock};
   header_t val;
   if (recv(sock, &val, sizeof(val), 0) <= 0) {
@@ -229,6 +221,7 @@ void init_dispatcher() {
     if2 >> num_processed;
   } else {
     bf = Bloomfilter(MAX_EXPECTED_LINKS, MAX_FALSE_POSITIVE_RATE);
+    std::cout << bf.bloomFilter.size() << std::endl;
     std::ifstream infile("seed_list.txt");
     if (!infile.is_open()) {
       std::cerr << "Failed to open seed list" << std::endl;
@@ -246,6 +239,7 @@ void init_dispatcher() {
 }
 
 int main(int argc, char **argv) {
+  std::cout << "STARTING DISPATCHER...\n";
   signal(SIGPIPE, SIG_IGN);
   int res = pthread_mutex_init(&queue_lock, NULL);
   if (res != 0) return 1;
@@ -279,7 +273,7 @@ int main(int argc, char **argv) {
                        reinterpret_cast<socklen_t *>(&len));
     if (newfd == -1) continue;
     pthread_t temp;
-    pthread_create(&temp, NULL, handler, new int{newfd});
+    pthread_create(&temp, NULL, handler, (void *)(uint64_t)(newfd));
     pthread_detach(temp);
   }
 }

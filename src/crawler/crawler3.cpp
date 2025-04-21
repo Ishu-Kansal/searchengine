@@ -54,17 +54,16 @@ static constexpr std::string_view UNWANTED_LRM = "&lrm";
 static constexpr std::string_view UNWANTED_RLM = "&rlm";
 static constexpr size_t MAX_WORD_LENGTH = 50;
 
-constexpr uint32_t MAX_PROCESSED = 100'000;
-constexpr uint32_t NUM_CHUNKS = 1;
-
-IndexChunk chunk{};
-
 const static int NUM_THREADS = 16;  // start small
+const static int NUM_CHUNKS = 10;   // start small
 
 uint32_t STATIC_RANK = 0;  // temp global variable
 
 std::queue<std::string> explore_queue{};
 std::vector<std::pair<std::string, uint32_t>> links_vector;
+IndexChunk chunks[NUM_CHUNKS];
+pthread_mutex_t chunk_locks[NUM_CHUNKS];
+sem_t* sems[NUM_THREADS];
 
 pthread_mutex_t queue_lock{};
 pthread_mutex_t chunk_lock{};
@@ -106,7 +105,7 @@ std::string get_string() {
 
 void add_url(cstring_view url, uint64_t rank) {
   int sock = get_socket(1);
-  if (sock == -1) return;
+  if (sock == -1 || url.empty()) return;
   SocketWrapper _{sock};
   header_t header = sizeof(rank) + url.size();
   send(sock, &header, sizeof(header), 0);
@@ -342,8 +341,11 @@ void* add_to_index(void* addr) {
   return NULL;
 #endif
 
-  pthread_lock_guard _{chunk_lock};
+  auto idx = arg->thread_id % NUM_CHUNKS;
+  auto& chunk = chunks[idx];
+
   if (arg->parser.isEnglish) {
+    pthread_lock_guard guard{chunk_locks[idx]};
     const uint16_t urlLength = arg->url.size();
     chunk.add_url(arg->url, arg->static_rank);
 
@@ -373,30 +375,22 @@ void* add_to_index(void* addr) {
 
     chunk.add_enddoc();
   }
+  sem_post(sems[arg->thread_id]);
   delete arg;
   return NULL;
 }
 
-void* runner(void*) {
+void* runner(void* arg) {
   // const static thread_local pid_t thread_id = syscall(SYS_gettid);
-  const static thread_local auto thread_id = rand() % NUM_CHUNKS;
+  const unsigned int thread_id = (uint64_t)(arg);
   bool done = false;
   while (!done) {
     // Get the next url to be processed
     std::string url = get_string();
     if (url.empty()) {
-      sleep(10);
+      sleep(1);
       continue;
     }
-
-    // Print the url that is being processed
-    // std::cout << "-----------------" << '\n';
-    // std::cout << url << '\n';
-    // std::cout << "-----------------" << '\n';
-
-    // std::cout << "URL length: " << url.size() << std::endl;
-    // std::cout << "Size of link vector: " << links_vector.size()
-    // << std::endl;
 
     pthread_t thread;
 
@@ -423,68 +417,36 @@ void* runner(void*) {
       num_processed++;
       if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
       if (num_processed > MAX_PROCESSED) done = true;
+    }
 
-      if (links_vector.size() < MAX_QUEUE_SIZE) {
-        for (auto& link : parser.links) {
-          std::string next_url = std::move(link.URL);
+    for (auto& link : parser.links) {
+      std::string next_url = std::move(link.URL);
 
-          // Ignore links that begin with '#' or '?'
-          if (next_url[0] == '#' || next_url[0] == '?') {
-            continue;
-          }
-
-          // If link starts with '/', add the domain to the beginning
-          // of it
-          if (next_url[0] == '/') {
-            next_url = url.substr(0, 8) + getHostFromUrl(url) + next_url;
-          }
-
-          if (!check_url(next_url)) {
-            continue;
-          }
-
-          // If link has not been seen before, add it to the bf and
-          // links vector
-          add_url(next_url, static_rank);
-          /*if (!bf.contains(next_url)) {
-            bf.insert(next_url);
-            links_vector.emplace_back(next_url,
-                                      static_rank);  //
-          STATIC_RANK++}); sem_post(queue_sem);
-          }*/
-        }
-      }
-      // --------------------------------------------------
-      // For debugging (not needed for crawler to function)
-      /*std::string filename =
-          "./files/file" + std::to_string(num_processed) + ".txt";
-      std::ofstream output_file(filename);
-
-      if (!output_file) {
-        // std::cerr << "Error opening file!\n" << std::endl;
-        // std::cerr << url << std::endl;
+      // Ignore links that begin with '#' or '?'
+      if (next_url[0] == '#' || next_url[0] == '?') {
         continue;
       }
 
-      output_file << url << "\n\n";
-      /*output_file << "Number of links in queue: "
-                  << explore_queue.size() + links_vector.size() << "\n\n";
-      output_file << parser.words.size() << " words\n";
-      output_file << parser.links.size() << " links\n\n";
-      output_file << html;
-      output_file << "\n\n";
-      for (auto& word : parser.words) output_file << word << ' ';
+      // If link starts with '/', add the domain to the beginning
+      // of it
+      if (next_url[0] == '/') {
+        next_url = url.substr(0, 8) + getHostFromUrl(url) + next_url;
+      }
 
-      output_file.close();
-       */
-      // --------------------------------------------------
-      pthread_t t;
-      pthread_create(
-          &t, NULL, add_to_index,
-          new Args{std::move(parser), std::move(url), static_rank, thread_id});
-      pthread_detach(t);
-      // std::cout << '\n';
+      if (!check_url(next_url)) {
+        continue;
+      }
+
+      add_url(next_url, static_rank);
     }
+
+    // --------------------------------------------------
+    sem_wait(sems[thread_id]);
+    pthread_t t;
+    pthread_create(
+        &t, NULL, add_to_index,
+        new Args{std::move(parser), std::move(url), static_rank, thread_id});
+    pthread_detach(t);
   }
   return NULL;
 }
@@ -493,12 +455,16 @@ int main(int argc, char** argv) {
   signal(SIGPIPE, SIG_IGN);
 
   int id = atoi(argv[0]);
+  assert(id < 100);
 
   std::vector<std::string> sem_names{};
-  for (int i = 0; i < NUM_CHUNKS; ++i) {
+  for (int i = 0; i < NUM_THREADS; ++i) {
     sem_names.push_back("/sem_" + std::to_string(i));
     sem_unlink(sem_names[i].data());
   }
+
+  for (int i = 0; i < NUM_CHUNKS; ++i)
+    pthread_mutex_init(chunk_locks + i, NULL);
 
   /*for (const auto& url : seed_urls) {
     explore_queue.push(url);
@@ -514,22 +480,23 @@ int main(int argc, char** argv) {
 
   pthread_t threads[NUM_THREADS];
   for (int i = 0; i < NUM_THREADS; i++) {
-    pthread_create(threads + i, NULL, runner, NULL);
+    sems[i] = sem_open(sem_names[i].data(), O_CREAT, 0666, 1);
+    if (sems[i] == SEM_FAILED) assert(false);
+    pthread_create(threads + i, NULL, runner, (void*)(uint64_t)(i));
   }
   std::cout << "STARTED THREADS...\n";
   for (int i = 0; i < NUM_THREADS; i++) {
     pthread_join(threads[i], NULL);
   }
 
-  std::cout << "FINISHED THREADS/...\n";
+  std::cout << "FINISHED THREADS...\n";
 
-  IndexFile chunkFile(id, chunk);
+  // IndexFile chunkFile(id, chunk);
 
   pthread_mutex_destroy(&queue_lock);
   pthread_mutex_destroy(&chunk_lock);
   pthread_mutex_destroy(&cout_lock);
-  // for (int i = 0; i < NUM_CHUNKS; ++i) IndexChunk::Write(chunks[i].chunk,
-  // i);
+  for (int i = 0; i < NUM_CHUNKS; ++i) IndexFile(id * 100 + i, chunks[i]);
 
   // std::cout << "Time taken: " << duration.count() << " ms" << std::endl;
   return 0;
