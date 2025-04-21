@@ -220,6 +220,7 @@ void *handler(void *fd) {
 void init_dispatcher() {
   std::ifstream if1{queueName}, if2{statsName};
   if (if1.good()) {
+    std::cout << "Starting dispatcher from save state...\n";
     bf = Bloomfilter(filterName);
     std::string url;
     while (if1 >> url) explore_queue.push(url);
@@ -242,11 +243,13 @@ void init_dispatcher() {
 
 void *getter(void *arg) {
   int fd = (uint64_t)(arg);
+  SocketWrapper sock_{fd};
+  char c;
   while (true) {
-    char c;
-    while (recv(fd, &c, sizeof(c), MSG_WAITALL) > 0) {
+    if (recv(fd, &c, sizeof(c), MSG_WAITALL) != 0) {
       get_handler(fd);
-    }
+    } else
+      break;
   }
   return NULL;
 }
@@ -290,10 +293,11 @@ void *get_requests(void *) {
 
 void *adder(void *arg) {
   int fd = (uint64_t)(arg);
+  SocketWrapper sock_{fd};
+  size_t header;
+  uint64_t rank{};
   while (true) {
-    size_t header;
-    while (recv(fd, &header, sizeof(header), MSG_WAITALL) > 0) {
-      uint64_t rank{};
+    if (recv(fd, &header, sizeof(header), MSG_WAITALL) != 0) {
       std::string url(header - sizeof(rank), 0);
       if (recv(fd, &rank, sizeof(rank), MSG_WAITALL) <= 0) continue;
       if (recv(fd, url.data(), url.size(), MSG_WAITALL) <= 0) continue;
@@ -302,7 +306,8 @@ void *adder(void *arg) {
         bf.insert(url);
         links_vector.emplace_back(std::move(url), rank);
       }
-    }
+    } else
+      break;
   }
   return NULL;
 }

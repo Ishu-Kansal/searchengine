@@ -460,8 +460,8 @@ int main(int argc, char** argv) {
          getter_response_sem != SEM_FAILED && adder_request_sem != SEM_FAILED);
 
   pthread_t adder, getter;
-  pthread_create(&adder, NULL, url_adder, NULL);
-  pthread_create(&getter, NULL, url_getter, NULL);
+  assert(pthread_create(&adder, NULL, url_adder, NULL) == 0);
+  assert(pthread_create(&getter, NULL, url_getter, NULL) == 0);
 
   pthread_t threads[NUM_THREADS];
   for (int i = 0; i < NUM_THREADS; i++) {
