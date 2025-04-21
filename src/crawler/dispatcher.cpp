@@ -138,6 +138,7 @@ void saver() {
   std::cout << "Finished writing filter...\n";
 
   std::ofstream outputFile{queueName};
+  if (!outputFile) assert(false);
 
   int ctr = 0;
   std::queue<std::string> temp_queue{};
@@ -165,20 +166,6 @@ void saver() {
   statsFile.flush();
 }
 
-struct GetArgs {
-  std::string next;
-  int fd;
-};
-
-void *send_async(void *arg) {
-  GetArgs *args = (GetArgs *)(arg);
-  const size_t header = args->next.size();
-  send(args->fd, &header, sizeof(header), 0);
-  send(args->fd, args->next.data(), args->next.size(), 0);
-  close(args->fd);
-  delete args;
-}
-
 void get_handler(int fd) {
   std::string next = get_next_url();
 
@@ -186,10 +173,9 @@ void get_handler(int fd) {
   if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
   if (num_processed % DISPATCHER_SAVE_RATE == 0) saver();
 
-  GetArgs *ptr = new GetArgs{std::move(next), fd};
-  pthread_t t;
-  pthread_create(&t, NULL, send_async, (void *)(ptr));
-  pthread_detach(t);
+  const size_t header = next.size();
+  send(fd, &header, sizeof(header), 0);
+  send(fd, next.data(), next.size(), 0);
 }
 
 void add_handler(int fd, uint64_t size) {
@@ -209,16 +195,17 @@ void add_handler(int fd, uint64_t size) {
 
 void *handler(void *fd) {
   int sock = (uint64_t)(fd);
+  SocketWrapper sock_{sock};
+
   header_t val;
+
   if (recv(sock, &val, sizeof(val), 0) <= 0) {
-    close(sock);
     return NULL;
   }
   if (val == GET_COMMAND) {
     get_handler(sock);
   } else {
     add_handler(sock, val);
-    close(sock);
   }
   return NULL;
 }
@@ -279,13 +266,7 @@ int main(int argc, char **argv) {
   while (true) {
     int newfd = accept(sock, reinterpret_cast<sockaddr *>(&addr),
                        reinterpret_cast<socklen_t *>(&len));
-    if (newfd == -1) {
-      std::cout << "here\n";
-      continue;
-    }
+    if (newfd == -1) continue;
     handler((void *)(uint64_t)(newfd));
-    /*pthread_t temp;
-    pthread_create(&temp, NULL, handler, (void *)(uint64_t)(newfd));
-    pthread_detach(temp);*/
   }
 }
