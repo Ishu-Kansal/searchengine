@@ -2,6 +2,7 @@
 #include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <openssl/md5.h>
 #include <pthread.h>
 #include <semaphore.h>
@@ -55,7 +56,7 @@ static constexpr std::string_view UNWANTED_LRM = "&lrm";
 static constexpr std::string_view UNWANTED_RLM = "&rlm";
 static constexpr size_t MAX_WORD_LENGTH = 50;
 
-const static int NUM_THREADS = 16;  // start small
+const static int NUM_THREADS = 32;  // start small
 const static int NUM_CHUNKS = 10;   // start small
 
 uint32_t STATIC_RANK = 0;  // temp global variable
@@ -75,7 +76,7 @@ std::mt19937 mt{std::random_device{}()};
 
 std::atomic<int> ctr{};
 
-int get_socket(int timeout = 5) {
+int get_socket(int sec = 5, int msec = 0) {
   sockaddr_in address;
   address.sin_family = AF_INET;
   address.sin_port = htons(SERVER_PORT);             // Port number
@@ -83,12 +84,16 @@ int get_socket(int timeout = 5) {
 
   int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (sock == -1) return -1;
-  int res = connect(sock, (struct sockaddr*)&address, sizeof(address));
-  if (res == -1) return -1;
   struct timeval tv;
-  tv.tv_sec = timeout;  // 5 seconds
-  tv.tv_usec = 0;
-  res = setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+  tv.tv_sec = sec;  // 5 seconds
+  tv.tv_usec = msec;
+  int res =
+      setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+  if (res == -1) return -1;
+  int flag = 1;
+  res = setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+  if (res == -1) return -1;
+  res = connect(sock, (struct sockaddr*)&address, sizeof(address));
   if (res == -1) return -1;
   return sock;
 }
@@ -107,7 +112,7 @@ std::string get_string() {
 }
 
 void add_url(cstring_view url, uint64_t rank) {
-  int sock = get_socket(1);
+  int sock = get_socket(0, 10);
   if (sock == -1 || url.empty()) return;
   SocketWrapper _{sock};
   header_t header = sizeof(rank) + url.size();
@@ -420,7 +425,7 @@ void* runner(void* arg) {
     {
       pthread_lock_guard guard{queue_lock};
       num_processed++;
-      // if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
+      if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
       if (num_processed > MAX_PROCESSED) done = true;
     }
 
@@ -457,14 +462,10 @@ void* runner(void* arg) {
 }
 
 void* metric_collector(void*) {
-  std::chrono::steady_clock::time_point prev =
-      std::chrono::high_resolution_clock::now();
   while (true) {
-    if (std::chrono::high_resolution_clock::now() - prev >
-        std::chrono::duration(10s)) {
-      std::cout << "Num processed over last 10 seconds: " << ctr << '\n';
-      prev = std::chrono::high_resolution_clock::now();
-    };
+    ctr = 0;
+    sleep(10);
+    std::cout << "Num processed over last 10 seconds: " << ctr << '\n';
   }
 }
 

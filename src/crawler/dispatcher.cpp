@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include <netdb.h>
+#include <netinet/tcp.h>
 #include <pthread.h>
 #include <signal.h>
 #include <sys/socket.h>
@@ -246,6 +247,10 @@ int main(int argc, char **argv) {
 
   int opt = 1;
   int opt_res = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+  assert(opt_res != -1);
+
+  int flag = 1;
+  opt_res = setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
   assert(opt_res != -1);
 
   sockaddr_in addr{};  // initializes with zeroes
