@@ -56,7 +56,7 @@ static constexpr std::string_view UNWANTED_LRM = "&lrm";
 static constexpr std::string_view UNWANTED_RLM = "&rlm";
 static constexpr size_t MAX_WORD_LENGTH = 50;
 
-const static int NUM_THREADS = 32;  // start small
+const static int NUM_THREADS = 64;  // start small
 const static int NUM_CHUNKS = 10;   // start small
 
 uint32_t STATIC_RANK = 0;  // temp global variable
@@ -71,54 +71,108 @@ pthread_mutex_t queue_lock{};
 pthread_mutex_t chunk_lock{};
 pthread_mutex_t cout_lock{};
 sem_t* queue_sem;
-uint32_t num_processed{};
+// uint32_t num_processed{};
 std::mt19937 mt{std::random_device{}()};
 
-std::atomic<int> ctr{};
+std::atomic<int> ctr{}, num_processed{};
 
-int get_socket(int sec = 5, int msec = 0) {
+pthread_mutex_t getter_lock{};
+sem_t* getter_request_sem{};
+sem_t* getter_response_sem{};
+
+pthread_mutex_t adder_lock{};
+sem_t* adder_request_sem{};
+
+std::vector<std::string> getterQueue{};
+std::vector<std::pair<std::string, uint64_t>> adderQueue{};
+
+int adder_socket;
+
+void* url_getter(void*) {
   sockaddr_in address;
   address.sin_family = AF_INET;
-  address.sin_port = htons(SERVER_PORT);             // Port number
+  address.sin_port = htons(GET_PORT);                // Port number
   address.sin_addr.s_addr = inet_addr("127.0.0.1");  // Server IP
 
   int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (sock == -1) return -1;
-  struct timeval tv;
-  tv.tv_sec = sec;  // 5 seconds
-  tv.tv_usec = msec;
-  int res =
-      setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
-  if (res == -1) return -1;
+  assert(sock != -1);
+
   int flag = 1;
-  res = setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
-  if (res == -1) return -1;
+  int res = setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+  assert(res != -1);
+
   res = connect(sock, (struct sockaddr*)&address, sizeof(address));
-  if (res == -1) return -1;
-  return sock;
+  assert(res != -1);
+
+  bool req = 1;
+  size_t header{};
+
+  while (true) {
+    sem_wait(getter_request_sem);
+    send(sock, &req, sizeof(req), 0);
+    recv(sock, &header, sizeof(header), MSG_WAITALL);
+    std::string next_url(header, 0);
+    recv(sock, next_url.data(), next_url.size(), MSG_WAITALL);
+    {
+      pthread_lock_guard guard{getter_lock};
+      getterQueue.emplace_back(std::move(next_url));
+      sem_post(getter_response_sem);
+    }
+  }
 }
 
 std::string get_string() {
-  const int sock = get_socket(5);
-  if (sock == -1) return "";
-  SocketWrapper _{sock};
-  int res = send(sock, &GET_COMMAND, sizeof(GET_COMMAND), 0);
-  if (res == -1) return "";
-  size_t header = 0;
-  if (recv(sock, &header, sizeof(header), 0) <= 0 || header == 0) return "";
-  std::string result(header, 0);
-  if (recv(sock, result.data(), result.size(), MSG_WAITALL) <= 0) return "";
+  sem_post(getter_request_sem);
+  sem_wait(getter_response_sem);
+  pthread_lock_guard guard{getter_lock};
+  std::string result = std::move(getterQueue.back());
+  getterQueue.pop_back();
   return result;
 }
 
-void add_url(cstring_view url, uint64_t rank) {
-  int sock = get_socket(0, 10);
-  if (sock == -1 || url.empty()) return;
-  SocketWrapper _{sock};
-  header_t header = sizeof(rank) + url.size();
-  send(sock, &header, sizeof(header), 0);
-  send(sock, &rank, sizeof(rank), 0);
-  send(sock, url.data(), url.size(), 0);
+void* url_adder(void*) {
+  sockaddr_in address;
+  address.sin_family = AF_INET;
+  address.sin_port = htons(ADD_PORT);                // Port number
+  address.sin_addr.s_addr = inet_addr("127.0.0.1");  // Server IP
+
+  int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  assert(sock != -1);
+
+  int flag = 1;
+  int res = setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+  assert(res != -1);
+
+  res = connect(sock, (struct sockaddr*)&address, sizeof(address));
+  assert(res != -1);
+
+  bool req = 1;
+  size_t header{};
+  std::string next;
+  uint64_t rank;
+
+  while (true) {
+    for (int i = 0; i < 10'000; ++i) {
+      sem_wait(adder_request_sem);
+      {
+        pthread_lock_guard guard{adder_lock};
+        std::tie(next, rank) = std::move(adderQueue.back());
+        adderQueue.pop_back();
+        size_t header = sizeof(size_t) + next.size();
+        send(sock, &header, sizeof(header), 0);
+        send(sock, &rank, sizeof(rank), 0);
+        send(sock, next.data(), next.size(), 0);
+      }
+    }
+    sleep(1);
+  }
+}
+
+void add_url(std::string&& url, uint64_t rank) {
+  pthread_lock_guard guard{adder_lock};
+  if (adderQueue.size() > MAX_QUEUE_SIZE || url.empty()) return;
+  adderQueue.emplace_back(std::move(url), rank);
+  sem_post(adder_request_sem);
 }
 
 bool isEnglish(const std::string& s) {
@@ -189,110 +243,6 @@ std::vector<std::string> splitHyphenWords(const std::string& word) {
     parts.push_back(word);
   }
   return parts;
-}
-
-int partition(int left, int right, int pivot_index) {
-  int pivot_rank = links_vector[pivot_index].second;
-
-  // Move the pivot to the end
-  std::swap(links_vector[pivot_index], links_vector[right]);
-
-  // Move all less ranked elements to the left
-  int store_index = left;
-  for (int i = left; i < right; i++) {
-    if (links_vector[i].second < pivot_rank) {
-      std::swap(links_vector[store_index], links_vector[i]);
-      store_index += 1;
-    }
-  }
-
-  // Move the pivot to its final place
-  std::swap(links_vector[right], links_vector[store_index]);
-
-  return store_index;
-}
-
-void quickselect(int left, int right, int k) {
-  if (left >= right) {
-    return;
-  }
-
-  std::uniform_int_distribution<> gen(left, right - 1);
-  int pivot_index = gen(mt);
-
-  // Find the pivot position in a sorted list
-  pivot_index = partition(left, right, pivot_index);
-
-  // If the pivot is in its final sorted position
-  if (k == pivot_index) {
-    return;
-  } else if (k < pivot_index) {
-    // go left
-    quickselect(left, pivot_index - 1, k);
-  } else {
-    // go right
-    quickselect(pivot_index + 1, right, k);
-  }
-}
-
-void fill_queue() {
-  // std::cout << "Enter fill_queue()" << std::endl;
-  uint32_t links_vector_size = links_vector.size();
-
-  if (explore_queue.empty() && links_vector_size > MAX_VECTOR_SIZE) {
-    // std::cout << "Here1" << std::endl;
-    // Establish range for uniform random num gen
-    // Range is from 0 to the last element in the vector
-    std::uniform_int_distribution<> gen{0, int(links_vector_size - 1)};
-    // std::cout << "Here2" << std::endl;
-
-    // Generates N random elements and moves them to the end
-    for (size_t t = links_vector_size - 1; t > links_vector_size - NUM_RANDOM;
-         t--) {
-      std::swap(links_vector[gen(mt)], links_vector[t]);
-    }
-    // std::cout << "Here3" << std::endl;
-
-    // Sorts the last N elements of the vector
-    quickselect(links_vector_size - NUM_RANDOM, links_vector_size - 1,
-                NUM_RANDOM - TOP_K_ELEMENTS);
-
-    // std::cout << "Here4" << std::endl;
-
-    // Takes last K from vector and adds its to queue
-    for (size_t i = 0; i < TOP_K_ELEMENTS; ++i) {
-      explore_queue.push(std::move(links_vector.back().first));
-      links_vector.pop_back();
-    }
-  }
-  // std::cout << "Exit fill_queue()" << std::endl;
-}
-
-std::string get_next_url() {
-  sem_wait(queue_sem);
-  pthread_lock_guard guard{queue_lock};
-
-  size_t links_vector_size = links_vector.size();
-  std::string url;
-
-  if (!explore_queue.empty()) {
-    // std::cout << "Pull url from explore queue" << std::endl;
-    url = std::move(explore_queue.front());
-    explore_queue.pop();
-  } else if (links_vector_size > MAX_VECTOR_SIZE) {
-    // std::cout << "Explore queue empty, fill queue with links from vector"
-    // << std::endl;
-    fill_queue();
-    url = std::move(explore_queue.front());
-    explore_queue.pop();
-  } else {
-    // std::cout << "Explore queue empty, use last link from vector"
-    // << std::endl;
-    url = std::move(links_vector.back().first);
-    links_vector.pop_back();
-  }
-
-  return url;
 }
 
 std::string getHostFromUrl(const std::string& url) {
@@ -396,12 +346,11 @@ void* runner(void* arg) {
   while (!done) {
     // Get the next url to be processed
     std::string url = get_string();
+
     if (url.empty()) {
       sleep(1);
       continue;
     }
-
-    pthread_t thread;
 
     ThreadArgs args = {url, "", -1};
 
@@ -412,21 +361,19 @@ void* runner(void* arg) {
 
     // Continue if html code was not retrieved
     if (args.status != 0) {
-      // std::cout << "Status " << args.status << std::endl;
+      std::cout << "Status " << args.status << std::endl;
       // std::cout << "Could not retrieve HTML\n" << std::endl;
       continue;
     }
-
     // Parse the html code
     std::string& html = args.html;
     HtmlParser parser(html.data(), html.size());
     int static_rank = get_static_rank(cstring_view{url}, parser);
     // Process links found by the parser
     {
-      pthread_lock_guard guard{queue_lock};
-      num_processed++;
-      if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
-      if (num_processed > MAX_PROCESSED) done = true;
+      auto it = num_processed++;
+      if (it % 1000 == 0) std::cout << it << std::endl;
+      if (it > MAX_PROCESSED) done = true;
     }
 
     for (auto& link : parser.links) {
@@ -447,9 +394,8 @@ void* runner(void* arg) {
         continue;
       }
 
-      add_url(next_url, static_rank);
+      add_url(std::move(next_url), static_rank);
     }
-
     // --------------------------------------------------
     sem_wait(sems[thread_id]);
     pthread_t t;
@@ -498,6 +444,24 @@ int main(int argc, char** argv) {
 
   pthread_t ctr_thread;
   pthread_create(&ctr_thread, NULL, metric_collector, NULL);
+
+  assert(!pthread_mutex_init(&getter_lock, NULL));
+  assert(!pthread_mutex_init(&adder_lock, NULL));
+
+  sem_unlink("/getter_request_sem");
+  sem_unlink("/getter_response_sem");
+  sem_unlink("/adder_request_sem");
+
+  getter_request_sem = sem_open("/getter_request_sem", O_CREAT, 0666, 0);
+  getter_response_sem = sem_open("/getter_response_sem", O_CREAT, 0666, 0);
+  adder_request_sem = sem_open("/adder_request_sem", O_CREAT, 0666, 0);
+
+  assert(getter_request_sem != SEM_FAILED &&
+         getter_response_sem != SEM_FAILED && adder_request_sem != SEM_FAILED);
+
+  pthread_t adder, getter;
+  pthread_create(&adder, NULL, url_adder, NULL);
+  pthread_create(&getter, NULL, url_getter, NULL);
 
   pthread_t threads[NUM_THREADS];
   for (int i = 0; i < NUM_THREADS; i++) {

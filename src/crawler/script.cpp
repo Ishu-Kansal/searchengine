@@ -51,11 +51,14 @@ int main(int argc, char **argv) {
   pthread_t dispatcher;
   pthread_create(&dispatcher, NULL, create_dispatcher, NULL);
 
+  sleep(2);
+
   const int NUM_BATCHES = atoi(argv[1]);
   const int CRAWLERS_PER_BATCH = atoi(argv[2]);
   const int TOTAL = NUM_BATCHES * CRAWLERS_PER_BATCH;
 
-  assert(TOTAL * MAX_PROCESSED == 10'000'000);
+  // assert(TOTAL * MAX_PROCESSED == 10'000'000);
+  std::cout << "Total processed: " << TOTAL * MAX_PROCESSED << '\n';
 
   pthread_t threads[TOTAL];
 

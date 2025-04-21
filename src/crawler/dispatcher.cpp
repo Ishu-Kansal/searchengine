@@ -30,6 +30,8 @@ std::vector<std::pair<std::string, uint32_t>> links_vector{};
 
 uint64_t num_processed{};
 
+pthread_mutex_t queue_lock{};
+
 int partition(int left, int right, int pivot_index) {
   int pivot_rank = links_vector[pivot_index].second;
 
@@ -168,12 +170,15 @@ void saver() {
 }
 
 void get_handler(int fd) {
-  std::string next = get_next_url();
+  std::string next;
+  {
+    pthread_lock_guard guard{queue_lock};
+    next = get_next_url();
 
-  num_processed++;
-  if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
-  if (num_processed % DISPATCHER_SAVE_RATE == 0) saver();
-
+    num_processed++;
+    if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
+    if (num_processed % DISPATCHER_SAVE_RATE == 0) saver();
+  }
   const size_t header = next.size();
   send(fd, &header, sizeof(header), 0);
   send(fd, next.data(), next.size(), 0);
@@ -226,9 +231,7 @@ void init_dispatcher() {
       exit(EXIT_FAILURE);
     }
     std::string line;
-    std::uniform_int_distribution<> pushDist(1, 25);
     while (std::getline(infile, line)) {
-      if (line.empty() || pushDist(mt) != 1) continue;
       explore_queue.push(line);
       bf.insert(line);
     }
@@ -236,12 +239,18 @@ void init_dispatcher() {
   }
 }
 
-int main(int argc, char **argv) {
-  std::cout << "STARTING DISPATCHER...\n";
-  signal(SIGPIPE, SIG_IGN);
+void *getter(void *arg) {
+  int fd = (uint64_t)(arg);
+  while (true) {
+    char c;
+    while (recv(fd, &c, sizeof(c), MSG_WAITALL) > 0) {
+      get_handler(fd);
+    }
+  }
+  return NULL;
+}
 
-  init_dispatcher();
-
+void *get_requests(void *) {
   int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   assert(sock != -1);
 
@@ -256,7 +265,7 @@ int main(int argc, char **argv) {
   sockaddr_in addr{};  // initializes with zeroes
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  addr.sin_port = htons(SERVER_PORT);
+  addr.sin_port = htons(GET_PORT);
 
   int bind_res = bind(sock, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
   assert(bind_res != -1);
@@ -272,6 +281,80 @@ int main(int argc, char **argv) {
     int newfd = accept(sock, reinterpret_cast<sockaddr *>(&addr),
                        reinterpret_cast<socklen_t *>(&len));
     if (newfd == -1) continue;
-    handler((void *)(uint64_t)(newfd));
+    pthread_t thread;
+    pthread_create(&thread, NULL, getter, (void *)(uint64_t)(newfd));
+    pthread_detach(thread);
   }
+}
+
+void *adder(void *arg) {
+  int fd = (uint64_t)(arg);
+  while (true) {
+    size_t header;
+    while (recv(fd, &header, sizeof(header), MSG_WAITALL) > 0) {
+      uint64_t rank{};
+      std::string url(header - sizeof(rank), 0);
+      if (recv(fd, &rank, sizeof(rank), MSG_WAITALL) <= 0) continue;
+      if (recv(fd, url.data(), url.size(), MSG_WAITALL) <= 0) continue;
+      pthread_lock_guard guard{queue_lock};
+      if (links_vector.size() < MAX_VECTOR_SIZE && !bf.contains(url)) {
+        bf.insert(url);
+        links_vector.emplace_back(std::move(url), rank);
+      }
+    }
+  }
+  return NULL;
+}
+
+void *add_requests(void *) {
+  int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  assert(sock != -1);
+
+  int opt = 1;
+  int opt_res = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+  assert(opt_res != -1);
+
+  int flag = 1;
+  opt_res = setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+  assert(opt_res != -1);
+
+  sockaddr_in addr{};  // initializes with zeroes
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  addr.sin_port = htons(ADD_PORT);
+
+  int bind_res = bind(sock, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
+  assert(bind_res != -1);
+
+  unsigned int len = sizeof(addr);
+
+  int listen_res = listen(sock, 100);
+  assert(listen_res != -1);
+
+  memset(&addr, 0, sizeof(addr));
+
+  while (true) {
+    int newfd = accept(sock, reinterpret_cast<sockaddr *>(&addr),
+                       reinterpret_cast<socklen_t *>(&len));
+    if (newfd == -1) continue;
+    pthread_t thread;
+    pthread_create(&thread, NULL, adder, (void *)(uint64_t)(newfd));
+    pthread_detach(thread);
+  }
+}
+
+int main(int argc, char **argv) {
+  std::cout << "STARTING DISPATCHER...\n";
+
+  signal(SIGPIPE, SIG_IGN);
+
+  init_dispatcher();
+
+  pthread_mutex_init(&queue_lock, NULL);
+
+  pthread_t getter, adder;
+  pthread_create(&getter, NULL, get_requests, NULL);
+  pthread_create(&adder, NULL, add_requests, NULL);
+  pthread_join(getter, NULL);
+  pthread_join(adder, NULL);
 }
