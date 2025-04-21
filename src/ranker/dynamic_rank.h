@@ -27,9 +27,9 @@ struct AnchorTermIndex
 
 // Weights for computing the score of specific ranking components, enums for quick readjusting and no magic numbers
 enum DynamicWeights: int {
-   SHORTSPANSWEIGHT = 64,
-   TOPSPANSWEIGHT = 32,
-   NEARTOPWEIGHT = 2,
+   SHORTSPANSWEIGHT = 32,
+   TOPSPANSWEIGHT = 16,
+   NEARTOPWEIGHT = 1,
 };
 
 
@@ -74,7 +74,7 @@ int get_rank_score(int nearTopAnchorCount, int shortSpans, int topSpans, bool is
 
    // declare individual ints below for debugging purposes
    int shortSpansResult = shortSpans * SHORTSPANSWEIGHT;
-   int nearTopAnchorResult = nearTopAnchorCount * NEARTOPWEIGHT;
+   int nearTopAnchorResult = nearTopAnchorCount;
    int topSpansResult = topSpans * TOPSPANSWEIGHT;
    // multiply by the type weight and the added up weights of the spans
    return sectionWeight * (shortSpansResult + nearTopAnchorResult + topSpansResult);

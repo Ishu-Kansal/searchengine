@@ -62,12 +62,12 @@ bool isEnglish(const std::string &s) {
       return;
     }
     // Gets rid of non english words
-    /*
+
       if (!isEnglish(s)) {
       s.clear();
       return;
     }
-    */
+  
   
     // Gets rid of '
     s.erase(std::remove(s.begin(), s.end(), '\''), s.end());
@@ -199,10 +199,8 @@ std::vector<UrlRank> run_engine(std::string& query, uint32_t numChunks,
 int main(int argc, char** argv) {
   const std::string data_filename = "websites_data.jsonl";
   const uint32_t numChunks = 10;
-
-  const uint32_t chunkNum = 0;
 /*
-  
+  const uint32_t chunkNum = 0;
 
   IndexChunk indexChunk;
   if (!build_index_from_file(data_filename, indexChunk))
@@ -218,7 +216,7 @@ int main(int argc, char** argv) {
 
   int matches = 0;
 
-  std::string test_query_1 = argc > 1 ? argv[1] : "umich engineering";
+  std::string test_query_1 = argc > 1 ? argv[1] : "apple apples";
   std::cout << "\n--- Running Query 1: [" << test_query_1 << "] ---"
             << std::endl;
   auto start = std::chrono::high_resolution_clock::now();
@@ -237,8 +235,5 @@ int main(int argc, char** argv) {
                 << std::endl;
     }
   }
-
-
-
   return 0;
 }

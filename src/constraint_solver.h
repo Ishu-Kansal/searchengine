@@ -2,11 +2,66 @@
 
 #include <string_view>
 #include <cctype>
-
+#include <algorithm>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cctype>
+#include <sstream>
 #include "isr/isr.h"
 #include "ranker/dynamic_rank.h"
 
 constexpr size_t TOTAL_DOCS_TO_RETURN = 100;
+constexpr size_t HOST_MATCH_SCORE = 100;
+constexpr size_t PATH_MATCH_SCORE = 50;
+constexpr size_t SEGEMENT_MATCH_SCORE = 25;
+
+constexpr std::array<float, 256> createReciprocalTable() 
+{
+  std::array<float, 256> table = {};
+  for (int i = 1; i < 256; ++i) 
+  {
+    table[i] = 1.0f / static_cast<float>(i);
+  }
+  table[0] = 0.0f; 
+  return table;
+}
+
+constexpr std::array<int, 256> createShortestSpanTable()
+{
+  std::array<int, 256> table = {};
+  for (int i = 1; i < 256; ++i)
+  {
+    table[i] = (i * (i + 1)) / 2;
+  }
+  table[0] = 0;
+  return table;
+}
+
+constexpr auto RECIPROCAL_TABLE = createReciprocalTable();
+constexpr auto SHORTEST_SPAN_TABLE = createShortestSpanTable();
+
+float HostMatchScore(int queryLen, int hostLen) 
+{
+  if (hostLen == 0) return 0.0f;
+  return queryLen * RECIPROCAL_TABLE[hostLen];
+}
+
+int getShortestSpan(int queryLen)
+{
+  return SHORTEST_SPAN_TABLE[queryLen];
+}
+
+struct ParsedUrlRanking 
+{
+  std::string host;               // e.g., "www.example.com", "example.co.uk:8080"
+  std::string path;               // e.g., "/", "/path/to/doc.html"
+  std::string first_path_segment; // e.g., "path" (from "/path/to/doc"), "blog" (from "/blog/")
+  bool isValid() const 
+  {
+      return !host.empty();
+  }
+};
 
 struct UrlRank 
 {
@@ -24,13 +79,14 @@ struct UrlRank
 
 };
 
-struct WordSortInfo {
+struct WordSortInfo 
+{
   int outerIndex;
   int innerIndex;
   int occurrences;
 
-bool operator<(const WordSortInfo& other) const 
-{
+  bool operator<(const WordSortInfo& other) const 
+  {
       if (occurrences != other.occurrences) 
       {
           return occurrences < other.occurrences;
@@ -99,6 +155,10 @@ void insertionSort(vector<UrlRank> & topRankedDocs, UrlRank & rankedDoc)
   topRankedDocs[pos] = std::move(docToInsert);
 }
 
+int calculateURLscore(std::string url)
+{
+
+}
 // actual constraint solver function
 std::vector<UrlRank> constraint_solver(
   std::unique_ptr<ISR> &queryISR,
@@ -126,7 +186,6 @@ std::vector<UrlRank> constraint_solver(
         }
         titleTerms.push_back(std::move(copiedInner));
     }
-
     
     for (int chunkNum = 0; chunkNum < numChunks; ++chunkNum)
     {
@@ -148,8 +207,8 @@ std::vector<UrlRank> constraint_solver(
           int docStartLoc = currLoc - currDelta;
         
           // use the index to get relevant doc data
-
           unique_ptr<Doc> doc = reader.FindUrl(index, chunkNum);
+          
           int dynamic_score = get_dynamic_rank(
             rarestTermInOrder,
             orderedQueryTerms, 
@@ -174,27 +233,7 @@ std::vector<UrlRank> constraint_solver(
           //   std::cout << "Title score: " << title_score << " URL: " << doc->url << std::endl;
           // }
 
-          int url_score = 0;
-          for (int i = 0; i < orderedQueryTerms.size(); i++)
-          {
-            for (int j = 0; j < orderedQueryTerms[i].size(); j++)
-            {
-              std::transform(doc->url.begin(), doc->url.end(), doc->url.begin(),
-              [](unsigned char c){ return std::tolower(c); });
-
-              if (doc->url.find(orderedQueryTerms[i][j]->GetWord()) != string::npos) 
-              {
-                url_score += 100; // Add 100 for each query term found in the url
-              }
-
-            }
-          }
-          
-          // In case
-          if (doc->staticRank > 30) {
-            doc->staticRank = 0;
-          }
-
+          int url_score = calculateURLscore(doc->url);
           // Add weights to the score later
           UrlRank urlRank(doc->url, dynamic_score + url_score); /*title_score + url_score + doc->staticRank*/
           // cout << urlRank.rank << '\n';
