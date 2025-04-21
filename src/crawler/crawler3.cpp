@@ -54,8 +54,6 @@ static constexpr std::string_view UNWANTED_LRM = "&lrm";
 static constexpr std::string_view UNWANTED_RLM = "&rlm";
 static constexpr size_t MAX_WORD_LENGTH = 50;
 
-constexpr uint32_t NUM_CHUNKS = 1;
-
 IndexChunk chunk{};
 
 const static int NUM_THREADS = 16;  // start small
@@ -64,6 +62,7 @@ uint32_t STATIC_RANK = 0;  // temp global variable
 
 std::queue<std::string> explore_queue{};
 std::vector<std::pair<std::string, uint32_t>> links_vector;
+sem_t* sems[NUM_THREADS];
 
 pthread_mutex_t queue_lock{};
 pthread_mutex_t chunk_lock{};
@@ -341,8 +340,8 @@ void* add_to_index(void* addr) {
   return NULL;
 #endif
 
-  pthread_lock_guard _{chunk_lock};
   if (arg->parser.isEnglish) {
+    pthread_lock_guard guard{chunk_lock};
     const uint16_t urlLength = arg->url.size();
     chunk.add_url(arg->url, arg->static_rank);
 
@@ -372,30 +371,22 @@ void* add_to_index(void* addr) {
 
     chunk.add_enddoc();
   }
+  sem_post(sems[arg->thread_id]);
   delete arg;
   return NULL;
 }
 
-void* runner(void*) {
+void* runner(void* arg) {
   // const static thread_local pid_t thread_id = syscall(SYS_gettid);
-  const static thread_local auto thread_id = rand() % NUM_CHUNKS;
+  const unsigned int thread_id = (uint64_t)(arg);
   bool done = false;
   while (!done) {
     // Get the next url to be processed
     std::string url = get_string();
     if (url.empty()) {
-      sleep(10);
+      sleep(1);
       continue;
     }
-
-    // Print the url that is being processed
-    // std::cout << "-----------------" << '\n';
-    // std::cout << url << '\n';
-    // std::cout << "-----------------" << '\n';
-
-    // std::cout << "URL length: " << url.size() << std::endl;
-    // std::cout << "Size of link vector: " << links_vector.size()
-    // << std::endl;
 
     pthread_t thread;
 
@@ -446,6 +437,7 @@ void* runner(void*) {
     }
 
     // --------------------------------------------------
+    sem_wait(sems[thread_id]);
     pthread_t t;
     pthread_create(
         &t, NULL, add_to_index,
@@ -461,7 +453,7 @@ int main(int argc, char** argv) {
   int id = atoi(argv[0]);
 
   std::vector<std::string> sem_names{};
-  for (int i = 0; i < NUM_CHUNKS; ++i) {
+  for (int i = 0; i < NUM_THREADS; ++i) {
     sem_names.push_back("/sem_" + std::to_string(i));
     sem_unlink(sem_names[i].data());
   }
@@ -480,14 +472,16 @@ int main(int argc, char** argv) {
 
   pthread_t threads[NUM_THREADS];
   for (int i = 0; i < NUM_THREADS; i++) {
-    pthread_create(threads + i, NULL, runner, NULL);
+    sems[i] = sem_open(sem_names[i].data(), O_CREAT, 0666, 1);
+    if (sems[i] == SEM_FAILED) assert(false);
+    pthread_create(threads + i, NULL, runner, (void*)(uint64_t)(i));
   }
   std::cout << "STARTED THREADS...\n";
   for (int i = 0; i < NUM_THREADS; i++) {
     pthread_join(threads[i], NULL);
   }
 
-  std::cout << "FINISHED THREADS/...\n";
+  std::cout << "FINISHED THREADS...\n";
 
   IndexFile chunkFile(id, chunk);
 

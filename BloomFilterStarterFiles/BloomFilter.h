@@ -133,7 +133,7 @@ class Bloomfilter {
     return true;
   }
 
- private:
+ public:
   // Add any private member variables that may be neccessary.
   uint64_t sizeInBits;
   uint64_t numHashFuncs;

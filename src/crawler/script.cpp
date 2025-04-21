@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
   const int CRAWLERS_PER_BATCH = atoi(argv[2]);
   const int TOTAL = NUM_BATCHES * CRAWLERS_PER_BATCH;
 
-  assert(TOTAL * MAX_PROCESSED == 10);
+  assert(TOTAL * MAX_PROCESSED == 10'000'000);
 
   pthread_t threads[TOTAL];
 

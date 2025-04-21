@@ -174,7 +174,7 @@ void get_handler(int fd) {
   send(fd, next.data(), next.size(), 0);
   num_processed++;
   if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
-  if (num_processed % 1000 == 0) saver();
+  if (num_processed % DISPATCHER_SAVE_RATE == 0) saver();
 }
 
 void add_handler(int fd, uint64_t size) {
@@ -221,6 +221,7 @@ void init_dispatcher() {
     if2 >> num_processed;
   } else {
     bf = Bloomfilter(MAX_EXPECTED_LINKS, MAX_FALSE_POSITIVE_RATE);
+    std::cout << bf.bloomFilter.size() << std::endl;
     std::ifstream infile("seed_list.txt");
     if (!infile.is_open()) {
       std::cerr << "Failed to open seed list" << std::endl;
@@ -238,6 +239,7 @@ void init_dispatcher() {
 }
 
 int main(int argc, char **argv) {
+  std::cout << "STARTING DISPATCHER...\n";
   signal(SIGPIPE, SIG_IGN);
   int res = pthread_mutex_init(&queue_lock, NULL);
   if (res != 0) return 1;
