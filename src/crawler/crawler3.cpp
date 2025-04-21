@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <chrono>
 #include <cstring>
@@ -71,6 +72,8 @@ pthread_mutex_t cout_lock{};
 sem_t* queue_sem;
 uint32_t num_processed{};
 std::mt19937 mt{std::random_device{}()};
+
+std::atomic<int> ctr{};
 
 int get_socket(int timeout = 5) {
   sockaddr_in address;
@@ -336,6 +339,7 @@ struct Args {
 
 void* add_to_index(void* addr) {
   Args* arg = reinterpret_cast<Args*>(addr);
+  ++ctr;
 #ifdef NO_INDEX
   delete arg;
   return NULL;
@@ -397,8 +401,9 @@ void* runner(void* arg) {
     ThreadArgs args = {url, "", -1};
 
     // Start getHTML in a new thread
-    pthread_create(&thread, nullptr, getHTML_wrapper, &args);
-    pthread_join(thread, nullptr);
+    getHTML_wrapper(&args);
+    /*pthread_create(&thread, nullptr, getHTML_wrapper, &args);
+    pthread_join(thread, nullptr);*/
 
     // Continue if html code was not retrieved
     if (args.status != 0) {
@@ -415,7 +420,7 @@ void* runner(void* arg) {
     {
       pthread_lock_guard guard{queue_lock};
       num_processed++;
-      if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
+      // if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
       if (num_processed > MAX_PROCESSED) done = true;
     }
 
@@ -451,6 +456,18 @@ void* runner(void* arg) {
   return NULL;
 }
 
+void* metric_collector(void*) {
+  std::chrono::steady_clock::time_point prev =
+      std::chrono::high_resolution_clock::now();
+  while (true) {
+    if (std::chrono::high_resolution_clock::now() - prev >
+        std::chrono::duration(10s)) {
+      std::cout << "Num processed over last 10 seconds: " << ctr << '\n';
+      prev = std::chrono::high_resolution_clock::now();
+    };
+  }
+}
+
 int main(int argc, char** argv) {
   signal(SIGPIPE, SIG_IGN);
 
@@ -478,6 +495,9 @@ int main(int argc, char** argv) {
   pthread_mutex_init(&chunk_lock, NULL);
   pthread_mutex_init(&cout_lock, NULL);
 
+  pthread_t ctr_thread;
+  pthread_create(&ctr_thread, NULL, metric_collector, NULL);
+
   pthread_t threads[NUM_THREADS];
   for (int i = 0; i < NUM_THREADS; i++) {
     sems[i] = sem_open(sem_names[i].data(), O_CREAT, 0666, 1);
@@ -490,6 +510,8 @@ int main(int argc, char** argv) {
   }
 
   std::cout << "FINISHED THREADS...\n";
+
+  pthread_join(ctr_thread, NULL);
 
   // IndexFile chunkFile(id, chunk);
 
