@@ -36,9 +36,11 @@ settings.json
 .gitignore
 src/files/*
 vscode/
+.vscode/
 
 FrontEnd/config.js
+FrontEnd/HashFile*
+FrontEnd/IndexChunk*
 
 src/HashFile*
-
 src/IndexChunk*
