@@ -104,7 +104,7 @@ void* url_getter(void*) {
   res = connect(sock, (struct sockaddr*)&address, sizeof(address));
   assert(res != -1);
 
-  bool req = 1;
+  char req = 1;
   size_t header{};
 
   while (true) {
@@ -158,7 +158,7 @@ void* url_adder(void*) {
       pthread_lock_guard guard{adder_lock};
       std::tie(next, rank) = std::move(adderQueue.back());
       adderQueue.pop_back();
-      size_t header = sizeof(size_t) + next.size();
+      size_t header = sizeof(rank) + next.size();
       send(sock, &header, sizeof(header), 0);
       send(sock, &rank, sizeof(rank), 0);
       send(sock, next.data(), next.size(), 0);
@@ -306,6 +306,9 @@ void* add_to_index(void* addr) {
   if (arg->parser.isEnglish) {
     pthread_lock_guard guard{chunk_locks[idx]};
     const uint16_t urlLength = arg->url.size();
+
+    for (char& c : arg->url) c = tolower(static_cast<unsigned char>(c));
+
     chunk.add_url(arg->url, arg->static_rank);
 
     for (auto& word : arg->parser.titleWords) {

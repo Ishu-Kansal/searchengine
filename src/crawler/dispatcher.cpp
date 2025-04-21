@@ -291,10 +291,11 @@ void *get_requests(void *) {
 void *adder(void *arg) {
   int fd = (uint64_t)(arg);
   SocketWrapper sock_{fd};
-  size_t header;
+  size_t header{};
   uint64_t rank{};
   while (recv(fd, &header, sizeof(header), MSG_WAITALL)) {
     assert(header > sizeof(rank));
+    std::cout << "Received URL Size: " << (header - sizeof(rank)) << '\n';
     std::string url(header - sizeof(rank), 0);
     if (recv(fd, &rank, sizeof(rank), MSG_WAITALL) == -1) {
       perror("Failed to read rank: ");
