@@ -245,11 +245,8 @@ void *getter(void *arg) {
   int fd = (uint64_t)(arg);
   SocketWrapper sock_{fd};
   char c;
-  while (true) {
-    if (recv(fd, &c, sizeof(c), MSG_WAITALL) != 0) {
-      get_handler(fd);
-    } else
-      break;
+  while (recv(fd, &c, sizeof(c), MSG_WAITALL)) {
+    get_handler(fd);
   }
   return NULL;
 }
@@ -296,18 +293,22 @@ void *adder(void *arg) {
   SocketWrapper sock_{fd};
   size_t header;
   uint64_t rank{};
-  while (true) {
-    if (recv(fd, &header, sizeof(header), MSG_WAITALL) != 0) {
-      std::string url(header - sizeof(rank), 0);
-      if (recv(fd, &rank, sizeof(rank), MSG_WAITALL) <= 0) continue;
-      if (recv(fd, url.data(), url.size(), MSG_WAITALL) <= 0) continue;
-      pthread_lock_guard guard{queue_lock};
-      if (links_vector.size() < MAX_VECTOR_SIZE && !bf.contains(url)) {
-        bf.insert(url);
-        links_vector.emplace_back(std::move(url), rank);
-      }
-    } else
-      break;
+  while (recv(fd, &header, sizeof(header), MSG_WAITALL)) {
+    assert(header > sizeof(rank));
+    std::string url(header - sizeof(rank), 0);
+    if (recv(fd, &rank, sizeof(rank), MSG_WAITALL) == -1) {
+      perror("Failed to read rank: ");
+      assert(false);
+    }
+    if (recv(fd, url.data(), url.size(), MSG_WAITALL) == -1) {
+      perror("Failed to read added url: ");
+      assert(false);
+    }
+    pthread_lock_guard guard{queue_lock};
+    if (links_vector.size() < MAX_VECTOR_SIZE && !bf.contains(url)) {
+      bf.insert(url);
+      links_vector.emplace_back(std::move(url), rank);
+    }
   }
   return NULL;
 }
