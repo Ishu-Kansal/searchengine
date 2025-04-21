@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <sys/wait.h>
