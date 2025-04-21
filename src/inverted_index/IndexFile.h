@@ -137,39 +137,39 @@ class IndexFile {
    * @param urlList The vector of Doc objects to serialize
    */
 
-  void serializeUrlList(std::vector<uint8_t>& dataBuffer,
-                        const std::vector<Doc>& urlList) {
+   void serializeUrlList(std::vector<uint8_t>& dataBuffer,
+        const std::vector<Doc>& urlList) {
     if (urlList.size() < BLOCK_SIZE) {
-      dataBuffer.push_back(NO_SEEK_TABLE_MARKER);  // No seek table
+    dataBuffer.push_back(NO_SEEK_TABLE_MARKER);  // No seek table
     } else {
-      uint32_t numSeekTableEntries = urlList.size() >> BLOCK_OFFSET_BITS;
-      // One byte to get size
-      dataBuffer.push_back(SizeOf(numSeekTableEntries));
-      pushVarint(dataBuffer, numSeekTableEntries);
+    uint32_t numSeekTableEntries = urlList.size() >> BLOCK_OFFSET_BITS;
+    // One byte to get size
+    dataBuffer.push_back(SizeOf(numSeekTableEntries));
+    pushVarint(dataBuffer, numSeekTableEntries);
     }
     uint32_t postingIndex = 0;
     uint64_t byteOffset = 0;
     std::vector<uint8_t> tempBuffer;
     tempBuffer.reserve(POSTING_LIST_BUFFER_INITIAL_RESERVE);
     for (auto& doc : urlList) {
-      if (urlList.size() >= BLOCK_SIZE &&
-          (postingIndex + 1) % BLOCK_SIZE == 0 && postingIndex != 0) {
-        uint8_t* bytes = reinterpret_cast<uint8_t*>(&byteOffset);
-        dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(byteOffset));
-        // bytes = reinterpret_cast<uint8_t*>(&postingIndex);
-        // dataBuffer.insert(dataBuffer.end(), bytes, bytes +
-        // sizeof(postingIndex));
-      }
+    if (urlList.size() >= BLOCK_SIZE &&
+    (postingIndex + 1) % BLOCK_SIZE == 0 && postingIndex != 0) {
+    uint8_t* bytes = reinterpret_cast<uint8_t*>(&byteOffset);
+    dataBuffer.insert(dataBuffer.end(), bytes, bytes + sizeof(byteOffset));
+    // bytes = reinterpret_cast<uint8_t*>(&postingIndex);
+    // dataBuffer.insert(dataBuffer.end(), bytes, bytes +
+    // sizeof(postingIndex));
+    }
 
-      byteOffset += doc.url.size() + URL_HEADER_BYTES;
-      postingIndex++;
+    byteOffset += doc.url.size() + URL_HEADER_BYTES;
+    postingIndex++;
 
-      tempBuffer.push_back(uint8_t(doc.url.size()));
-      tempBuffer.insert(tempBuffer.end(), doc.url.begin(), doc.url.end());
-      tempBuffer.push_back(doc.staticRank);
+    tempBuffer.push_back(uint8_t(doc.url.size()));
+    tempBuffer.insert(tempBuffer.end(), doc.url.begin(), doc.url.end());
+    tempBuffer.push_back(doc.staticRank);
     }
     dataBuffer.insert(dataBuffer.end(), tempBuffer.begin(), tempBuffer.end());
-  }
+    }
 
   /**
    * @brief Serializes the list of PostingLists into the data buffer and updates

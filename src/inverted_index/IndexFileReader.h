@@ -132,6 +132,8 @@ private:
                 jump *= 2;
                 cursor += jump;
 
+                if (cursor >= numSeekTableEntries) break;
+
                 const uint8_t * readPtr = (ENTRY_SIZE * cursor) + seekTableStart;
 
                 if (!readUint64_t(readPtr, fileEnd, entryOffset)) { return false; }
@@ -353,6 +355,7 @@ public:
             postingListBuf = decodeVarint(postingListBuf, delta);
             currentLocation += delta;
             currentOffset += SizeOf(delta);
+            // cout << currentLocation << '\n';
             if (currentLocation >= target)
             {
                 // cout << "Deltas decoded: " << decodeCounter << "\n";
@@ -361,9 +364,11 @@ public:
           
             }
             index++;
-            if (index > numPosts) return nullptr;
+            if (index > numPosts) 
+            {
+                return nullptr;
+            }
         }
-
         return nullptr;
     }
 
@@ -387,33 +392,29 @@ public:
         const uint8_t* fileEnd = fileStart + fileSize;
 
         uint8_t numSeekTableEntriesSize = fileStart[0];
-        size_t tableIndex = (index + 1) >> BLOCK_OFFSET_BITS;
+        size_t tableIndex = (index) >> BLOCK_OFFSET_BITS;
 
         uint64_t numSeekTableEntries = 0;
-        if (numSeekTableEntriesSize) 
+
+        if (numSeekTableEntriesSize > 0 && tableIndex > 0)
         {
-            const uint8_t* temp = fileStart + 1;
-            decodeVarint(temp, numSeekTableEntries);
-        }
-        if (numSeekTableEntriesSize && tableIndex != 0)
-        {
-            tableIndex = std::min(uint64_t(tableIndex), numSeekTableEntries);
             const uint8_t* seekTable = fileStart + 1;
-            const uint8_t* entryPtr = seekTable + ((tableIndex - 1) * URL_ENTRY_SIZE)+ numSeekTableEntriesSize;
+            decodeVarint(seekTable, numSeekTableEntries);
+            tableIndex = std::min(uint64_t(tableIndex), numSeekTableEntries);
+            const uint8_t* entryPtr = seekTable + ((tableIndex - 1) * URL_ENTRY_SIZE) + numSeekTableEntriesSize;
 
             uint64_t entryOffset;
             
             if (!readUint64_t(entryPtr, fileEnd, entryOffset)) { return nullptr; }
 
             const uint8_t* urlPtr = seekTable + (URL_ENTRY_SIZE * numSeekTableEntries) + entryOffset + numSeekTableEntriesSize;
-            uint64_t urlIndex = (tableIndex * BLOCK_SIZE) - 1;
-        
+            uint64_t urlIndex = (tableIndex << BLOCK_OFFSET_BITS);
+            
             while (urlIndex < index)
             {
                 uint64_t bytesToSkip = *urlPtr + 2;
                 urlPtr += bytesToSkip;
                 ++urlIndex;
-
             }
             if (urlIndex == index)
             {
@@ -423,7 +424,6 @@ public:
                 urlPtr += urlLen + 1;
                 obj->staticRank = static_cast<uint8_t>(*urlPtr);
    
-                
                 return obj;
             }
         }
@@ -440,7 +440,6 @@ public:
             }
             if (urlIndex == index)
             {        
-
                 auto obj = std::make_unique<Doc>();
                 uint8_t urlLen = *urlPtr;
                 obj->url = std::string(reinterpret_cast<const char*>(urlPtr + 1), urlLen);
@@ -575,6 +574,7 @@ public:
         if (targetLocations.empty()) 
         {
             // Won't happen
+            fprintf(stderr, "DEBUG: EMPTY target locations\n");
             return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
         }
 
@@ -642,7 +642,6 @@ public:
 
         if (numSeekTableEntriesSize) 
         {
-           
             if (postingListBuf + numSeekTableEntriesSize > fileEnd) 
             {
                 fprintf(stderr, "ERROR: Not enough space for numSeekTableEntries varint encoding.\n");

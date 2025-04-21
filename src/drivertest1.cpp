@@ -14,6 +14,98 @@
 #include "json.hpp"
 #include "query_parser/parser.h"
 
+#include "../HtmlParser/HtmlParser.h"
+#include "crawler/sockets.h"
+
+static constexpr std::string_view APOS_ENTITY = "&#039;";
+static constexpr std::string_view APOS_ENTITY2 = "&apos;";
+static constexpr std::string_view HTML_ENTITY = "&#";
+
+static constexpr std::string_view UNWANTED_NBSP = "&nbsp";
+static constexpr std::string_view UNWANTED_LRM  = "&lrm";
+static constexpr std::string_view UNWANTED_RLM  = "&rlm";
+static constexpr size_t MAX_WORD_LENGTH = 50;
+
+constexpr uint32_t MAX_PROCESSED = 10000;
+constexpr uint32_t MAX_VECTOR_SIZE = 20000;
+constexpr uint32_t MAX_QUEUE_SIZE = 100000;
+constexpr uint32_t TOP_K_ELEMENTS = 7500;
+constexpr uint32_t NUM_RANDOM = 10000;
+constexpr uint32_t NUM_CHUNKS = 5;
+
+bool isEnglish(const std::string &s) {
+    for (const auto &ch : s) {
+        if (static_cast<unsigned char>(ch) > 127) {
+            return false;
+        }
+    }
+    return true;
+  }
+  void cleanString(std::string &s) {
+      // Gets rid of both &#039; and &apos;
+      size_t pos = 0;
+      while ((pos = s.find(APOS_ENTITY, pos)) != std::string::npos || 
+             (pos = s.find(APOS_ENTITY2, pos)) != std::string::npos) {
+          s.erase(pos, (pos == s.find(APOS_ENTITY, pos)) ? APOS_ENTITY.length() : APOS_ENTITY2.length());
+      }
+    if (s.size() > MAX_WORD_LENGTH)
+    {
+      s.clear();
+      return;
+    }
+    // Gets rid of strings containing HTML entities
+    if (s.find(HTML_ENTITY) != std::string::npos || s.find(UNWANTED_NBSP) != std::string::npos ||
+    s.find(UNWANTED_LRM) != std::string::npos ||
+    s.find(UNWANTED_RLM) != std::string::npos) 
+    {
+      s.clear();
+      return;
+    }
+    // Gets rid of non english words
+    /*
+      if (!isEnglish(s)) {
+      s.clear();
+      return;
+    }
+    */
+  
+    // Gets rid of '
+    s.erase(std::remove(s.begin(), s.end(), '\''), s.end());
+  
+    // Get rid of start and end non punctuation
+    auto start = std::find_if(s.begin(), s.end(), ::isalnum);
+      
+    if (start == s.end()) {
+        s.clear();
+        return;
+    }
+    
+    auto end = std::find_if(s.rbegin(), s.rend(), ::isalnum).base();
+    
+    s.erase(end, s.end());
+    s.erase(s.begin(), start);
+  }
+  
+  std::vector<std::string> splitHyphenWords(const std::string &word) {
+    std::vector<std::string> parts;
+    if (word.find('-') != std::string::npos) {
+        size_t start = 0, end = 0;
+        while ((end = word.find('-', start)) != std::string::npos) {
+            std::string token = word.substr(start, end - start);
+            if (!token.empty())
+                parts.push_back(token);
+            start = end + 1;
+        }
+        std::string token = word.substr(start);
+        if (!token.empty())
+            parts.push_back(token);
+    } else {
+        parts.push_back(word);
+    }
+    return parts;
+  }
+
+  
 using json = nlohmann::json;
 
 bool build_index_from_file(const std::string& filename,
@@ -37,12 +129,6 @@ bool build_index_from_file(const std::string& filename,
     }
 
     json j = json::parse(line);
-
-    if (!j.contains("url") || !j["url"].is_string() || !j.contains("rank") ||
-        !j["rank"].is_number_integer() || !j.contains("content") ||
-        !j["content"].is_array()) {
-      continue;
-    }
 
     std::string url = j["url"].get<std::string>();
     size_t rank = j["rank"].get<size_t>();
@@ -109,8 +195,9 @@ int main(int argc, char** argv) {
   const uint32_t numChunks = 10;
 
   const uint32_t chunkNum = 0;
+/*
+  
 
-  /*
   IndexChunk indexChunk;
   if (!build_index_from_file(data_filename, indexChunk))
   {
@@ -144,6 +231,8 @@ int main(int argc, char** argv) {
                 << std::endl;
     }
   }
+
+
 
   return 0;
 }

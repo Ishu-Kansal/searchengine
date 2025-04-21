@@ -145,10 +145,19 @@ std::vector<UrlRank> constraint_solver(
 
           int docEndLoc = currLoc;
           int docStartLoc = currLoc - currDelta;
-  
+        
           // use the index to get relevant doc data
+          if (matchedDocs == 1008)
+          {
+            cout << "";
+          }
           unique_ptr<Doc> doc = reader.FindUrl(index, chunkNum);
 
+          if (doc->url == "https://www.zdnet.com/meet-the-team/jack-clark/")
+          {
+            // doc = reader.FindUrl(index - 1, chunkNum);
+            cout << "";
+          }
           int dynamic_score = get_dynamic_rank(
             rarestTermInOrder,
             orderedQueryTerms, 
