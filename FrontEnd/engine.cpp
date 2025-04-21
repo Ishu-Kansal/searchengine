@@ -21,23 +21,30 @@ std::string clean_url(std::string& url) {
   // Remove "https://"
   const std::string https_prefix = "https://";
   if (cleaned.rfind(https_prefix, 0) == 0) {
-      cleaned.erase(0, https_prefix.length());
+    cleaned.erase(0, https_prefix.length());
   }
 
   // Remove "http:/"
-  const std::string http_prefix = "https:/";
+  const std::string http_prefix = "http:/";
   if (cleaned.rfind(http_prefix, 0) == 0) {
-      cleaned.erase(0, http_prefix.length());
+    cleaned.erase(0, http_prefix.length());
   }
 
   // Remove "www."
   const std::string www_prefix = "www.";
   if (cleaned.rfind(www_prefix, 0) == 0) {
-      cleaned.erase(0, www_prefix.length());
+    cleaned.erase(0, www_prefix.length());
+  }
+
+  // Remove query string after '?'
+  size_t query_pos = cleaned.find('?');
+  if (query_pos != std::string::npos) {
+    cleaned = cleaned.substr(0, query_pos);
   }
 
   return cleaned;
 }
+
 
 bool is_valid_utf8(const std::string& string) {
     const unsigned char* bytes = reinterpret_cast<const unsigned char*>(string.c_str());

@@ -38,54 +38,88 @@ std::string Driver::join_words(const std::vector<std::string>& words, size_t max
 
 
 std::string Driver::decode_html_entities(const std::string& input) {
-   static const std::unordered_map<std::string, char> named_entities = {
-       {"amp", '&'}, {"lt", '<'}, {"gt", '>'},
-       {"quot", '"'}, {"apos", '\''}, {"nbsp", ' '}, {"mdash", '-'}
-   };
+   static const std::unordered_map<std::string, std::string> named_entities = {
+      {"amp", "&"}, {"lt", "<"}, {"gt", ">"}, {"quot", "\""}, {"apos", "'"},
+      {"nbsp", " "}, {"copy", "©"}, {"reg", "®"}, {"euro", "€"}, {"pound", "£"},
+      {"cent", "¢"}, {"yen", "¥"}, {"deg", "°"}, {"sect", "§"}, {"para", "¶"},
+      {"hellip", "…"}, {"mdash", "—"}, {"ndash", "–"}, {"lsquo", "‘"}, {"rsquo", "’"},
+      {"ldquo", "“"}, {"rdquo", "”"}, {"bull", "•"}, {"trade", "™"}, {"iexcl", "¡"}
+  };
 
    std::string output;
    size_t i = 0;
    while (i < input.length()) {
-       if (input[i] == '&') {
-           size_t semicolon = input.find(';', i + 1);
-           if (semicolon != std::string::npos) {
-               std::string entity = input.substr(i + 1, semicolon - i - 1);
+      if (input[i] == '&') {
+         size_t semicolon = input.find(';', i + 1);
+         if (semicolon != std::string::npos) {
+            std::string entity = input.substr(i + 1, semicolon - i - 1);
 
-               // Check for numeric entity
-               if (!entity.empty() && entity[0] == '#') {
-                   char decoded_char = '?'; // fallback
-                   if (entity[1] == 'x' || entity[1] == 'X') {
-                       // Hexadecimal
-                       int code;
-                       std::stringstream ss;
-                       ss << std::hex << entity.substr(2);
-                       ss >> code;
-                       decoded_char = static_cast<char>(code);
-                   } else {
-                       // Decimal
-                       int code = std::stoi(entity.substr(1));
-                       decoded_char = static_cast<char>(code);
-                   }
-                   output += decoded_char;
-                   i = semicolon + 1;
-               } else if (named_entities.count(entity)) {
-                   output += named_entities.at(entity);
-                   i = semicolon + 1;
-               } else {
-                   output += '&'; // unknown entity
-                   ++i;
-               }
-           } else {
-               output += input[i];
-               ++i;
-           }
-       } else {
-           output += input[i];
-           ++i;
-       }
+            // Check for numeric entity
+            if (!entity.empty() && entity[0] == '#') {
+                  char decoded_char = '?'; // fallback
+                  try {
+                     if (!entity.empty() && entity[0] == '#') {
+                        std::string decoded_char = "?"; // fallback
+                        try {
+                            int code = 0;
+                            if (entity[1] == 'x' || entity[1] == 'X') {
+                                code = std::stoi(entity.substr(2), nullptr, 16);
+                            } else {
+                                code = std::stoi(entity.substr(1));
+                            }
+                    
+                            // Convert to UTF-8
+                            if (code <= 0x7F) {
+                                decoded_char = std::string(1, static_cast<char>(code));
+                            } else if (code <= 0x7FF) {
+                                decoded_char = {
+                                    static_cast<char>(0xC0 | (code >> 6)),
+                                    static_cast<char>(0x80 | (code & 0x3F))
+                                };
+                            } else if (code <= 0xFFFF) {
+                                decoded_char = {
+                                    static_cast<char>(0xE0 | (code >> 12)),
+                                    static_cast<char>(0x80 | ((code >> 6) & 0x3F)),
+                                    static_cast<char>(0x80 | (code & 0x3F))
+                                };
+                            } else if (code <= 0x10FFFF) {
+                                decoded_char = {
+                                    static_cast<char>(0xF0 | (code >> 18)),
+                                    static_cast<char>(0x80 | ((code >> 12) & 0x3F)),
+                                    static_cast<char>(0x80 | ((code >> 6) & 0x3F)),
+                                    static_cast<char>(0x80 | (code & 0x3F))
+                                };
+                            }
+                        } catch (...) {
+                            decoded_char = "?";
+                        }
+                        output += decoded_char;
+                        i = semicolon + 1;
+                    }                    
+                  } catch (...) {
+                     decoded_char = '?';
+                  }
+                  output += decoded_char;
+                  i = semicolon + 1;
+            } else if (named_entities.count(entity)) {
+               output += named_entities.at(entity);
+               i = semicolon + 1;
+            } else {
+                  output += '&'; // unknown entity, keep as-is
+                  ++i;
+            }
+         } else {
+            output += input[i];
+            ++i;
+         }
+      } else {
+         output += input[i];
+         ++i;
+      }
    }
    return output;
 }
+
 
 // Given a URL, fetch its HTML content and parse it into a SearchResult struct containing:
 // - the raw URL,
@@ -104,9 +138,9 @@ SearchResult Driver::get_url_and_parse(const std::string& url) {
    }
 
    try {
-       HtmlParser parser(html.data(), html.size());
-       result.title = decode_html_entities(join_words(parser.titleWords));
-       result.snippet = decode_html_entities(join_words(parser.description, 30));
+      HtmlParser parser(html.data(), html.size());
+      result.title = decode_html_entities(join_words(parser.titleWords));
+      result.snippet = decode_html_entities(join_words(parser.description, 30));
    }
    catch (...) {
        std::cerr << "Parsing failed for: " << url_str << std::endl;

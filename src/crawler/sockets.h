@@ -193,7 +193,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
                 close(socketFD);
                 return 11;
             }
-            int code = atoi(header.data() + 9);
+            code = atoi(header.data() + 9);
             if (code == 0) {
                 SSL_shutdown(ssl);
                 SSL_free(ssl);
@@ -265,7 +265,6 @@ int getHTML(std::string url_in, std::string &output) {
             "Connection: close\r\n\r\n";
 
         int status = runSocket(req, url_in, output);
-        // std::cout << status << std::endl;
 
         // std::cout << "output:\n" << output << std::endl;
 
