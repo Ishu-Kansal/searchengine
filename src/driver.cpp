@@ -171,7 +171,13 @@ std::vector<UrlRank> run_engine_helper(
          return {};
       }
 
-      std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, numChunks, reader, matches);
+      int sequences_length = 0;
+      for (auto& sequence : sequences)
+      {
+          sequences_length += sequence.size();
+      }
+
+      std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, numChunks, reader, matches, sequences_length);
 
       return raw_results;
    }

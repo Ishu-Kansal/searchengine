@@ -179,9 +179,15 @@ std::vector<UrlRank> run_engine(std::string& query, uint32_t numChunks,
       return {};
     }
 
+    int sequences_length = 0;
+    for (auto &sequence : sequences)
+    {
+      sequences_length += sequence.size();
+    }
+
     matches = 0;
     std::vector<UrlRank> raw_results =
-        constraint_solver(isrs, sequences, numChunks, reader, matches);
+        constraint_solver(isrs, sequences, numChunks, reader, matches, sequences_length);
 
     return raw_results;
   } else {

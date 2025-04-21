@@ -105,7 +105,8 @@ std::vector<UrlRank> constraint_solver(
   vector<vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms,
   uint32_t numChunks,
   IndexFileReader& reader,
-  int& matches
+  int& matches,
+  int queryLength
 ) 
   {
     auto rarestTermInOrder = getRarestIndices(orderedQueryTerms);
