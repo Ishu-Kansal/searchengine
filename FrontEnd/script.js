@@ -51,6 +51,8 @@ searchForm.addEventListener('submit', async function (e) {
   submitButton.disabled = true;
   loadingIndicator.style.display = 'block';
 
+  document.getElementById('searchSummaryBox').style.display = 'none';
+
   let gifIndex = Math.floor(Math.random() * gifs.length);
   loadingGif.src = gifs[gifIndex];
   gifInterval = setInterval(() => {
@@ -100,6 +102,17 @@ searchForm.addEventListener('submit', async function (e) {
 
     const searchData = await searchResponse.json();
     console.log('Search API response completed');
+
+    // Display searchData.summary above results
+    if (searchData.summary) {
+      const searchSummaryBox = document.getElementById('searchSummaryBox');
+      const searchSummaryText = document.getElementById('searchSummaryText');
+
+      searchSummaryText.textContent = searchData.summary;
+      searchSummaryBox.style.display = 'block';
+    } else {
+      document.getElementById('searchSummaryBox').style.display = 'none';
+    }
 
     if (!Array.isArray(searchData.results)) {
       throw new Error("Invalid data format received from server.");

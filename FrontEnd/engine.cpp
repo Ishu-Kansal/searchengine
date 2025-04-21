@@ -104,7 +104,8 @@ void* snippet_thread_worker(void* arg) {
 // then concurrently fetching the matching URLs.
 // This modified version returns just the URLs.
 json run_query(std::string &query) {
-  std::vector<std::string> urls = driver.run_engine(query);
+  std::string summary;
+  std::vector<std::string> urls = driver.run_engine(query, summary);
 
   result["results"] = json::array();
   for (std::string& url : urls) {
@@ -121,9 +122,13 @@ json run_query(std::string &query) {
     });
   }
 
+  std::cout << "Summary: " << summary << std::endl;
+
   if (urls.size() == 0) {
     std::cout << "No results found" << std::endl;
   }
+
+  result["summary"] = summary;
 
   return result;
 }

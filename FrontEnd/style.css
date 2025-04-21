@@ -277,7 +277,7 @@ h1::after {
 }
 #paginationControls .btn:disabled {
   opacity: 0.6;
-  cursor: not-allowed;
+  cursor: default;
   color: #6c757d;
   background-color: #f8f9fa;
   border-color: #dee2e6;
@@ -300,7 +300,7 @@ h1::after {
 
 #aiSummaryContainer {
   border-radius: 16px;
-  margin-bottom: 40px;
+  margin-bottom: 0px;
 }
 
 .panel-heading {

@@ -104,7 +104,8 @@ std::vector<UrlRank> constraint_solver(
   std::unique_ptr<ISR> &queryISR,
   vector<vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms,
   uint32_t numChunks,
-  IndexFileReader& reader
+  IndexFileReader& reader,
+  int& matches
 ) 
   {
     auto rarestTermInOrder = getRarestIndices(orderedQueryTerms);
@@ -206,5 +207,6 @@ std::vector<UrlRank> constraint_solver(
     }
     }
     cout << "MATCHED DOCUMENTS: " << matchedDocs << '\n';
+    matches = matchedDocs;
     return topNdocs; 
 }

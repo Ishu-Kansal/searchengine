@@ -78,7 +78,7 @@ bool build_index_from_file(const std::string& filename,
 }
 
 std::vector<UrlRank> run_engine(std::string& query, uint32_t numChunks,
-                                IndexFileReader& reader) {
+                                IndexFileReader& reader, int& matches) {
   std::vector<std::vector<std::unique_ptr<ISRWord>>> sequences;
 
   QueryParser parser(query, numChunks, reader);
@@ -93,8 +93,9 @@ std::vector<UrlRank> run_engine(std::string& query, uint32_t numChunks,
       return {};
     }
 
+    matches = 0;
     std::vector<UrlRank> raw_results =
-        constraint_solver(isrs, sequences, numChunks, reader);
+        constraint_solver(isrs, sequences, numChunks, reader, matches);
 
     return raw_results;
   } else {
@@ -122,18 +123,20 @@ int main(int argc, char** argv) {
   */
   IndexFileReader reader(numChunks);
 
+  int matches = 0;
+
   std::string test_query_1 = argc > 1 ? argv[1] : "umich engineering";
   std::cout << "\n--- Running Query 1: [" << test_query_1 << "] ---"
             << std::endl;
   auto start = std::chrono::high_resolution_clock::now();
-  std::vector<UrlRank> results1 = run_engine(test_query_1, numChunks, reader);
+  std::vector<UrlRank> results1 = run_engine(test_query_1, numChunks, reader, matches);
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = end - start;
   std::cout << "Query 1 execution time: " << elapsed.count() << " seconds"
             << std::endl;
 
   if (!results1.empty()) {
-    std::cout << "Found " << results1.size()
+    std::cout << "Found " << matches
               << " results for query 1 (showing top " << results1.size()
               << "):" << std::endl;
     for (const auto& url_sv : results1) {

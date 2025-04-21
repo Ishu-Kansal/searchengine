@@ -119,7 +119,8 @@ SearchResult Driver::get_url_and_parse(const std::string& url) {
 std::vector<UrlRank> run_engine_helper(
     std::string &query,
     uint32_t numChunks,
-    IndexFileReader &reader)
+    IndexFileReader &reader,
+    int& matches)
 {
    std::vector<std::vector<std::unique_ptr<ISRWord>>> sequences;
 
@@ -136,7 +137,7 @@ std::vector<UrlRank> run_engine_helper(
          return {};
       }
 
-      std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, numChunks, reader);
+      std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, numChunks, reader, matches);
 
       return raw_results;
    }
@@ -147,7 +148,7 @@ std::vector<UrlRank> run_engine_helper(
    }
 }
 
-std::vector<std::string> Driver::run_engine(std::string& query) {
+std::vector<std::string> Driver::run_engine(std::string& query, std::string& summary) {
    const std::string data_filename = "websites_data.jsonl";
    const uint32_t numChunks = 1;
 
@@ -155,9 +156,11 @@ std::vector<std::string> Driver::run_engine(std::string& query) {
 
    IndexFileReader reader(numChunks);
 
+   int matches = 0;
+
    std::cout << "\n--- Running Query: [" << query << "] ---" << std::endl;
    auto start = std::chrono::high_resolution_clock::now();
-   std::vector<UrlRank> results = run_engine_helper(query, numChunks, reader);
+   std::vector<UrlRank> results = run_engine_helper(query, numChunks, reader, matches);
    auto end = std::chrono::high_resolution_clock::now();
    std::chrono::duration<double> elapsed = end - start;
    std::cout << "Query execution time: " << elapsed.count() << " seconds" << std::endl;
@@ -165,13 +168,17 @@ std::vector<std::string> Driver::run_engine(std::string& query) {
    std::vector<std::string> urls;
    if (!results.empty())
    {
-      std::cout << "Found " << results.size() << " results for query (showing top " << results.size() << "):" << std::endl;
+      std::cout << "Found " << matches << " results for query (showing top " << results.size() << "):" << std::endl;
       for (const auto &url_sv : results)
       {
          std::cout << "  Rank: " << url_sv.rank << " - " << url_sv.url << std::endl;
          urls.emplace_back(url_sv.url);
       }
    }
+
+   std::ostringstream oss;
+   oss << std::fixed << std::setprecision(3) << elapsed.count();
+   summary = "Found " + std::to_string(matches) + " matches in " + oss.str() + " seconds";
 
    return urls;
    

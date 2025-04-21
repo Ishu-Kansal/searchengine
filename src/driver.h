@@ -17,7 +17,7 @@ class Driver {
         Driver();
     
         // Runs the full query pipeline and returns the matching URLs
-        std::vector<std::string> run_engine(std::string& query);
+        std::vector<std::string> run_engine(std::string& query, std::string& summary);
     
         // Given a URL, fetches and parses HTML into SearchResult metadata
         SearchResult get_url_and_parse(const std::string& url);
