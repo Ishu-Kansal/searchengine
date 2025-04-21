@@ -40,7 +40,7 @@ std::string Driver::join_words(const std::vector<std::string>& words, size_t max
 std::string Driver::decode_html_entities(const std::string& input) {
    static const std::unordered_map<std::string, char> named_entities = {
        {"amp", '&'}, {"lt", '<'}, {"gt", '>'},
-       {"quot", '"'}, {"apos", '\''}, {"nbsp", ' '}
+       {"quot", '"'}, {"apos", '\''}, {"nbsp", ' '}, {"mdash", '-'}
    };
 
    std::string output;
@@ -105,8 +105,8 @@ SearchResult Driver::get_url_and_parse(const std::string& url) {
 
    try {
        HtmlParser parser(html.data(), html.size());
-       result.title = join_words(parser.titleWords);
-       result.snippet = join_words(parser.description, 30);
+       result.title = decode_html_entities(join_words(parser.titleWords));
+       result.snippet = decode_html_entities(join_words(parser.description, 30));
    }
    catch (...) {
        std::cerr << "Parsing failed for: " << url_str << std::endl;

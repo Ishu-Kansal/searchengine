@@ -15,6 +15,57 @@ pthread_mutex_t result_mutex = PTHREAD_MUTEX_INITIALIZER;
 // Shared driver instance
 Driver driver;
 
+std::string clean_url(std::string& url) {
+  std::string cleaned = url;
+
+  // Remove "https://"
+  const std::string https_prefix = "https://";
+  if (cleaned.rfind(https_prefix, 0) == 0) {
+      cleaned.erase(0, https_prefix.length());
+  }
+
+  // Remove "http:/"
+  const std::string http_prefix = "https:/";
+  if (cleaned.rfind(http_prefix, 0) == 0) {
+      cleaned.erase(0, http_prefix.length());
+  }
+
+  // Remove "www."
+  const std::string www_prefix = "www.";
+  if (cleaned.rfind(www_prefix, 0) == 0) {
+      cleaned.erase(0, www_prefix.length());
+  }
+
+  return cleaned;
+}
+
+bool is_valid_utf8(const std::string& string) {
+    const unsigned char* bytes = reinterpret_cast<const unsigned char*>(string.c_str());
+    size_t len = string.length();
+    size_t i = 0;
+
+    while (i < len) {
+        if (bytes[i] <= 0x7F) {
+            i += 1;
+        } else if ((bytes[i] & 0xE0) == 0xC0) {
+            if (i + 1 >= len || (bytes[i + 1] & 0xC0) != 0x80) return false;
+            i += 2;
+        } else if ((bytes[i] & 0xF0) == 0xE0) {
+            if (i + 2 >= len || (bytes[i + 1] & 0xC0) != 0x80 || (bytes[i + 2] & 0xC0) != 0x80) return false;
+            i += 3;
+        } else if ((bytes[i] & 0xF8) == 0xF0) {
+            if (i + 3 >= len || (bytes[i + 1] & 0xC0) != 0x80 ||
+                (bytes[i + 2] & 0xC0) != 0x80 || (bytes[i + 3] & 0xC0) != 0x80)
+                return false;
+            i += 4;
+        } else {
+            return false;
+        }
+    }
+    return true;
+}
+
+
 // Struct used to pass URL and index info to each thread
 struct ThreadData {
   std::string url;
@@ -28,11 +79,21 @@ void* snippet_thread_worker(void* arg) {
 
     // Lock before modifying shared data
     pthread_mutex_lock(&result_mutex);
+
+    if (!is_valid_utf8(parsed.title) || parsed.title == "") {
+      parsed.title = clean_url(parsed.url);
+    }
+
+    if (!is_valid_utf8(parsed.snippet)) {
+      parsed.snippet = "";
+    }
+    
     result["results"][data->idx] = {
-        {"url", parsed.url},
-        {"title", parsed.title},
-        {"snippet", parsed.snippet}
+      {"url", parsed.url},
+      {"title", parsed.title},
+      {"snippet", parsed.snippet}
     };
+
     pthread_mutex_unlock(&result_mutex);
 
     delete data; // Clean up dynamically allocated memory
@@ -46,10 +107,16 @@ json run_query(std::string &query) {
   std::vector<std::string> urls = driver.run_engine(query);
 
   result["results"] = json::array();
-  for (const std::string url : urls) {
+  for (std::string& url : urls) {
+    if (!is_valid_utf8(url)) {
+      continue;
+    }
+
+    std::string cleaned = clean_url(url);
+
     result["results"].push_back({
         {"url", url},
-        {"title", url},
+        {"title", cleaned},
         {"snippet", ""}
     });
   }

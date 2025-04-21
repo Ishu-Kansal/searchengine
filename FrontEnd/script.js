@@ -28,6 +28,8 @@ const submitButton = searchForm.querySelector('button[type="submit"]');
 
 let gifInterval = null; // To store the interval ID
 
+const fetchedPages = new Set();
+
 searchForm.addEventListener('submit', async function (e) {
   e.preventDefault();
 
@@ -111,6 +113,8 @@ searchForm.addEventListener('submit', async function (e) {
     } else {
       allResults = searchData.results;
 
+      fetchedPages.clear();
+
       renderPage(0); // Show results right away
 
       // Start fetching snippets immediately after search response
@@ -149,8 +153,6 @@ searchForm.addEventListener('submit', async function (e) {
     submitButton.disabled = false;
   }
 });
-
-const fetchedPages = new Set();
 
 async function fetchSnippetsForPage(pageIndex) {
   const start = pageIndex * pageSize;
@@ -325,6 +327,8 @@ function displayAISummary(summaryText) {
   summaryTextEl.textContent = summaryText;
   summaryContainer.style.display = 'block';
   document.getElementById('aiSummaryContent').style.display = 'block';
+  document.getElementsByClassName('panel-heading')[0].style.borderBottomLeftRadius = '0px';
+  document.getElementsByClassName('panel-heading')[0].style.borderBottomRightRadius = '0px';
   document.getElementById('aiToggleIcon').classList.remove('glyphicon-chevron-down');
   document.getElementById('aiToggleIcon').classList.add('glyphicon-chevron-up');
 }
