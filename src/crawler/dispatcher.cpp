@@ -140,7 +140,8 @@ void saver() {
   bf.writeBFtoFile(filterName);
   std::cout << "Finished writing filter...\n";
 
-  std::ofstream outputFile{queueName};
+  std::ofstream outputFile{queueName,
+                           std::ofstream::out | std::ios_base::trunc};
   if (!outputFile) assert(false);
 
   int ctr = 0;
@@ -164,7 +165,7 @@ void saver() {
   }
   outputFile.flush();
   std::cout << "Finished writing queue...\n";
-  std::ofstream statsFile{statsName};
+  std::ofstream statsFile{statsName, std::ofstream::out | std::ios_base::trunc};
   statsFile << num_processed;
   statsFile.flush();
 }

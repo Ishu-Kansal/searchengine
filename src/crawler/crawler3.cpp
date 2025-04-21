@@ -56,8 +56,8 @@ static constexpr std::string_view UNWANTED_LRM = "&lrm";
 static constexpr std::string_view UNWANTED_RLM = "&rlm";
 static constexpr size_t MAX_WORD_LENGTH = 50;
 
-const static int NUM_THREADS = 64;  // start small
-const static int NUM_CHUNKS = 10;   // start small
+const static int NUM_THREADS = 128;  // start small
+const static int NUM_CHUNKS = 10;    // start small
 
 uint32_t STATIC_RANK = 0;  // temp global variable
 
@@ -148,23 +148,23 @@ void* url_adder(void*) {
 
   bool req = 1;
   size_t header{};
-  std::string next;
-  uint64_t rank;
+  std::string next{};
+  uint64_t rank{};
 
   while (true) {
-    for (int i = 0; i < 10'000; ++i) {
-      sem_wait(adder_request_sem);
-      {
-        pthread_lock_guard guard{adder_lock};
-        std::tie(next, rank) = std::move(adderQueue.back());
-        adderQueue.pop_back();
-        size_t header = sizeof(size_t) + next.size();
-        send(sock, &header, sizeof(header), 0);
-        send(sock, &rank, sizeof(rank), 0);
-        send(sock, next.data(), next.size(), 0);
-      }
+    // for (int i = 0; i < 10'000; ++i) {
+    sem_wait(adder_request_sem);
+    {
+      pthread_lock_guard guard{adder_lock};
+      std::tie(next, rank) = std::move(adderQueue.back());
+      adderQueue.pop_back();
+      size_t header = sizeof(size_t) + next.size();
+      send(sock, &header, sizeof(header), 0);
+      send(sock, &rank, sizeof(rank), 0);
+      send(sock, next.data(), next.size(), 0);
     }
-    sleep(1);
+    // }
+    // sleep(1);
   }
 }
 
