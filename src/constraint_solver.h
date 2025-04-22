@@ -16,6 +16,8 @@ constexpr size_t TOTAL_DOCS_TO_RETURN = 128;
 
 constexpr size_t HOST_MATCH_SCORE = 256;
 constexpr size_t PATH_MATCH_SCORE = 128;
+constexpr size_t HOST_MATCHED_ALL_QUERY_TERMS = 128;
+constexpr size_t PATH_MATCHED_ALL_QUERY_TERMS = 64;
 
 constexpr size_t MAX_SHORT_URL_LEN = 16;
 
@@ -125,7 +127,8 @@ ParsedUrlRanking parseUrl(const std::string& url_string) {
   {
        result.first_path_segment.pop_back();
   }
-
+  std::replace(result.path.begin(), result.path.end(), '-', ' ');
+  std::replace(result.first_path_segment.begin(), result.first_path_segment.end(), '-', ' ');
   return result;
 }
 struct UrlRank 
@@ -270,17 +273,22 @@ float calculateURLscore(const ParsedUrlRanking & parsedUrl,
 {
     float hostMatchScore = 0.0f;
     float pathMatchScore = 0.0f;
-
-    for (const auto & termsVector: orderedQueryTerms)
+    size_t currScore = 0;
+    for (int i = 0; i < orderedQueryTerms.size(); ++i)
     {
-      for (const auto & wordISR: termsVector)
+      size_t currQueryVectorSize = orderedQueryTerms[i].size();
+      size_t currHostMatches = 0;
+      size_t currPathMatches = 0;
+      for (int j = 0; j < currQueryVectorSize; ++j)
       {
+        const auto &wordISR = orderedQueryTerms[i][j];
         if (!wordISR) continue;
         const std::string_view word = wordISR->GetWord();
         if (word.empty()) continue;
         if (!parsedUrl.host.empty() && parsedUrl.host.find(word) != std::string_view::npos)
         {
           float curr = matchScore(word.size(), parsedUrl.host.size());
+          ++currHostMatches;
           if (curr > hostMatchScore)
           {
             hostMatchScore = curr;
@@ -290,75 +298,83 @@ float calculateURLscore(const ParsedUrlRanking & parsedUrl,
         if (!parsedUrl.path.empty() && parsedUrl.path.find(word) != std::string_view::npos)
         {
           float curr = matchScore(word.size(), parsedUrl.path.size());
+          ++currPathMatches;
           if (curr > pathMatchScore)
           {
             pathMatchScore = curr;
           }
         }
       } // End inner loop (words)
+      if (currHostMatches == currQueryVectorSize && currQueryVectorSize > 1)
+      {
+        currScore += HOST_MATCHED_ALL_QUERY_TERMS;
+      }
+      if (currPathMatches == currQueryVectorSize && currQueryVectorSize > 1)
+      {
+        currScore += PATH_MATCHED_ALL_QUERY_TERMS;
+      }
     } // End outer loop (term vectors)
     if (parsedUrl.host.size() < MAX_SHORT_URL_LEN)
     {
       if (hostMatchScore > 0.5f)
       {
-        return HOST_MATCH_SCORE;
+        return HOST_MATCH_SCORE + currScore;
       }
       if (hostMatchScore > 0.3f)
       {
-        return HOST_MATCH_SCORE >> 1;
+        return HOST_MATCH_SCORE >> 1 + currScore;
       }
       if (hostMatchScore > 0.15f)
       {
-        return HOST_MATCH_SCORE >> 2;
+        return HOST_MATCH_SCORE >> 2 + currScore;
       }
     }
     else
     {
       if (hostMatchScore > 0.7f)
       {
-        return HOST_MATCH_SCORE;
+        return HOST_MATCH_SCORE + currScore;
       }
       if (hostMatchScore > 0.5f)
       {
-        return HOST_MATCH_SCORE >> 1;
+        return HOST_MATCH_SCORE >> 1 + currScore;
       }
       if (hostMatchScore > 0.3f)
       {
-        return HOST_MATCH_SCORE >> 2;
+        return HOST_MATCH_SCORE >> 2 + currScore;
       }
     }
     if (parsedUrl.path.size() < MAX_SHORT_URL_LEN)
     {
       if (pathMatchScore > 0.5f)
       {
-        return HOST_MATCH_SCORE;
+        return HOST_MATCH_SCORE + currScore;
       }
-      if (pathMatchScore > 0.3f)
+      else if (pathMatchScore > 0.3f)
       {
-        return HOST_MATCH_SCORE >> 1;
+        return HOST_MATCH_SCORE >> 1 + currScore;
       }
-      if (pathMatchScore > 0.15f)
+      else if (pathMatchScore > 0.15f)
       {
-        return HOST_MATCH_SCORE >> 2;
+        return HOST_MATCH_SCORE >> 2 + currScore;
       }
     }
     else
     {
       if (pathMatchScore > 0.7f)
       {
-        return PATH_MATCH_SCORE;
+        return PATH_MATCH_SCORE + currScore;
       }
-      if (pathMatchScore > 0.5f)
+      else if (pathMatchScore > 0.5f)
       {
-        return PATH_MATCH_SCORE >> 1;
+        return PATH_MATCH_SCORE >> 1 + currScore;
       }
-      if (pathMatchScore > 0.3f)
+      else if (pathMatchScore > 0.3f)
       {
-        return PATH_MATCH_SCORE >> 2;
+        return PATH_MATCH_SCORE >> 2 + currScore;
       }
     }
-    
-    return 0.0f;
+    return currScore;
 }
 // actual constraint solver function
 std::vector<UrlRank> constraint_solver(
@@ -410,7 +426,7 @@ std::vector<UrlRank> constraint_solver(
           // use the index to get relevant doc data
           unique_ptr<Doc> doc = reader.FindUrl(index, chunkNum);
           if (!doc) break;
-          if (doc->url == "https://nossdav.org/2025/")
+          if (doc->url == "https://www.macworld.com/article/347010/new-mac-pro-2023.html")
           {
             cout << "";
           }
