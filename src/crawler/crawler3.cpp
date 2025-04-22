@@ -86,13 +86,15 @@ sem_t* adder_request_sem{};
 std::vector<std::string> getterQueue{};
 std::vector<std::pair<std::string, uint64_t>> adderQueue{};
 
+std::string dispatcher_address{};
+
 int adder_socket;
 
 void* url_getter(void*) {
   sockaddr_in address;
   address.sin_family = AF_INET;
-  address.sin_port = htons(GET_PORT);                // Port number
-  address.sin_addr.s_addr = inet_addr("127.0.0.1");  // Server IP
+  address.sin_port = htons(GET_PORT);  // Port number
+  address.sin_addr.s_addr = inet_addr(dispatcher_address.c_str());  // Server IP
 
   int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   assert(sock != -1);
@@ -419,7 +421,13 @@ void* metric_collector(void*) {
 int main(int argc, char** argv) {
   signal(SIGPIPE, SIG_IGN);
 
-  int id = atoi(argv[0]);
+  if (argc != 3) {
+    std::cout << "Usage: ./crawler [id] [server ip]";
+    exit(1);
+  }
+
+  int id = atoi(argv[1]);
+  dispatcher_address = argv[2];
   assert(id < 100);
 
   std::vector<std::string> sem_names{};
