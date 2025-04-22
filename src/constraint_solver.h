@@ -8,13 +8,17 @@
 #include <algorithm>
 #include <cctype>
 #include <sstream>
+
 #include "isr/isr.h"
 #include "ranker/dynamic_rank.h"
 
-constexpr size_t TOTAL_DOCS_TO_RETURN = 100;
-constexpr size_t HOST_MATCH_SCORE = 100;
-constexpr size_t PATH_MATCH_SCORE = 50;
-constexpr size_t SEGEMENT_MATCH_SCORE = 25;
+constexpr size_t TOTAL_DOCS_TO_RETURN = 16;
+constexpr size_t HOST_MATCH_SCORE = 256;
+constexpr size_t PATH_MATCH_SCORE = 128;
+
+constexpr size_t MAX_SHORT_URL_LEN = 16;
+
+static bool bodyText = true;
 
 constexpr std::array<float, 256> createReciprocalTable() 
 {
@@ -41,10 +45,10 @@ constexpr std::array<int, 256> createShortestSpanTable()
 constexpr auto RECIPROCAL_TABLE = createReciprocalTable();
 constexpr auto SHORTEST_SPAN_TABLE = createShortestSpanTable();
 
-float HostMatchScore(int queryLen, int hostLen) 
+float matchScore(int queryLen, int partialUrlLen) 
 {
-  if (hostLen == 0) return 0.0f;
-  return queryLen * RECIPROCAL_TABLE[hostLen];
+  if (partialUrlLen == 0) return 0.0f;
+  return queryLen * RECIPROCAL_TABLE[partialUrlLen];
 }
 
 int getShortestSpan(int queryLen)
@@ -63,6 +67,66 @@ struct ParsedUrlRanking
   }
 };
 
+ParsedUrlRanking parseUrl(const std::string& url_string) {
+  ParsedUrlRanking result;
+  result.path = "/";
+
+  size_t scheme_end = url_string.find("://");
+  if (scheme_end == std::string::npos) 
+  {
+      return result;
+  }
+  size_t authority_start = scheme_end + 3;
+
+  size_t authority_end = url_string.find_first_of("/?#", authority_start);
+
+  if (authority_end == std::string::npos) 
+  {
+      result.host = url_string.substr(authority_start);
+  } 
+  else 
+  {
+      result.host = url_string.substr(authority_start, authority_end - authority_start);
+      
+      size_t path_end = url_string.find_first_of("?#", authority_end);
+      if (path_end == std::string::npos) 
+      {
+          result.path = url_string.substr(authority_end);
+      } 
+      else 
+      {
+          result.path = url_string.substr(authority_end, path_end - authority_end);
+      }
+      if (result.path.empty() && url_string[authority_end] == '/') 
+      {
+           result.path = "/";
+      }
+  }
+
+  if (result.path.length() > 1 && result.path[0] == '/') 
+  { // Path needs to be longer than just "/"
+      size_t first_segment_end = result.path.find('/', 1); // Find the *next* slash after the first char
+      if (first_segment_end == std::string::npos) 
+      {
+          // No more slashes, the segment is the rest of the path
+          result.first_path_segment = result.path.substr(1);
+      } 
+      else if (first_segment_end > 1) 
+      {
+           // Segment ends before the next slash
+          result.first_path_segment = result.path.substr(1, first_segment_end - 1);
+      }
+      // If first_segment_end is 1 (e.g., path "//"), segment remains empty.
+  }
+
+  // Basic cleanup: remove trailing slash from segment if it exists and is the only char
+  if (!result.first_path_segment.empty() && result.first_path_segment.back() == '/') 
+  {
+       result.first_path_segment.pop_back();
+  }
+
+  return result;
+}
 struct UrlRank 
 {
   int rank;
@@ -127,7 +191,6 @@ std::vector<AnchorTermIndex> getRarestIndices(
   return sortedIndices;
 }
 
-
 void insertionSort(vector<UrlRank> & topRankedDocs, UrlRank & rankedDoc) 
 {
   const size_t maxSize = TOTAL_DOCS_TO_RETURN;
@@ -155,9 +218,146 @@ void insertionSort(vector<UrlRank> & topRankedDocs, UrlRank & rankedDoc)
   topRankedDocs[pos] = std::move(docToInsert);
 }
 
-int calculateURLscore(std::string url)
+/*
+float calculateURLscore(const ParsedUrlRanking & parsedUrl, vector<vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms)
 {
+  float score = 0;
+  for (const auto & termsVector: orderedQueryTerms)
+  {
+    for (const auto & wordISR: termsVector)
+    {
+      const std::string_view & word = wordISR->GetWord();
+      if (parsedUrl.host.find(word) != std::string::npos)
+      {
+        float result = matchScore(word.size(), parsedUrl.host.size());
+        if (result > score)
+        {
+          score = result;
+        }
+        break;
+      }
+      if (parsedUrl.path.find(word) != std::string::npos)
+      {
+        float result = matchScore(word.size(), parsedUrl.path.size());
+        if (result > score)
+        {
+          score = result;
+        }
+        break;
+      }
 
+    }
+  }
+
+  if (score > 0.5f)
+  {
+    return HOST_MATCH_SCORE;
+  }
+  if (score > 0.3f)
+  {
+    return HOST_MATCH_SCORE >> 1;
+  }
+  if (score > 0.15f)
+  {
+
+  }
+}
+
+*/
+float calculateURLscore(const ParsedUrlRanking & parsedUrl,
+                       const std::vector<std::vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms)
+{
+    float hostMatchScore = 0.0f;
+    float pathMatchScore = 0.0f;
+
+    for (const auto & termsVector: orderedQueryTerms)
+    {
+      for (const auto & wordISR: termsVector)
+      {
+        if (!wordISR) continue;
+        const std::string_view word = wordISR->GetWord();
+        if (word.empty()) continue;
+        if (!parsedUrl.host.empty() && parsedUrl.host.find(word) != std::string_view::npos)
+        {
+          float curr = matchScore(word.size(), parsedUrl.host.size());
+          if (curr > hostMatchScore)
+          {
+            hostMatchScore = curr;
+          }
+        }
+
+        if (!parsedUrl.path.empty() && parsedUrl.path.find(word) != std::string_view::npos)
+        {
+          float curr = matchScore(word.size(), parsedUrl.path.size());
+          if (curr > pathMatchScore)
+          {
+            pathMatchScore = curr;
+          }
+        }
+      } // End inner loop (words)
+    } // End outer loop (term vectors)
+    if (parsedUrl.host.size() < MAX_SHORT_URL_LEN)
+    {
+      if (hostMatchScore > 0.5f)
+      {
+        return HOST_MATCH_SCORE;
+      }
+      if (hostMatchScore > 0.3f)
+      {
+        return HOST_MATCH_SCORE >> 1;
+      }
+      if (hostMatchScore > 0.15f)
+      {
+        return HOST_MATCH_SCORE >> 2;
+      }
+    }
+    else
+    {
+      if (hostMatchScore > 0.7f)
+      {
+        return HOST_MATCH_SCORE;
+      }
+      if (hostMatchScore > 0.5f)
+      {
+        return HOST_MATCH_SCORE >> 1;
+      }
+      if (hostMatchScore > 0.3f)
+      {
+        return HOST_MATCH_SCORE >> 2;
+      }
+    }
+    if (parsedUrl.path.size() < MAX_SHORT_URL_LEN)
+    {
+      if (pathMatchScore > 0.5f)
+      {
+        return HOST_MATCH_SCORE;
+      }
+      if (pathMatchScore > 0.3f)
+      {
+        return HOST_MATCH_SCORE >> 1;
+      }
+      if (pathMatchScore > 0.15f)
+      {
+        return HOST_MATCH_SCORE >> 2;
+      }
+    }
+    else
+    {
+      if (pathMatchScore > 0.7f)
+      {
+        return PATH_MATCH_SCORE;
+      }
+      if (pathMatchScore > 0.5f)
+      {
+        return PATH_MATCH_SCORE >> 1;
+      }
+      if (pathMatchScore > 0.3f)
+      {
+        return PATH_MATCH_SCORE >> 2;
+      }
+    }
+    
+    return 0.0f;
 }
 // actual constraint solver function
 std::vector<UrlRank> constraint_solver(
@@ -205,10 +405,16 @@ std::vector<UrlRank> constraint_solver(
 
           int docEndLoc = currLoc;
           int docStartLoc = currLoc - currDelta;
-        
+
           // use the index to get relevant doc data
           unique_ptr<Doc> doc = reader.FindUrl(index, chunkNum);
-          
+          if (!doc) break;
+          if (doc->url == "https://nossdav.org/2025/")
+          {
+            cout << "";
+          }
+
+          int shortestSpanPossible = getShortestSpan(queryLength);
           int dynamic_score = get_dynamic_rank(
             rarestTermInOrder,
             orderedQueryTerms, 
@@ -216,24 +422,26 @@ std::vector<UrlRank> constraint_solver(
             docEndLoc,
             reader,
             chunkNum,
-            true);
+            bodyText,
+            shortestSpanPossible);
           // std::cout << "Dynamic rank: " << dynamic_score << '\n';
           // Dynamic score for title words
+
           /*
           int title_score = get_dynamic_rank(
-            titleTerms[anchorOuterIndex][anchorInnerIndex],
+            rarestTermInOrder,
             titleTerms,
             docStartLoc,
             docEndLoc,
             reader,
             chunkNum,
-            false);
+            !bodyText,
+            shortestSpanPossible);
             */
-          // if (title_score > 0) {
-          //   std::cout << "Title score: " << title_score << " URL: " << doc->url << std::endl;
-          // }
-
-          int url_score = calculateURLscore(doc->url);
+        
+          ParsedUrlRanking parsedUrl = parseUrl(doc->url);
+          int url_score = calculateURLscore(parsedUrl, orderedQueryTerms);
+          
           // Add weights to the score later
           UrlRank urlRank(doc->url, dynamic_score + url_score); /*title_score + url_score + doc->staticRank*/
           // cout << urlRank.rank << '\n';
@@ -244,7 +452,7 @@ std::vector<UrlRank> constraint_solver(
             break;
           }
           docObj = docISR->Seek(currMatch->location, chunkNum);
-    }
+      }
     }
     cout << "MATCHED DOCUMENTS: " << matchedDocs << '\n';
     matches = matchedDocs;
