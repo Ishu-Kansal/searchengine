@@ -81,7 +81,7 @@ void fill_queue() {
   // std::cout << "Enter fill_queue()" << std::endl;
   uint32_t links_vector_size = links_vector.size();
 
-  if (explore_queue.empty() && links_vector_size > MAX_VECTOR_SIZE) {
+  if (explore_queue.empty() && links_vector_size + 100 > MAX_VECTOR_SIZE) {
     // std::cout << "Here1" << std::endl;
     // Establish range for uniform random num gen
     // Range is from 0 to the last element in the vector
@@ -113,7 +113,7 @@ void fill_queue() {
 std::string get_next_url() {
   const size_t links_vector_size = links_vector.size();
 
-  if (explore_queue.empty() && links_vector_size > MAX_VECTOR_SIZE) {
+  if (explore_queue.empty() && links_vector_size + 100 > MAX_VECTOR_SIZE) {
     fill_queue();
   }
 
@@ -220,7 +220,6 @@ void *handler(void *fd) {
 void init_dispatcher() {
   std::ifstream if1{queueName}, if2{statsName};
   if (if1.good()) {
-    std::cout << "Starting dispatcher from save state...\n";
     bf = Bloomfilter(filterName);
     std::string url;
     while (if1 >> url) explore_queue.push(url);
@@ -243,11 +242,11 @@ void init_dispatcher() {
 
 void *getter(void *arg) {
   int fd = (uint64_t)(arg);
-  SocketWrapper sock_{fd};
   char c;
-  while (recv(fd, &c, sizeof(c), MSG_WAITALL)) {
+  while (recv(fd, &c, sizeof(c), 0) != 0) {
     get_handler(fd);
   }
+  close(fd);
   return NULL;
 }
 
@@ -290,21 +289,13 @@ void *get_requests(void *) {
 
 void *adder(void *arg) {
   int fd = (uint64_t)(arg);
-  SocketWrapper sock_{fd};
-  size_t header{};
-  uint64_t rank{};
-  while (recv(fd, &header, sizeof(header), MSG_WAITALL)) {
-    assert(header > sizeof(rank));
-    std::cout << "Received URL Size: " << (header - sizeof(rank)) << '\n';
+  size_t header;
+  uint64_t rank;
+  while (recv(fd, &header, sizeof(header), MSG_WAITALL) != 0) {
+    uint64_t rank{};
     std::string url(header - sizeof(rank), 0);
-    if (recv(fd, &rank, sizeof(rank), MSG_WAITALL) == -1) {
-      perror("Failed to read rank: ");
-      assert(false);
-    }
-    if (recv(fd, url.data(), url.size(), MSG_WAITALL) == -1) {
-      perror("Failed to read added url: ");
-      assert(false);
-    }
+    if (recv(fd, &rank, sizeof(rank), MSG_WAITALL) == 0) break;
+    if (recv(fd, url.data(), url.size(), MSG_WAITALL) == 0) break;
     pthread_lock_guard guard{queue_lock};
     if (links_vector.size() < MAX_VECTOR_SIZE && !bf.contains(url)) {
       bf.insert(url);

@@ -319,7 +319,7 @@ void* add_to_index(void* addr) {
         std::transform(part.begin(), part.end(), part.begin(),
                        [](unsigned char c) { return std::tolower(c); });
         // std::cout << part << '\n';
-        chunk.add_word(part, false);
+        chunk.add_word(part, true);
       }
     }
 
@@ -345,8 +345,8 @@ void* add_to_index(void* addr) {
 void* runner(void* arg) {
   // const static thread_local pid_t thread_id = syscall(SYS_gettid);
   const unsigned int thread_id = (uint64_t)(arg);
-  bool done = false;
-  while (!done) {
+
+  while (num_processed++ < MAX_PROCESSED) {
     // Get the next url to be processed
     std::string url = get_string();
 
@@ -364,7 +364,6 @@ void* runner(void* arg) {
 
     // Continue if html code was not retrieved
     if (args.status != 0) {
-      std::cout << "Status " << args.status << std::endl;
       // std::cout << "Could not retrieve HTML\n" << std::endl;
       continue;
     }
@@ -374,9 +373,7 @@ void* runner(void* arg) {
     int static_rank = get_static_rank(cstring_view{url}, parser);
     // Process links found by the parser
     {
-      auto it = num_processed++;
-      if (it % 1000 == 0) std::cout << it << std::endl;
-      if (it > MAX_PROCESSED) done = true;
+      if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
     }
 
     for (auto& link : parser.links) {
@@ -447,6 +444,7 @@ int main(int argc, char** argv) {
 
   pthread_t ctr_thread;
   pthread_create(&ctr_thread, NULL, metric_collector, NULL);
+  pthread_detach(ctr_thread);
 
   assert(!pthread_mutex_init(&getter_lock, NULL));
   assert(!pthread_mutex_init(&adder_lock, NULL));
@@ -478,8 +476,6 @@ int main(int argc, char** argv) {
   }
 
   std::cout << "FINISHED THREADS...\n";
-
-  pthread_join(ctr_thread, NULL);
 
   // IndexFile chunkFile(id, chunk);
 
