@@ -1,9 +1,5 @@
 CXX = g++
-<<<<<<< HEAD
 CXXFLAGS = -pthread -Wall -Wextra -std=c++17 -O3 \
-=======
-CXXFLAGS = -pthread -Wall -Wextra -std=c++17 -O3\
->>>>>>> 54e0066 (changes)
     -I/opt/homebrew/opt/openssl@3/include
 
 LDFLAGS = -L/opt/homebrew/opt/openssl@3/lib -lssl -lcrypto

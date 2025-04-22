@@ -251,6 +251,39 @@ h1::after {
   text-align: center;
 }
 
+.searchBarContainer {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+#imageDisplayContainer {
+  display: none;
+  max-width: 80px;
+  max-height: 60px;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: transform 0.05s ease, z-index 0s;
+}
+
+#imageDisplayContainer:hover {
+  transform: scale(8);
+  z-index: 9999;
+  position: relative;
+}
+
+.imageSearchBtn.drag-hover {
+  background-color: #e0e0e0;
+  border: 2px dashed #666;
+}
+
+#uploadedImage {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 6px;
+}
+
 /* Style for the uploaded image */
 #uploadedImage {
   max-width: 60%;

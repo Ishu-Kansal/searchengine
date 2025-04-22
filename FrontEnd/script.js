@@ -4,16 +4,6 @@ let allResults = [];
 let currentPage = 0;
 const pageSize = 10;
 
-// Set up an array of GIFs for the loading animation
-const gifs = [
-  'https://tenor.com/view/evan-peters-ip-ip-address-google-computer-gif-16211954443149729959.gif', // IP
-  'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMzZ4ZnpjdDVoOHlueW1kbmRtdG55NDIzcjA1aHdzaXlnam9tanp4MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/FArgGzk7KO14k/giphy.gif', // Bears
-  'https://tenor.com/view/kerfuffle-fox-gif-18270783.gif', // Fox
-  'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWcwM3U1dGl1aGIyamgzbWNqcDE1MXRkenM0OTBudHRuNnF5NGl0NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/E6jscXfv3AkWQ/giphy.gif', // Cat
-  'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbjBuMHI2b3dpZWpzbzF1eGF0enhvcWwzM2duZHh2b3FnYzZhbXNhNiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/42wQXwITfQbDGKqUP7/giphy.gif', // Pikachu
-  'https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTY0MmUxMHlpN3dycmt0cWl4aWJ2NTJ6ZG50c3B5Zzk3eWNyZHdydyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/A53vF9xNk7AKnQPLDs/giphy.gif' // Cookie monster
-];
-
 // DOM References
 const searchForm = document.getElementById('searchForm');
 const queryInput = document.getElementById('queryInput');
@@ -26,9 +16,20 @@ const nextButton = document.getElementById('nextPage');
 const pageNumberSpan = document.getElementById('pageNumber');
 const submitButton = searchForm.querySelector('button[type="submit"]');
 
-let gifInterval = null; // To store the interval ID
-
 const fetchedPages = new Set();
+
+let gifTimeout = null;
+let gifInterval = null;
+
+// Set up an array of GIFs for the loading animation
+const gifs = [
+  'https://tenor.com/view/evan-peters-ip-ip-address-google-computer-gif-16211954443149729959.gif', // IP
+  'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMzZ4ZnpjdDVoOHlueW1kbmRtdG55NDIzcjA1aHdzaXlnam9tanp4MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/FArgGzk7KO14k/giphy.gif', // Bears
+  'https://tenor.com/view/kerfuffle-fox-gif-18270783.gif', // Fox
+  'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWcwM3U1dGl1aGIyamgzbWNqcDE1MXRkenM0OTBudHRuNnF5NGl0NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/E6jscXfv3AkWQ/giphy.gif', // Cat
+  'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbjBuMHI2b3dpZWpzbzF1eGF0enhvcWwzM2duZHh2b3FnYzZhbXNhNiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/42wQXwITfQbDGKqUP7/giphy.gif', // Pikachu
+  'https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTY0MmUxMHlpN3dycmt0cWl4aWJ2NTJ6ZG50c3B5Zzk3eWNyZHdydyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/A53vF9xNk7AKnQPLDs/giphy.gif' // Cookie monster
+];
 
 searchForm.addEventListener('submit', async function (e) {
   e.preventDefault();
@@ -55,7 +56,7 @@ searchForm.addEventListener('submit', async function (e) {
   document.getElementById('searchSummaryBox').style.display = 'none';
 
   let gifIndex = Math.floor(Math.random() * gifs.length);
-  let gifTimeout = null;
+  gifTimeout = null;
 
   // Hide GIF initially
   loadingGif.style.display = 'none';
@@ -304,14 +305,30 @@ function updatePaginationButtons() {
   paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
 }
 
+function scrollToMaintainBottomOffset(offsetFromBottom) {
+  const totalHeight = document.body.scrollHeight;
+  window.scrollTo({
+    top: totalHeight - offsetFromBottom,
+    behavior: 'instant'
+  });
+}
+
 // Pagination Event Listeners
 prevButton.addEventListener('click', () => {
   if (currentPage > 0) {
+    let offsetFromBottom = document.body.scrollHeight - window.scrollY;
+
     let newPage = currentPage - 1;
     renderPage(newPage);
+    scrollToMaintainBottomOffset(offsetFromBottom);
+
     if (!fetchedPages.has(newPage)) {
       fetchSnippetsForPage(newPage).then(() => {
-        renderPage(newPage); // Re-render with snippets
+        if (currentPage == newPage) {
+          //offsetFromBottom = document.body.scrollHeight - window.scrollY;
+          renderPage(currentPage);
+          //scrollToMaintainBottomOffset(offsetFromBottom);
+        }
         paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
       }).catch(error => {
         console.error('Snippet Fetch Error:', error);
@@ -322,11 +339,19 @@ prevButton.addEventListener('click', () => {
 
 nextButton.addEventListener('click', () => {
   if ((currentPage + 1) * pageSize < allResults.length) {
+    let offsetFromBottom = document.body.scrollHeight - window.scrollY;
+
     let newPage = currentPage + 1;
     renderPage(newPage);
+    scrollToMaintainBottomOffset(offsetFromBottom);
+
     if (!fetchedPages.has(newPage)) {
       fetchSnippetsForPage(newPage).then(() => {
-        renderPage(newPage); // Re-render with snippets
+        if (currentPage == newPage) {
+          //offsetFromBottom = document.body.scrollHeight - window.scrollY;
+          renderPage(currentPage);
+          //scrollToMaintainBottomOffset(offsetFromBottom);
+        }
         paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
       }).catch(error => {
         console.error('Snippet Fetch Error:', error);
@@ -371,7 +396,6 @@ function displayAISummary(summaryText) {
 
 const imageSearchBtn = document.querySelector('.imageSearchBtn');
 const imageInput = document.getElementById('imageInput');
-const imageDropOverlay = document.getElementById('imageDropOverlay');
 
 // Click triggers file select
 imageSearchBtn.addEventListener('click', () => {
@@ -386,20 +410,23 @@ imageInput.addEventListener('change', (event) => {
   }
 });
 
-// Drag-and-drop
-window.addEventListener('dragover', (e) => {
+//const imageSearchIcon = document.getElementById('searchForm');
+const imageSearchIcon = document.getElementsByTagName('body')[0];
+
+// Prevent default drag behavior on the image button itself
+imageSearchIcon.addEventListener('dragover', (e) => {
   e.preventDefault();
-  imageDropOverlay.style.display = 'block';
+  imageSearchIcon.classList.add('drag-hover');
 });
 
-window.addEventListener('dragleave', (e) => {
+imageSearchIcon.addEventListener('dragleave', (e) => {
   e.preventDefault();
-  imageDropOverlay.style.display = 'none';
+  imageSearchIcon.classList.remove('drag-hover');
 });
 
-window.addEventListener('drop', (e) => {
+imageSearchIcon.addEventListener('drop', (e) => {
   e.preventDefault();
-  imageDropOverlay.style.display = 'none';
+  imageSearchIcon.classList.remove('drag-hover');
   const file = e.dataTransfer.files[0];
   if (file && file.type.startsWith('image/')) {
     handleImageSearch(e, file);
@@ -427,15 +454,14 @@ async function handleImageSearch(e, file) {
 
   document.getElementById('searchSummaryBox').style.display = 'none';
 
+  clearTimeout(gifTimeout);
+  gifTimeout = null;
+
+  clearInterval(gifInterval);
+  gifInterval = null;
+
   let gifIndex = Math.floor(Math.random() * gifs.length);
-  let gifTimeout = null;
 
-  // Hide GIF initially
-  loadingGif.style.display = 'none';
-  loading.style.display = 'none';
-  loadingGif.src = ''; // Clear any existing GIF
-
-  // Start a delayed timer to show the GIF after 1 second
   gifTimeout = setTimeout(() => {
     loadingGif.src = gifs[gifIndex];
     loadingGif.style.display = 'block';
@@ -453,6 +479,12 @@ async function handleImageSearch(e, file) {
     
     const img = new Image();
     const imageUrl = URL.createObjectURL(file);
+
+    // Show the image in the image display area
+    const imageDisplayContainer = document.getElementById('imageDisplayContainer');
+    const uploadedImage = document.getElementById('uploadedImage');
+    uploadedImage.src = imageUrl;
+    imageDisplayContainer.style.display = 'block';
     
     img.onload = async () => {
       try {
@@ -527,7 +559,7 @@ async function handleImageSearch(e, file) {
         const imageDisplayContainer = document.getElementById('imageDisplayContainer');
         const uploadedImage = document.getElementById('uploadedImage');
         uploadedImage.src = imageUrl;
-        imageDisplayContainer.style.display = 'block'; // Show the image container
+        imageDisplayContainer.style.display = 'block';
       }
     };
 
@@ -545,4 +577,15 @@ async function handleImageSearch(e, file) {
   }
 }
 
+document.getElementById("imageInput").addEventListener("change", function (event) {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      document.getElementById("uploadedImage").src = e.target.result;
+      document.getElementById("imageDisplayContainer").style.display = "block";
+    };
+    reader.readAsDataURL(file);
+  }
+});
 

@@ -24,17 +24,17 @@
     <!-- Sticky header -->
     <div id="stickyHeader">
       <h1 data-text="404 Found">404 Found</h1>
-      <form id="searchForm" class="form-horizontal" autocomplete="off">
+      <form id="searchForm" class="form-horizontal" autocomplete="on">
         <div class="form-group">
           <!-- Inside the searchBarContainer div -->
           <div class="searchBarContainer">
             <!-- Image display area -->
-            <div id="imageDisplayContainer" style="display: none;">
-              <img id="uploadedImage" src="" alt="Uploaded Image" style="max-width: 100%; height: auto;">
+            <div id="imageDisplayContainer">
+              <img id="uploadedImage" src="" alt="Uploaded Image">
             </div>
-
+          
             <input type="text" class="searchBar" id="queryInput" required placeholder="Search the void..." />
-            
+          
             <!-- Search button -->
             <button type="submit" class="searchBtn">
               <i class="fas fa-search"></i>
@@ -50,22 +50,6 @@
             <!-- Hidden image input -->
             <input type="file" id="imageInput" accept="image/*" style="display: none;">
           </div>
-          
-          <!-- Drag and drop overlay -->
-          <div id="imageDropOverlay" style="
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(0,0,0,0.5);
-            z-index: 9999;
-            color: white;
-            font-size: 24px;
-            text-align: center;
-            line-height: 100vh;
-          ">
-            Drop your image here
-          </div>
-
         </div>
       </form>
     </div>
