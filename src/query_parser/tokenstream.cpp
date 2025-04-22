@@ -18,7 +18,7 @@ TokenStream::TokenStream( std::string &query ) : location( 0 ) {
 
    // Set of punctuation characters to remove from the query
    const std::unordered_set<char> strippedPunctuation = {
-      {'!', ',', '.', '?', ';'}
+      {'!', ',', '.', '?', ';', ':', '-', '+', '/', '~', '`', '>', '<', '@', '#', '$', '%', '^', '&', '*'}
    };
 
    // Common stopwords to remove unless inside quotes

@@ -54,11 +54,23 @@ searchForm.addEventListener('submit', async function (e) {
   document.getElementById('searchSummaryBox').style.display = 'none';
 
   let gifIndex = Math.floor(Math.random() * gifs.length);
-  loadingGif.src = gifs[gifIndex];
-  gifInterval = setInterval(() => {
-    gifIndex = (gifIndex + 1) % gifs.length;
+  let gifTimeout = null;
+
+  // Hide GIF initially
+  loadingGif.style.display = 'none';
+  loading.style.display = 'none';
+  loadingGif.src = ''; // Clear any existing GIF
+
+  // Start a delayed timer to show the GIF after .25 second
+  gifTimeout = setTimeout(() => {
     loadingGif.src = gifs[gifIndex];
-  }, 2000);
+    loadingGif.style.display = 'block';
+    loading.style.display = 'block';
+    gifInterval = setInterval(() => {
+      gifIndex = (gifIndex + 1) % gifs.length;
+      loadingGif.src = gifs[gifIndex];
+    }, 2000);
+  }, 250);
 
   let aiText = "";
 
@@ -70,7 +82,7 @@ searchForm.addEventListener('submit', async function (e) {
         "Authorization": "Bearer " + OPENAI_API_KEY
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4.1-nano",
         messages: [
           {
             role: "system",
@@ -159,8 +171,18 @@ searchForm.addEventListener('submit', async function (e) {
         An error occurred: ${error.message}. Please try again.
       </p>`;
   } finally {
+    clearTimeout(gifTimeout);
+    gifTimeout = null;
+
     clearInterval(gifInterval);
     gifInterval = null;
+
+    loadingGif.style.display = 'none'; // Ensure GIF is hidden
+    loadingGif.src = ''; // Clear GIF source
+    loadingIndicator.style.display = 'none';
+    submitButton.classList.remove('loading');
+    submitButton.disabled = false;
+
     loadingIndicator.style.display = 'none';
     submitButton.classList.remove('loading');
     submitButton.disabled = false;
@@ -345,3 +367,173 @@ function displayAISummary(summaryText) {
   document.getElementById('aiToggleIcon').classList.remove('glyphicon-chevron-down');
   document.getElementById('aiToggleIcon').classList.add('glyphicon-chevron-up');
 }
+
+const imageSearchBtn = document.querySelector('.imageSearchBtn');
+const imageInput = document.getElementById('imageInput');
+const imageDropOverlay = document.getElementById('imageDropOverlay');
+
+// Click triggers file select
+imageSearchBtn.addEventListener('click', () => {
+  imageInput.click();
+});
+
+// Handle file input
+imageInput.addEventListener('change', (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    handleImageSearch(event, file);
+  }
+});
+
+// Drag-and-drop
+window.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  imageDropOverlay.style.display = 'block';
+});
+
+window.addEventListener('dragleave', (e) => {
+  e.preventDefault();
+  imageDropOverlay.style.display = 'none';
+});
+
+window.addEventListener('drop', (e) => {
+  e.preventDefault();
+  imageDropOverlay.style.display = 'none';
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    handleImageSearch(e, file);
+  }
+});
+
+async function handleImageSearch(e, file) {
+  e.preventDefault();
+
+  let questionText = "Describe what is in the pdf in six words or less";
+  console.log("Image selected:", file);
+
+  // Reset UI and state
+  currentPage = 0;
+  allResults = [];
+  searchResultsContainer.innerHTML = '';
+  document.getElementById('aiSummaryContainer').style.display = 'none';
+  paginationControls.style.display = 'none';
+  toggleAISummary();
+
+  submitButton.classList.add('loading');
+  submitButton.disabled = true;
+  loadingIndicator.style.display = 'block';
+
+  document.getElementById('searchSummaryBox').style.display = 'none';
+
+  let gifIndex = Math.floor(Math.random() * gifs.length);
+  let gifTimeout = null;
+
+  // Hide GIF initially
+  loadingGif.style.display = 'none';
+  loading.style.display = 'none';
+  loadingGif.src = ''; // Clear any existing GIF
+
+  // Start a delayed timer to show the GIF after 1 second
+  gifTimeout = setTimeout(() => {
+    loadingGif.src = gifs[gifIndex];
+    loadingGif.style.display = 'block';
+    loading.style.display = 'block';
+    gifInterval = setInterval(() => {
+      gifIndex = (gifIndex + 1) % gifs.length;
+      loadingGif.src = gifs[gifIndex];
+    }, 2000);
+  }, 1000);
+
+  try {
+    // Step 1: Convert image to PDF
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF();
+    
+    const img = new Image();
+    const imageUrl = URL.createObjectURL(file);
+    
+    img.onload = async () => {
+      try {
+        // Add the image to the PDF
+        pdf.addImage(img, 'JPEG', 10, 10, 180, 160);
+
+        // Generate PDF Blob
+        const pdfBlob = pdf.output('blob');
+
+        // Step 2: Upload the PDF Blob
+        const formData = new FormData();
+        formData.append("file", pdfBlob, "converted_image.pdf");
+        formData.append("purpose", "user_data");
+
+        const uploadResponse = await fetch("https://api.openai.com/v1/files", {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer " + OPENAI_API_KEY
+          },
+          body: formData
+        });
+
+        const uploadData = await uploadResponse.json();
+        if (!uploadData.id) throw new Error("File upload failed.");
+        const fileId = uploadData.id;
+        console.log("Uploaded file ID:", fileId);
+
+        // Step 3: Query using file_id
+        const response = await fetch("https://api.openai.com/v1/responses", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + OPENAI_API_KEY
+          },
+          body: JSON.stringify({
+            model: "gpt-4.1-mini",
+            input: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "input_file",
+                    file_id: fileId
+                  },
+                  {
+                    type: "input_text",
+                    text: questionText
+                  }
+                ]
+              }
+            ]
+          })
+        });
+
+        const data = await response.json();
+        console.log(data);
+        const resultText = data.output[0].content[0].text;
+
+        if (!resultText) throw new Error("No valid response from API.");
+        console.log("Response:", resultText);
+        queryInput.value = resultText;
+        searchForm.dispatchEvent(new Event('submit'));
+
+      } catch (error) {
+        console.error("Error during image processing:", error);
+      } finally {
+        loadingIndicator.style.display = 'none';
+        submitButton.classList.remove('loading');
+        submitButton.disabled = false;
+      }
+    };
+
+
+    img.src = imageUrl; // Start loading the image
+
+  } catch (error) {
+    console.error("Error:", error.message);
+    throw error;
+  } finally {
+    // Hide the loading state
+    loadingIndicator.style.display = 'none';
+    submitButton.classList.remove('loading');
+    submitButton.disabled = false;
+  }
+}
+

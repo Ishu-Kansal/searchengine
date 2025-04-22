@@ -190,6 +190,60 @@ h1::after {
   vertical-align: middle;
 }
 
+.imageSearchBtn {
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  background: #212529;
+  border: none;
+  flex-shrink: 0;
+  cursor: pointer;
+  margin-left: 8px;
+  position: relative;
+}
+
+.imageSearchBtn:hover {
+  transform: scale(1.1);
+  background-color: #212529;
+}
+
+.imageSearchBtn i {
+  font-size: 16px;
+  color: #ffffff;
+  transition: color 0.3s ease;
+}
+
+#imageUploadInput {
+  display: none;
+}
+
+/* Optional drag-drop visual styling */
+.imageDropOverlay {
+  display: none;
+  position: fixed;
+  z-index: 10000;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(33, 37, 41, 0.75);
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 500;
+  font-family: "Poppins", sans-serif;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.imageDropOverlay.active {
+  display: flex;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
