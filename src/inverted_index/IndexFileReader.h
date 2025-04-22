@@ -35,7 +35,7 @@ constexpr size_t URL_ENTRY_HEADER_BYTES = 1;
 constexpr size_t URL_ENTRY_RANK_BYTES = 1;
 
 typedef size_t Location;
-
+/** @brief Penalty value used in LoadChunkOfPostingListClosest when a word is not found or no close posting exists. */
 constexpr Location NO_OCCURENCE_PENALTY = 1000;
 
 /**
@@ -82,6 +82,55 @@ private:
         return fileInfo.st_size;
     }
     /**
+     * @brief Checks if the requested chunk is valid.
+     * @param chunkNum The chunk index.
+     * @return True if the requested mapped files are valid, false otherwise.
+     */
+    bool checkChunkValidity(uint32_t chunkNum) const 
+    {
+        if (chunkNum >= mappedFiles.size() || !mappedFiles[chunkNum]) 
+        {
+            fprintf(stderr, "DEBUG: Chunk %u not loaded or out of bounds.\n", chunkNum);
+            return false;
+        }
+        if (!hashBlobPtrs[chunkNum]) 
+        {
+            fprintf(stderr, "DEBUG: Hash file %u was not mapped or is invalid.\n", chunkNum);
+            return false;
+        }
+        return true;
+    }
+    struct ValidTuple
+    {
+        const SerialTuple* tup;
+        bool isValid;
+
+        ValidTuple() = default;
+        ValidTuple( const SerialTuple* inTup, bool valid) : tup(inTup), isValid(valid) {}
+    };
+    /**
+     * @brief Checks if hashblob is valid.
+     * @param chunkNum the chunk index.
+     * @param word word we're searching for.
+     * @return ValidTuple that has Serial Tuple and a boolean to see if hashblob is valid or not
+     */
+    ValidTuple checkHashBlobValidity(uint32_t chunkNum, const std::string & word) const 
+    {
+        const HashBlob *hashblob = hashBlobPtrs[chunkNum];
+        if (!hashblob) 
+        {
+            fprintf(stderr, "DEBUG: Hash blob pointer null for chunk %u.\n", chunkNum);
+            return ValidTuple(nullptr, false);
+        }
+
+        const SerialTuple* tup = hashblob->Find(word.c_str());
+        if (!tup) 
+        {
+            return ValidTuple(nullptr, false);
+        }
+        return ValidTuple(tup, true);
+    }
+    /**
      * @brief Safely reads a uint64_t value from a memory buffer
      * Advances the pointer past the read value. Checks for buffer boundaries
      * @param currentPtr Reference to the pointer indicating the current read position in the buffer
@@ -98,7 +147,19 @@ private:
         currentPtr += sizeof(uint64_t);
         return true;
     }
-
+    /**
+     * @brief Searches the seek table for the entry closest to target location.
+     * Uses a galloping search followed by binary search
+     * @param seekTableStart Pointer to the beginning of the seek table data.
+     * @param fileEnd Pointer to the end of the memory-mapped file (for bounds checking).
+     * @param numSeekTableEntries The total number of entries in the seek table.
+     * @param target The target location to search for.
+     * @param[out] outBestOffset The offset associated with the best found seek table entry.
+     * @param[out] outBestLocation The location associated with the best found seek table entry.
+     * @param[out] outIndex The posting index for the best entry.
+     * @param[in,out] outTableIndex A hint for the starting index in the seek table; updated with the index of the best entry found.
+     * @return True if a suitable entry was found or target is before the first entry, false on read error.
+     */
     bool findBestSeekEntry(
         const uint8_t* seekTableStart,
         const uint8_t* fileEnd,
@@ -277,22 +338,13 @@ public:
         uint32_t chunkNum,
         int tableIndex = -1) const {
 
-        if (chunkNum >= mappedFiles.size() || !mappedFiles[chunkNum]) 
+        if (!checkChunkValidity(chunkNum))
         {
-            fprintf(stderr, "DEBUG: invalid chunkNum or unmapped chunk: %u\n", chunkNum);
             return nullptr;
         }
-        if (!hashBlobPtrs[chunkNum])
-        { 
-            fprintf(stderr, "DEBUG: Hash file %u was not mapped successfully or is invalid.\n", chunkNum);
-            return nullptr;
-        }
-        const HashBlob *hashblob = hashBlobPtrs[chunkNum]; 
-
-        const SerialTuple * tup = hashblob->Find(word.c_str());
-        if (!tup) 
+        const ValidTuple & validTup = checkHashBlobValidity(chunkNum, word);
+        if (!validTup.isValid)
         {
-            fprintf(stderr, "DEBUG: '%s' not found in hashblob for chunk %u\n", word.c_str(), chunkNum);
             return nullptr;
         }
         // Get mapped file
@@ -302,7 +354,7 @@ public:
         const uint8_t* fileStart = static_cast<const uint8_t*>(mapPtr);
         const uint8_t* fileEnd = fileStart + fileSize;
 
-        Location postingListOffset = tup->Value; // Start of posting list
+        Location postingListOffset = validTup.tup->Value; // Start of posting list
         if (postingListOffset >= fileSize) 
         {
             // shouldn't happen
@@ -451,7 +503,18 @@ public:
         }
         return nullptr;
     }
-
+    /**
+    * @brief Loads a specific range of locations from a word's posting list within a given chunk.
+    * Retrieves all locations L such that startLoc < L < endLoc. 
+    * Used for loading anchor locations for span calculations.
+    * @param word The word whose posting list chunk to load.
+    * @param chunkNum The index of the chunk file containing the posting list.
+    * @param startLoc Start location of the document.
+    * @param endLoc End location of the document.
+    * @param tableIndex hint for the initial seek table search index.
+    * @return A vector containing the locations strictly within the specified range (startLoc, endLoc).
+    * Returns an empty vector if the word is not found, the chunk is invalid, the range is invalid.
+    */
     std::vector<Location> LoadChunkOfPostingList(
         const std::string& word, 
         uint32_t chunkNum,
@@ -460,27 +523,15 @@ public:
         int tableIndex = -1) const
     {
         std::vector<Location> results;
-        results.reserve(128);
-        if (chunkNum >= mappedFiles.size() || !mappedFiles[chunkNum]) 
+        results.reserve(64);
+        if (!checkChunkValidity(chunkNum))
         {
-            return results; 
-        }
-
-        if (!hashBlobPtrs[chunkNum])
-        { 
-            fprintf(stderr, "DEBUG: Hash file %u was not mapped successfully or is invalid.\n", chunkNum);
             return results;
         }
-        const HashBlob *hashblob = hashBlobPtrs[chunkNum]; 
-        if (!hashblob) 
+        const ValidTuple & validTup = checkHashBlobValidity(chunkNum, word);
+        if (!validTup.isValid)
         {
-             return results;
-        }
-
-        const SerialTuple * tup = hashblob->Find(word.c_str());
-        if (!tup) 
-        {
-             return results;
+            return results;
         }
 
         const void* mapPtr = mappedFiles[chunkNum]->get();
@@ -489,7 +540,7 @@ public:
         const uint8_t* fileStart = static_cast<const uint8_t*>(mapPtr);
         const uint8_t* fileEnd = fileStart + fileSize;
 
-        Location postingListOffset = tup->Value; 
+        Location postingListOffset = validTup.tup->Value; 
         if (postingListOffset >= fileSize) 
         {
             fprintf(stderr, "ERROR: Offset into file (%zu) is out of bounds (%zu) for word '%s' in chunk %u.\n", postingListOffset, fileSize, word.c_str(), chunkNum);
@@ -563,39 +614,36 @@ public:
 
         return results;
     }
+    /**
+     * @brief Finds the closest occurrence of a word to each anchor term location
+     * For each location in targetLocations, this function finds the location L in the posting list
+     * for word (where L < endLoc) that minimizes abs(L - targetLocation). It returns the minimum absolute *difference* found for each target location.
+     * @param word The word whose posting list to search.
+     * @param chunkNum The index of the chunk file.
+     * @param targetLocations Anchor locations.
+     * @param endLoc location where matched document ends.
+     * @param tableIndex hint for seek table search index.
+     * @return A vector of the same size as targetLocations. Each element i contains the minimum absolute difference found between targetLocations[i] and an actual posting location for word.
+     */
     std::vector<Location> LoadChunkOfPostingListClosest(
         const std::string& word,
         uint32_t chunkNum,
         const std::vector<Location>& targetLocations,
         Location endLoc,
         int tableIndex = -1) const
-    {
-
+    {      
         if (targetLocations.empty()) 
         {
             // Won't happen
             fprintf(stderr, "DEBUG: EMPTY target locations\n");
             return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
         }
-
-        if (chunkNum >= mappedFiles.size() || !mappedFiles[chunkNum]) {
-            fprintf(stderr, "DEBUG: Chunk %u not loaded or out of bounds.\n", chunkNum);
+        if (!checkChunkValidity(chunkNum))
+        {
             return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
         }
-        if (!hashBlobPtrs[chunkNum]) 
-        {
-            fprintf(stderr, "DEBUG: Hash file %u was not mapped or is invalid.\n", chunkNum);
-            return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
-        }
-        const HashBlob *hashblob = hashBlobPtrs[chunkNum];
-        if (!hashblob) 
-        {
-             fprintf(stderr, "DEBUG: Hash blob pointer null for chunk %u.\n", chunkNum);
-             return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
-        }
-
-        const SerialTuple* tup = hashblob->Find(word.c_str());
-        if (!tup) 
+        const ValidTuple & validTup = checkHashBlobValidity(chunkNum, word);
+        if (!validTup.isValid)
         {
             return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
         }
@@ -603,15 +651,15 @@ public:
         const void* mapPtr = mappedFiles[chunkNum]->get();
         size_t fileSize = mappedFiles[chunkNum]->size();
         if (!mapPtr || fileSize == 0) 
-         {
+        {
              fprintf(stderr, "ERROR: Mapped file for chunk %u is invalid or empty.\n", chunkNum);
              return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
-         }
+        }
 
         const uint8_t* fileStart = static_cast<const uint8_t*>(mapPtr);
         const uint8_t* fileEnd = fileStart + fileSize;
 
-        Location postingListOffset = tup->Value;
+        Location postingListOffset = validTup.tup->Value;
         if (postingListOffset >= fileSize) 
         {
             fprintf(stderr, "ERROR: Offset %llu out of bounds (%zu) for word '%s' chunk %u.\n",

@@ -464,7 +464,7 @@ std::vector<UrlRank> constraint_solver(
           if (parsedUrl.path.size() <= MAX_SHORT_URL_LEN) url_score += SHORT_URL_BOOST;
           if (parsedUrl.path.size() >= 32)
           {
-            url_score -= SHORT_URL_BOOST;
+            // url_score -= SHORT_URL_BOOST;
           } 
           // if (parsedUrl.host.size() < MAX_SHORT_URL_LEN) url_score += SHORT_URL_BOOST;
           // Add weights to the score later
