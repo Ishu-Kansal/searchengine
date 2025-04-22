@@ -57,7 +57,6 @@ static constexpr std::string_view UNWANTED_RLM = "&rlm";
 static constexpr size_t MAX_WORD_LENGTH = 50;
 
 const static int NUM_THREADS = 128;  // start small
-const static int NUM_CHUNKS = 10;    // start small
 
 uint32_t STATIC_RANK = 0;  // temp global variable
 
@@ -135,8 +134,8 @@ std::string get_string() {
 void* url_adder(void*) {
   sockaddr_in address;
   address.sin_family = AF_INET;
-  address.sin_port = htons(ADD_PORT);                // Port number
-  address.sin_addr.s_addr = inet_addr("127.0.0.1");  // Server IP
+  address.sin_port = htons(ADD_PORT);  // Port number
+  address.sin_addr.s_addr = inet_addr(dispatcher_address.c_str());  // Server IP
 
   int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   assert(sock != -1);
@@ -305,40 +304,41 @@ void* add_to_index(void* addr) {
   auto idx = arg->thread_id % NUM_CHUNKS;
   auto& chunk = chunks[idx];
 
-  if (arg->parser.isEnglish) {
-    pthread_lock_guard guard{chunk_locks[idx]};
-    const uint16_t urlLength = arg->url.size();
+  const uint16_t urlLength = arg->url.size();
 
+  if (arg->url.find("wikipedia") == std::string::npos) {
     for (char& c : arg->url) c = tolower(static_cast<unsigned char>(c));
-
-    chunk.add_url(arg->url, arg->static_rank);
-
-    for (auto& word : arg->parser.titleWords) {
-      cleanString(word);
-      if (word.empty()) continue;
-      auto parts = splitHyphenWords(word);
-      for (auto& part : parts) {
-        std::transform(part.begin(), part.end(), part.begin(),
-                       [](unsigned char c) { return std::tolower(c); });
-        // std::cout << part << '\n';
-        chunk.add_word(part, true);
-      }
-    }
-
-    for (auto& word : arg->parser.words) {
-      cleanString(word);
-      if (word.empty()) continue;
-      auto parts = splitHyphenWords(word);
-      for (auto& part : parts) {
-        std::transform(part.begin(), part.end(), part.begin(),
-                       [](unsigned char c) { return std::tolower(c); });
-        // std::cout << part << '\n';
-        chunk.add_word(part, false);
-      }
-    }
-
-    chunk.add_enddoc();
   }
+
+  pthread_lock_guard guard{chunk_locks[idx]};
+
+  chunk.add_url(arg->url, arg->static_rank);
+
+  for (auto& word : arg->parser.titleWords) {
+    cleanString(word);
+    if (word.empty()) continue;
+    auto parts = splitHyphenWords(word);
+    for (auto& part : parts) {
+      std::transform(part.begin(), part.end(), part.begin(),
+                     [](unsigned char c) { return std::tolower(c); });
+      // std::cout << part << '\n';
+      chunk.add_word(part, true);
+    }
+  }
+
+  for (auto& word : arg->parser.words) {
+    cleanString(word);
+    if (word.empty()) continue;
+    auto parts = splitHyphenWords(word);
+    for (auto& part : parts) {
+      std::transform(part.begin(), part.end(), part.begin(),
+                     [](unsigned char c) { return std::tolower(c); });
+      // std::cout << part << '\n';
+      chunk.add_word(part, false);
+    }
+  }
+
+  chunk.add_enddoc();
   sem_post(sems[arg->thread_id]);
   delete arg;
   return NULL;
@@ -372,6 +372,9 @@ void* runner(void* arg) {
     // Parse the html code
     std::string& html = args.html;
     HtmlParser parser(html.data(), html.size());
+
+    if (!parser.isEnglish) continue;
+
     int static_rank = get_static_rank(cstring_view{url}, parser);
     // Process links found by the parser
     {
@@ -487,11 +490,14 @@ int main(int argc, char** argv) {
   std::cout << "FINISHED THREADS...\n";
 
   // IndexFile chunkFile(id, chunk);
+  for (int i = 0; i < NUM_CHUNKS; ++i) {
+    pthread_lock_guard guard{chunk_locks[i]};
+    IndexFile(id * NUM_CHUNKS + i, chunks[i]);
+  }
 
   pthread_mutex_destroy(&queue_lock);
   pthread_mutex_destroy(&chunk_lock);
   pthread_mutex_destroy(&cout_lock);
-  for (int i = 0; i < NUM_CHUNKS; ++i) IndexFile(id * 100 + i, chunks[i]);
 
   // std::cout << "Time taken: " << duration.count() << " ms" << std::endl;
   return 0;
