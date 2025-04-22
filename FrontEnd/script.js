@@ -434,7 +434,7 @@ imageSearchIcon.addEventListener('drop', (e) => {
 async function handleImageSearch(e, file) {
   e.preventDefault();
 
-  let questionText = "Describe what is in the image in as few words as possible, no more than 6 words";
+  let questionText = "identify what is in the image in as few words as possible";
   console.log("Image selected:", file);
 
   // Reset UI and state

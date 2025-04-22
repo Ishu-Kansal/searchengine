@@ -43,7 +43,7 @@ enum SectionWeights: int {
 
 // enum class for requirements of what is considered a short span or a top span
 enum Requirements: int {
-   TOPSPANSIZE = 128
+   TOPSPANSIZE = 256
 };
 
 
@@ -107,9 +107,20 @@ int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors
            endLocation,
            anchorTerm->GetSeekTableIndex()
        );
-  
+     
        if (!anchorLocations.empty())
        {
+            if (shortestSpanPossible == 1)
+            {  
+                for (const auto & loc : anchorLocations)
+                {
+                    if (loc < startLocation + Requirements::TOPSPANSIZE)
+                    {
+                        ++nearTopAnchor;
+                    }
+                }
+            return nearTopAnchor;
+            }
            locationVector spans(anchorLocations.size(), 0);
   
            for (int i = 0; i < phraseTerms.size(); ++i)
@@ -140,7 +151,6 @@ int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors
            for (int i = 0; i < spans.size(); ++i)
            {  
                Location & currentTotalSpan = spans[i];
-
 
                if (currentTotalSpan < (shortestSpanPossible << 1) && currentTotalSpan != 0)
                {

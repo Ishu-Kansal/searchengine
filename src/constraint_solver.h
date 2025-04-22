@@ -18,7 +18,7 @@ constexpr size_t HOST_MATCH_SCORE = 256;
 constexpr size_t PATH_MATCH_SCORE = 128;
 constexpr size_t HOST_MATCHED_ALL_QUERY_TERMS = 128;
 constexpr size_t PATH_MATCHED_ALL_QUERY_TERMS = 64;
-
+constexpr size_t SHORT_URL_BOOST = 32;
 constexpr size_t MAX_SHORT_URL_LEN = 16;
 
 static bool bodyText = true;
@@ -128,7 +128,10 @@ ParsedUrlRanking parseUrl(const std::string& url_string) {
        result.first_path_segment.pop_back();
   }
   std::replace(result.path.begin(), result.path.end(), '-', ' ');
-  std::replace(result.first_path_segment.begin(), result.first_path_segment.end(), '-', ' ');
+  std::replace(result.path.begin(), result.path.end(), '_', ' ');
+  std::replace(result.host.begin(), result.host.end(), '-', ' ');
+  std::replace(result.host.begin(), result.host.end(), '_', ' ');
+
   return result;
 }
 struct UrlRank 
@@ -314,7 +317,7 @@ float calculateURLscore(const ParsedUrlRanking & parsedUrl,
         currScore += PATH_MATCHED_ALL_QUERY_TERMS;
       }
     } // End outer loop (term vectors)
-    if (parsedUrl.host.size() < MAX_SHORT_URL_LEN)
+    if (parsedUrl.host.size() <= MAX_SHORT_URL_LEN)
     {
       if (hostMatchScore > 0.5f)
       {
@@ -344,7 +347,7 @@ float calculateURLscore(const ParsedUrlRanking & parsedUrl,
         return HOST_MATCH_SCORE >> 2 + currScore;
       }
     }
-    if (parsedUrl.path.size() < MAX_SHORT_URL_LEN)
+    if (parsedUrl.path.size() <= MAX_SHORT_URL_LEN)
     {
       if (pathMatchScore > 0.5f)
       {
@@ -427,7 +430,7 @@ std::vector<UrlRank> constraint_solver(
           // use the index to get relevant doc data
           unique_ptr<Doc> doc = reader.FindUrl(index, chunkNum);
           if (!doc) break;
-          if (doc->url == "https://www.macworld.com/article/347010/new-mac-pro-2023.html")
+          if (doc->url == "https://en.wikipedia.org/wiki/star")
           {
             cout << "";
           }
@@ -456,10 +459,14 @@ std::vector<UrlRank> constraint_solver(
             !bodyText,
             shortestSpanPossible);
             */
-        
           ParsedUrlRanking parsedUrl = parseUrl(doc->url);
           int url_score = calculateURLscore(parsedUrl, orderedQueryTerms);
-          
+          if (parsedUrl.path.size() <= MAX_SHORT_URL_LEN) url_score += SHORT_URL_BOOST;
+          if (parsedUrl.path.size() >= 32)
+          {
+            url_score -= SHORT_URL_BOOST;
+          } 
+          // if (parsedUrl.host.size() < MAX_SHORT_URL_LEN) url_score += SHORT_URL_BOOST;
           // Add weights to the score later
           UrlRank urlRank(doc->url, dynamic_score + url_score); /*title_score + url_score + doc->staticRank*/
           // cout << urlRank.rank << '\n';
