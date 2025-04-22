@@ -28,8 +28,13 @@
         <div class="form-group">
           <!-- Inside the searchBarContainer div -->
           <div class="searchBarContainer">
+            <!-- Image display area -->
+            <div id="imageDisplayContainer" style="display: none;">
+              <img id="uploadedImage" src="" alt="Uploaded Image" style="max-width: 100%; height: auto;">
+            </div>
+
             <input type="text" class="searchBar" id="queryInput" required placeholder="Search the void..." />
-          
+            
             <!-- Search button -->
             <button type="submit" class="searchBtn">
               <i class="fas fa-search"></i>
@@ -63,11 +68,6 @@
 
         </div>
       </form>
-    </div>
-
-    <!-- Image display area -->
-    <div id="imageDisplayContainer" style="display: none; margin-top: 20px;">
-      <img id="uploadedImage" src="" alt="Uploaded Image" style="max-width: 100%; height: auto;">
     </div>
 
     <!-- AI Summary Expandable Box -->

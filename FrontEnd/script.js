@@ -45,6 +45,7 @@ searchForm.addEventListener('submit', async function (e) {
   searchResultsContainer.innerHTML = '';
   document.getElementById('aiSummaryContainer').style.display = 'none';
   paginationControls.style.display = 'none';
+  imageDisplayContainer.style.display = 'none';
   toggleAISummary();
 
   submitButton.classList.add('loading');
@@ -70,7 +71,7 @@ searchForm.addEventListener('submit', async function (e) {
       gifIndex = (gifIndex + 1) % gifs.length;
       loadingGif.src = gifs[gifIndex];
     }, 2000);
-  }, 250);
+  }, 1000);
 
   let aiText = "";
 
@@ -417,6 +418,7 @@ async function handleImageSearch(e, file) {
   searchResultsContainer.innerHTML = '';
   document.getElementById('aiSummaryContainer').style.display = 'none';
   paginationControls.style.display = 'none';
+  imageDisplayContainer.style.display = 'none';
   toggleAISummary();
 
   submitButton.classList.add('loading');
@@ -442,10 +444,10 @@ async function handleImageSearch(e, file) {
       gifIndex = (gifIndex + 1) % gifs.length;
       loadingGif.src = gifs[gifIndex];
     }, 2000);
-  }, 1000);
+  }, 0);
 
   try {
-    // Step 1: Convert image to PDF
+    // Convert image to PDF
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF();
     
@@ -460,7 +462,7 @@ async function handleImageSearch(e, file) {
         // Generate PDF Blob
         const pdfBlob = pdf.output('blob');
 
-        // Step 2: Upload the PDF Blob
+        // Upload the PDF Blob
         const formData = new FormData();
         formData.append("file", pdfBlob, "converted_image.pdf");
         formData.append("purpose", "user_data");
@@ -478,7 +480,7 @@ async function handleImageSearch(e, file) {
         const fileId = uploadData.id;
         console.log("Uploaded file ID:", fileId);
 
-        // Step 3: Query using file_id
+        // Query using file_id
         const response = await fetch("https://api.openai.com/v1/responses", {
           method: "POST",
           headers: {
@@ -520,11 +522,17 @@ async function handleImageSearch(e, file) {
         loadingIndicator.style.display = 'none';
         submitButton.classList.remove('loading');
         submitButton.disabled = false;
+
+        // Show the image in the image display area
+        const imageDisplayContainer = document.getElementById('imageDisplayContainer');
+        const uploadedImage = document.getElementById('uploadedImage');
+        uploadedImage.src = imageUrl;
+        imageDisplayContainer.style.display = 'block'; // Show the image container
       }
     };
 
-
-    img.src = imageUrl; // Start loading the image
+    // Start loading the image
+    img.src = imageUrl; 
 
   } catch (error) {
     console.error("Error:", error.message);
@@ -536,4 +544,5 @@ async function handleImageSearch(e, file) {
     submitButton.disabled = false;
   }
 }
+
 
