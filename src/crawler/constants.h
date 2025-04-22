@@ -5,7 +5,7 @@
 constexpr int MAX_EXPECTED_LINKS = 10'000'000;
 constexpr uint32_t MAX_PROCESSED = 100'000;
 constexpr uint64_t MAX_QUEUE_SIZE = 50'000;
-constexpr uint64_t MAX_VECTOR_SIZE = 1'000'000;
+constexpr uint64_t MAX_VECTOR_SIZE = 2'500'000;
 constexpr uint64_t NUM_RANDOM = 25'000;
 constexpr uint64_t TOP_K_ELEMENTS = 50'000;
 constexpr uint64_t DISPATCHER_SAVE_RATE = 50'000;
