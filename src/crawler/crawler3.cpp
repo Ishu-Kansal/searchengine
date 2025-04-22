@@ -86,13 +86,15 @@ sem_t* adder_request_sem{};
 std::vector<std::string> getterQueue{};
 std::vector<std::pair<std::string, uint64_t>> adderQueue{};
 
+std::string dispatcher_address{};
+
 int adder_socket;
 
 void* url_getter(void*) {
   sockaddr_in address;
   address.sin_family = AF_INET;
-  address.sin_port = htons(GET_PORT);                // Port number
-  address.sin_addr.s_addr = inet_addr("127.0.0.1");  // Server IP
+  address.sin_port = htons(GET_PORT);  // Port number
+  address.sin_addr.s_addr = inet_addr(dispatcher_address.c_str());  // Server IP
 
   int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   assert(sock != -1);
@@ -319,7 +321,7 @@ void* add_to_index(void* addr) {
         std::transform(part.begin(), part.end(), part.begin(),
                        [](unsigned char c) { return std::tolower(c); });
         // std::cout << part << '\n';
-        chunk.add_word(part, false);
+        chunk.add_word(part, true);
       }
     }
 
@@ -345,8 +347,8 @@ void* add_to_index(void* addr) {
 void* runner(void* arg) {
   // const static thread_local pid_t thread_id = syscall(SYS_gettid);
   const unsigned int thread_id = (uint64_t)(arg);
-  bool done = false;
-  while (!done) {
+
+  while (num_processed < MAX_PROCESSED) {
     // Get the next url to be processed
     std::string url = get_string();
 
@@ -364,7 +366,6 @@ void* runner(void* arg) {
 
     // Continue if html code was not retrieved
     if (args.status != 0) {
-      std::cout << "Status " << args.status << std::endl;
       // std::cout << "Could not retrieve HTML\n" << std::endl;
       continue;
     }
@@ -376,7 +377,6 @@ void* runner(void* arg) {
     {
       auto it = num_processed++;
       if (it % 1000 == 0) std::cout << it << std::endl;
-      if (it > MAX_PROCESSED) done = true;
     }
 
     for (auto& link : parser.links) {
@@ -421,7 +421,13 @@ void* metric_collector(void*) {
 int main(int argc, char** argv) {
   signal(SIGPIPE, SIG_IGN);
 
-  int id = atoi(argv[0]);
+  if (argc != 3) {
+    std::cout << "Usage: ./crawler [id] [server ip]";
+    exit(1);
+  }
+
+  int id = atoi(argv[1]);
+  dispatcher_address = argv[2];
   assert(id < 100);
 
   std::vector<std::string> sem_names{};
@@ -447,6 +453,7 @@ int main(int argc, char** argv) {
 
   pthread_t ctr_thread;
   pthread_create(&ctr_thread, NULL, metric_collector, NULL);
+  pthread_detach(ctr_thread);
 
   assert(!pthread_mutex_init(&getter_lock, NULL));
   assert(!pthread_mutex_init(&adder_lock, NULL));
@@ -478,8 +485,6 @@ int main(int argc, char** argv) {
   }
 
   std::cout << "FINISHED THREADS...\n";
-
-  pthread_join(ctr_thread, NULL);
 
   // IndexFile chunkFile(id, chunk);
 

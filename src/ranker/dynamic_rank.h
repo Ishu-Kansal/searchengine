@@ -27,9 +27,9 @@ struct AnchorTermIndex
 
 // Weights for computing the score of specific ranking components, enums for quick readjusting and no magic numbers
 enum DynamicWeights: int {
-   SHORTSPANSWEIGHT = 64,
-   TOPSPANSWEIGHT = 32,
-   NEARTOPWEIGHT = 2,
+   SHORTSPANSWEIGHT = 32,
+   TOPSPANSWEIGHT = 16,
+   NEARTOPWEIGHT = 1,
 };
 
 
@@ -51,7 +51,7 @@ using locationVector = std::vector<Location>;
 
 
 constexpr Location RANGE_TOLERANCE = 32;
-
+constexpr int MAX_SPANS = 8;
 
 // given all of the occurences assigns the weights and returns the actual dynamic rank
 // ***RME CLAUSE***
@@ -59,7 +59,6 @@ constexpr Location RANGE_TOLERANCE = 32;
 // Modifies: Nothing
 // Effect: Scores a given rank of the document using weights with the given numbers above.
 int get_rank_score(int nearTopAnchorCount, int shortSpans, int topSpans, bool isBody) {
-   // TODO: make a hashtable/array for the type weights
    int sectionWeight = -1;
    // assign the weights based on what we are running the ranker on
    // urls will get higher weights than titles, titles will get higher weights than body, and body gets a normal weight
@@ -70,11 +69,11 @@ int get_rank_score(int nearTopAnchorCount, int shortSpans, int topSpans, bool is
        sectionWeight = TITLEWEIGHT;
    }
    assert(sectionWeight != -1);
-
-
+   shortSpans = std::min(MAX_SPANS, shortSpans);
+   topSpans = std::min(MAX_SPANS, topSpans);
    // declare individual ints below for debugging purposes
    int shortSpansResult = shortSpans * SHORTSPANSWEIGHT;
-   int nearTopAnchorResult = nearTopAnchorCount * NEARTOPWEIGHT;
+   int nearTopAnchorResult = nearTopAnchorCount;
    int topSpansResult = topSpans * TOPSPANSWEIGHT;
    // multiply by the type weight and the added up weights of the spans
    return sectionWeight * (shortSpansResult + nearTopAnchorResult + topSpansResult);
@@ -89,9 +88,7 @@ int get_rank_score(int nearTopAnchorCount, int shortSpans, int topSpans, bool is
 //           Needs a start location so we can seek to that location
 // Modifies: Nothing.
 // Effect: Returns the dynamic rank score for a single document.
-int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors, vector<vector<std::unique_ptr<ISRWord>>> &phraseTerms, uint64_t startLocation, uint64_t endLocation, const IndexFileReader & reader, uint32_t currChunk, bool isBody)
-
-
+int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors, vector<vector<std::unique_ptr<ISRWord>>> &phraseTerms, uint64_t startLocation, uint64_t endLocation, const IndexFileReader & reader, uint32_t currChunk, bool isBody, int shortestSpanPossible)
 {
    int shortSpans = 0;
    int topSpans = 0;
@@ -145,7 +142,7 @@ int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors
                Location & currentTotalSpan = spans[i];
 
 
-               if (currentTotalSpan < 10 && currentTotalSpan != 0)
+               if (currentTotalSpan < (shortestSpanPossible << 1) && currentTotalSpan != 0)
                {
                    shortSpans++;
                    if (anchorLocations[i] < startLocation + Requirements::TOPSPANSIZE)

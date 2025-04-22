@@ -62,12 +62,12 @@ bool isEnglish(const std::string &s) {
       return;
     }
     // Gets rid of non english words
-    /*
+
       if (!isEnglish(s)) {
       s.clear();
       return;
     }
-    */
+  
   
     // Gets rid of '
     s.erase(std::remove(s.begin(), s.end(), '\''), s.end());
@@ -196,13 +196,12 @@ std::vector<UrlRank> run_engine(std::string& query, uint32_t numChunks,
   }
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) 
+{
   const std::string data_filename = "websites_data.jsonl";
   const uint32_t numChunks = 10;
-
-  const uint32_t chunkNum = 0;
 /*
-  
+  const uint32_t chunkNum = 0;
 
   IndexChunk indexChunk;
   if (!build_index_from_file(data_filename, indexChunk))
@@ -218,11 +217,23 @@ int main(int argc, char** argv) {
 
   int matches = 0;
 
-  std::string test_query_1 = argc > 1 ? argv[1] : "umich engineering";
-  std::cout << "\n--- Running Query 1: [" << test_query_1 << "] ---"
+  std::string test1 = argc > 1 ? argv[1] : "'mac pro'";
+  std::string test2 = "united states of america";
+  std::string test3 = "ann arbor michigan";
+  std::string test4 = "computer science";
+  std::string test5 = "technology";
+  std::string test6 = "first day of class";
+
+  std::cout << "\n--- Running Query 1: [" << test1 << "] ---"
             << std::endl;
   auto start = std::chrono::high_resolution_clock::now();
-  std::vector<UrlRank> results1 = run_engine(test_query_1, numChunks, reader, matches);
+  std::vector<UrlRank> results1 = run_engine(test1, numChunks, reader, matches);
+  //std::vector<UrlRank> results2 = run_engine(test2, numChunks, reader, matches);
+  //std::vector<UrlRank> results3 = run_engine(test3, numChunks, reader, matches);
+  //std::vector<UrlRank> results4 = run_engine(test4, numChunks, reader, matches);
+  //std::vector<UrlRank> results5 = run_engine(test5, numChunks, reader, matches);
+  //std::vector<UrlRank> results6 = run_engine(test6, numChunks, reader, matches);
+
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = end - start;
   std::cout << "Query 1 execution time: " << elapsed.count() << " seconds"
@@ -230,15 +241,56 @@ int main(int argc, char** argv) {
 
   if (!results1.empty()) {
     std::cout << "Found " << matches
-              << " results for query 1 (showing top " << results1.size()
-              << "):" << std::endl;
-    for (const auto& url_sv : results1) {
+              << " results for query 1 (showing top " << test1
+              << "):" << '\n' << std::endl;
+    for (const auto& url_sv : results1) 
+    {
       std::cout << "  Rank: " << url_sv.rank << " - " << url_sv.url
-                << std::endl;
+                << std::endl;       
     }
+    /*
+        std::cout << "Found " << matches
+    << " results for query 2 (showing top " << test2
+    << "):" << '\n' << std::endl;
+    for (const auto& url_sv : results2) 
+    {
+      std::cout << "  Rank: " << url_sv.rank << " - " << url_sv.url
+                << std::endl;       
+    }
+    std::cout << "Found " << matches
+    << " results for query 3 (showing top " << test3
+    << "):" << '\n' << std::endl;
+    for (const auto& url_sv : results3) 
+    {
+      std::cout << "  Rank: " << url_sv.rank << " - " << url_sv.url
+                << std::endl;       
+    }
+    std::cout << "Found " << matches
+    << " results for query 4 (showing top " << test4
+    << "):" << '\n' << std::endl;
+    for (const auto& url_sv : results4) 
+    {
+      std::cout << "  Rank: " << url_sv.rank << " - " << url_sv.url
+                << std::endl;       
+    }
+    std::cout << "Found " << matches
+    << " results for query 5 (showing top " << test5
+    << "):" << '\n' << std::endl;
+    for (const auto& url_sv : results5) 
+    {
+      std::cout << "  Rank: " << url_sv.rank << " - " << url_sv.url
+                << std::endl;       
+    }
+    std::cout << "Found " << matches
+    << " results for query 6 (showing top " << test6
+    << "):" << '\n' << std::endl;
+    for (const auto& url_sv : results6) 
+    {
+      std::cout << "  Rank: " << url_sv.rank << " - " << url_sv.url
+                << std::endl;       
+    }
+    */
+
   }
-
-
-
   return 0;
 }
