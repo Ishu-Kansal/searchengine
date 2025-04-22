@@ -22,7 +22,7 @@ void *spawner(void *arg) {
       waitpid(pid, &status, 0);
       if (status == 0) break;
     } else {
-      execl("./crawler", "crawler", id_str.c_str(), NULL);
+      execl("./crawler", "crawler", id_str.c_str(), "127.0.0.1", NULL);
     }
   }
   sem_post(sem);
