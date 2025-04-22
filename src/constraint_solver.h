@@ -13,6 +13,7 @@
 #include "ranker/dynamic_rank.h"
 
 constexpr size_t TOTAL_DOCS_TO_RETURN = 128;
+
 constexpr size_t HOST_MATCH_SCORE = 256;
 constexpr size_t PATH_MATCH_SCORE = 128;
 

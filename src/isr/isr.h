@@ -208,6 +208,10 @@ public:
 
         SeekObj * farthestPost = nullptr;
         SeekObj * nearestPost = nullptr;
+        if (target > 1'750'000)
+        {
+            cout << "";
+        }
 
         for (size_t i = 0; i < terms.size(); ++i)
         {
@@ -274,6 +278,7 @@ public:
                 if (seekObj->location > nearestEndLocation)
                 {
                     farthestTerm = i;
+                    farthestPost = seekObj;
                     anotherOne = true;
                     docEnd = docEndISR->Seek(seekObj->location, chunkNum);
                     nearestStartLocation = docEnd->location - docEndISR->GetDocumentLength();

@@ -196,7 +196,8 @@ std::vector<UrlRank> run_engine(std::string& query, uint32_t numChunks,
   }
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) 
+{
   const std::string data_filename = "websites_data.jsonl";
   const uint32_t numChunks = 10;
 /*
@@ -216,7 +217,7 @@ int main(int argc, char** argv) {
 
   int matches = 0;
 
-  std::string test1 = argc > 1 ? argv[1] : "apple mac";
+  std::string test1 = argc > 1 ? argv[1] : "apple AND mac";
   std::string test2 = "united states of america";
   std::string test3 = "ann arbor michigan";
   std::string test4 = "computer science";
@@ -227,11 +228,11 @@ int main(int argc, char** argv) {
             << std::endl;
   auto start = std::chrono::high_resolution_clock::now();
   std::vector<UrlRank> results1 = run_engine(test1, numChunks, reader, matches);
-  std::vector<UrlRank> results2 = run_engine(test2, numChunks, reader, matches);
-  std::vector<UrlRank> results3 = run_engine(test3, numChunks, reader, matches);
-  std::vector<UrlRank> results4 = run_engine(test4, numChunks, reader, matches);
-  std::vector<UrlRank> results5 = run_engine(test5, numChunks, reader, matches);
-  std::vector<UrlRank> results6 = run_engine(test6, numChunks, reader, matches);
+  //std::vector<UrlRank> results2 = run_engine(test2, numChunks, reader, matches);
+  //std::vector<UrlRank> results3 = run_engine(test3, numChunks, reader, matches);
+  //std::vector<UrlRank> results4 = run_engine(test4, numChunks, reader, matches);
+  //std::vector<UrlRank> results5 = run_engine(test5, numChunks, reader, matches);
+  //std::vector<UrlRank> results6 = run_engine(test6, numChunks, reader, matches);
 
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = end - start;
@@ -247,7 +248,8 @@ int main(int argc, char** argv) {
       std::cout << "  Rank: " << url_sv.rank << " - " << url_sv.url
                 << std::endl;       
     }
-    std::cout << "Found " << matches
+    /*
+        std::cout << "Found " << matches
     << " results for query 2 (showing top " << test2
     << "):" << '\n' << std::endl;
     for (const auto& url_sv : results2) 
@@ -287,6 +289,8 @@ int main(int argc, char** argv) {
       std::cout << "  Rank: " << url_sv.rank << " - " << url_sv.url
                 << std::endl;       
     }
+    */
+
   }
   return 0;
 }
