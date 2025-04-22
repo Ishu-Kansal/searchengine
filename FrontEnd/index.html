@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-  
+
 <head>
   <meta charset="utf-8" />
   <title>404 Found Search Engine</title>
@@ -12,37 +12,36 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+    rel="stylesheet">
 
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
   <div class="container">
     <!-- Sticky header -->
     <div id="stickyHeader">
       <h1 data-text="404 Found">404 Found</h1>
       <form id="searchForm" class="form-horizontal" autocomplete="on">
         <div class="form-group">
-          <!-- Inside the searchBarContainer div -->
           <div class="searchBarContainer">
-            
+
             <input type="text" class="searchBar" id="queryInput" required placeholder="Search the void..." />
-          
+
             <!-- Search button -->
             <button type="submit" class="searchBtn">
               <i class="fas fa-search"></i>
               <div class="loading-spinner"></div>
             </button>
-          
+
             <!-- Search by Image button -->
             <button type="submit" id="imageSearchBtn" class="imageSearchBtn searchBtn" title="Search by image">
               <i class="fas fa-image"></i>
               <div class="loading-spinner"></div>
             </button>
-          
+
             <!-- Hidden image input -->
             <input type="file" id="imageInput" accept="image/*" style="display: none;">
           </div>
@@ -55,7 +54,8 @@
       <div class="panel-heading" style="cursor: pointer;" onclick="toggleAISummary()">
         <h4 class="panel-title" style="font-size: 1.2em;">
           <span id="aiSummaryTitle"></span>
-          <span id="aiToggleIcon" class="pull-right glyphicon glyphicon-chevron-down"></span></h4>
+          <span id="aiToggleIcon" class="pull-right glyphicon glyphicon-chevron-down"></span>
+        </h4>
       </div>
       <div class="panel-body" id="aiSummaryContent" style="display: none;">
         <div id="aiSummaryFlexContainer">
@@ -80,7 +80,9 @@
     <!-- Loading Indicator -->
     <div id="loading" class="loading-indicator" style="display:none;">
       <p>Please wait while we search the void...</p>
-      <img src="https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTY0MmUxMHlpN3dycmt0cWl4aWJ2NTJ6ZG50c3B5Zzk3eWNyZHdydyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/A53vF9xNk7AKnQPLDs/giphy.gif" alt="Loading..." id="loadingGif">
+      <img
+        src="https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTY0MmUxMHlpN3dycmt0cWl4aWJ2NTJ6ZG50c3B5Zzk3eWNyZHdydyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/A53vF9xNk7AKnQPLDs/giphy.gif"
+        alt="Loading..." id="loadingGif">
     </div>
 
     <!-- Pagination Controls -->

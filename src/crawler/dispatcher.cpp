@@ -170,6 +170,11 @@ void saver() {
   statsFile.flush();
 }
 
+void print_dispatcher() {
+  std::cout << "Dispatcher size: " << links_vector.size() + explore_queue.size()
+            << '\n';
+}
+
 void get_handler(int fd) {
   std::string next;
   {
@@ -177,7 +182,10 @@ void get_handler(int fd) {
     next = get_next_url();
 
     num_processed++;
-    if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
+    if (num_processed % 1000 == 0) {
+      std::cout << num_processed << std::endl;
+      print_dispatcher();
+    }
     if (num_processed % DISPATCHER_SAVE_RATE == 0) saver();
   }
   const size_t header = next.size();
@@ -302,6 +310,7 @@ void *adder(void *arg) {
       links_vector.emplace_back(std::move(url), rank);
     }
   }
+  close(fd);
   return NULL;
 }
 

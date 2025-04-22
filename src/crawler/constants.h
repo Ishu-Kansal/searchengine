@@ -11,6 +11,8 @@ constexpr uint64_t TOP_K_ELEMENTS = 7'500;
 constexpr uint64_t DISPATCHER_SAVE_RATE = 25'000;
 constexpr double MAX_FALSE_POSITIVE_RATE = 1e-2;
 
+constexpr uint64_t NUM_CHUNKS = 1;  // start small
+
 using header_t = uint64_t;
 constexpr uint64_t GET_COMMAND = 1;
 
