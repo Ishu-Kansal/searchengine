@@ -42,7 +42,7 @@ std::string Driver::decode_html_entities(const std::string& input) {
       {"amp", "&"}, {"lt", "<"}, {"gt", ">"}, {"quot", "\""}, {"apos", "'"},
       {"nbsp", " "}, {"copy", "©"}, {"reg", "®"}, {"euro", "€"}, {"pound", "£"},
       {"cent", "¢"}, {"yen", "¥"}, {"deg", "°"}, {"sect", "§"}, {"para", "¶"},
-      {"hellip", "…"}, {"mdash", "—"}, {"ndash", "–"}, {"lsquo", "‘"}, {"rsquo", "’"},
+      {"hellip", "…"}, {"mdash", "—"}, {"ndash", "-"}, {"lsquo", "'"}, {"rsquo", "'"},
       {"ldquo", "“"}, {"rdquo", "”"}, {"bull", "•"}, {"trade", "™"}, {"iexcl", "¡"}
   };
 
