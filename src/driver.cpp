@@ -190,7 +190,7 @@ std::vector<UrlRank> run_engine_helper(
 
 std::vector<std::string> Driver::run_engine(std::string& query, std::string& summary) {
    const std::string data_filename = "websites_data.jsonl";
-   const uint32_t numChunks = 100;
+   const uint32_t numChunks = 1100;
 
    const uint32_t chunkNum = 0;
 

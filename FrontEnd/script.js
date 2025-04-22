@@ -85,7 +85,7 @@ searchForm.addEventListener('submit', async function (e) {
         "Authorization": "Bearer " + OPENAI_API_KEY
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4.1-nano",
         messages: [
           {
             role: "system",
@@ -174,12 +174,15 @@ searchForm.addEventListener('submit', async function (e) {
         An error occurred: ${error.message}. Please try again.
       </p>`;
   } finally {
+    clearTimeout(gifTimeout);
+    gifTimeout = null;
+
     clearInterval(gifInterval);
     gifInterval = null;
 
     loadingGif.style.display = 'none'; // Ensure GIF is hidden
     loadingGif.src = ''; // Clear GIF source
-
+    
     loadingIndicator.style.display = 'none';
     submitButton.classList.remove('loading');
     submitButton.disabled = false;
@@ -431,7 +434,7 @@ imageSearchIcon.addEventListener('drop', (e) => {
 async function handleImageSearch(e, file) {
   e.preventDefault();
 
-  let questionText = "Describe what is in the pdf in seven words or less";
+  let questionText = "Describe what is in the image in as few words as possible";
   console.log("Image selected:", file);
 
   // Reset UI and state
@@ -474,7 +477,7 @@ async function handleImageSearch(e, file) {
     // Convert image to PDF
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF();
-
+    
     const img = new Image();
     const imageUrl = URL.createObjectURL(file);
 
@@ -483,7 +486,7 @@ async function handleImageSearch(e, file) {
     // const uploadedImage = document.getElementById('uploadedImage');
     // uploadedImage.src = imageUrl;
     // aiSummaryImageContainer.style.display = 'block';
-
+    
     img.onload = async () => {
       try {
         // Add the image to the PDF
@@ -549,10 +552,10 @@ async function handleImageSearch(e, file) {
         queryInput.value = resultText;
         searchForm.dispatchEvent(new Event('submit'));
 
-      }
+      } 
       catch (error) {
         console.error("Error during image processing:", error);
-      }
+      } 
       finally {
         loadingIndicator.style.display = 'none';
         //imageSearchBtn.classList.remove('loading');
@@ -566,7 +569,7 @@ async function handleImageSearch(e, file) {
     };
 
     // Start loading the image
-    img.src = imageUrl;
+    img.src = imageUrl; 
 
   }
   catch (error) {
@@ -586,4 +589,3 @@ document.getElementById("imageInput").addEventListener("change", function (event
     reader.readAsDataURL(file);
   }
 });
-

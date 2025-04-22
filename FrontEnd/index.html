@@ -20,12 +20,15 @@
 </head>
 
 <body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <div class="container">
     <!-- Sticky header -->
     <div id="stickyHeader">
       <h1 data-text="404 Found">404 Found</h1>
       <form id="searchForm" class="form-horizontal" autocomplete="on">
         <div class="form-group">
+          <!-- Inside the searchBarContainer div -->
           <div class="searchBarContainer">
 
             <input type="text" class="searchBar" id="queryInput" required placeholder="Search the void..." />

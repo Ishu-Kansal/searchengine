@@ -125,6 +125,7 @@ h1::after {
 .searchBar {
   flex-grow: 1;
   border-radius: 20px;
+  margin-left: 10px;
   margin-right: 10px;
   padding: 8px 15px;
   padding-right: 45px;
