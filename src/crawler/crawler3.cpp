@@ -346,7 +346,7 @@ void* runner(void* arg) {
   // const static thread_local pid_t thread_id = syscall(SYS_gettid);
   const unsigned int thread_id = (uint64_t)(arg);
 
-  while (num_processed++ < MAX_PROCESSED) {
+  while (num_processed < MAX_PROCESSED) {
     // Get the next url to be processed
     std::string url = get_string();
 
@@ -373,7 +373,8 @@ void* runner(void* arg) {
     int static_rank = get_static_rank(cstring_view{url}, parser);
     // Process links found by the parser
     {
-      if (num_processed % 1000 == 0) std::cout << num_processed << std::endl;
+      auto it = num_processed++;
+      if (it % 1000 == 0) std::cout << it << std::endl;
     }
 
     for (auto& link : parser.links) {
