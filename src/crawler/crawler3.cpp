@@ -309,7 +309,9 @@ void* add_to_index(void* addr) {
     pthread_lock_guard guard{chunk_locks[idx]};
     const uint16_t urlLength = arg->url.size();
 
-    for (char& c : arg->url) c = tolower(static_cast<unsigned char>(c));
+    if (arg->url.find("wikipedia") == std::string::npos) {
+        for (char& c : arg->url) c = tolower(static_cast<unsigned char>(c));
+    }
 
     chunk.add_url(arg->url, arg->static_rank);
 
@@ -378,26 +380,27 @@ void* runner(void* arg) {
       auto it = num_processed++;
       if (it % 1000 == 0) std::cout << it << std::endl;
     }
+    if(parser.isEnglish) {
+        for (auto& link : parser.links) {
+        std::string next_url = std::move(link.URL);
 
-    for (auto& link : parser.links) {
-      std::string next_url = std::move(link.URL);
+        // Ignore links that begin with '#' or '?'
+        if (next_url[0] == '#' || next_url[0] == '?') {
+            continue;
+        }
 
-      // Ignore links that begin with '#' or '?'
-      if (next_url[0] == '#' || next_url[0] == '?') {
-        continue;
-      }
+        // If link starts with '/', add the domain to the beginning
+        // of it
+        if (next_url[0] == '/') {
+            next_url = url.substr(0, 8) + getHostFromUrl(url) + next_url;
+        }
 
-      // If link starts with '/', add the domain to the beginning
-      // of it
-      if (next_url[0] == '/') {
-        next_url = url.substr(0, 8) + getHostFromUrl(url) + next_url;
-      }
+        if (!check_url(next_url)) {
+            continue;
+        }
 
-      if (!check_url(next_url)) {
-        continue;
-      }
-
-      add_url(std::move(next_url), static_rank);
+        add_url(std::move(next_url), static_rank);
+        }
     }
     // --------------------------------------------------
     sem_wait(sems[thread_id]);
