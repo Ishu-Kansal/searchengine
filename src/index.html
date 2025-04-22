@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+  
+<head>
+  <meta charset="utf-8" />
+  <title>404 Found Search Engine</title>
+  <link rel="icon" type="image/png" href="404FoundLogo.png" />
+
+  <!-- External CSS Libraries -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <div class="container">
+    <!-- Sticky header -->
+    <div id="stickyHeader">
+      <h1 data-text="404 Found">404 Found</h1>
+      <form id="searchForm" class="form-horizontal" autocomplete="off">
+        <div class="form-group">
+          <!-- Inside the searchBarContainer div -->
+          <div class="searchBarContainer">
+            <!-- Image display area -->
+            <div id="imageDisplayContainer" style="display: none;">
+              <img id="uploadedImage" src="" alt="Uploaded Image" style="max-width: 100%; height: auto;">
+            </div>
+
+            <input type="text" class="searchBar" id="queryInput" required placeholder="Search the void..." />
+            
+            <!-- Search button -->
+            <button type="submit" class="searchBtn">
+              <i class="fas fa-search"></i>
+              <div class="loading-spinner"></div>
+            </button>
+          
+            <!-- Search by Image button -->
+            <button type="submit" id="imageSearchBtn" class="imageSearchBtn searchBtn" title="Search by image">
+              <i class="fas fa-image"></i>
+              <div class="loading-spinner"></div>
+            </button>
+          
+            <!-- Hidden image input -->
+            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+          </div>
+          
+          <!-- Drag and drop overlay -->
+          <div id="imageDropOverlay" style="
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 9999;
+            color: white;
+            font-size: 24px;
+            text-align: center;
+            line-height: 100vh;
+          ">
+            Drop your image here
+          </div>
+
+        </div>
+      </form>
+    </div>
+
+    <!-- AI Summary Expandable Box -->
+    <div id="aiSummaryContainer" class="panel panel-default" style="display: none; margin-top: 20px;">
+      <div class="panel-heading" style="cursor: pointer;" onclick="toggleAISummary()">
+        <h4 class="panel-title" style="font-size: 1.2em;">AI Summary <span id="aiToggleIcon"
+            class="pull-right glyphicon glyphicon-chevron-down"></span></h4>
+      </div>
+      <div class="panel-body" id="aiSummaryContent" style="display: none;">
+        <p id="aiSummaryText" style="white-space: pre-wrap; font-size: 1em; line-height: 1.6;"></p>
+      </div>
+    </div>
+
+    <!-- Search Summary Display -->
+    <div id="searchSummaryBox"
+      style="display: none; margin-top: 20px; background-color: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #ddd;">
+      <p id="searchSummaryText" style="white-space: pre-wrap; margin-bottom: 0;"></p>
+    </div>
+
+    <!-- Search Results Area -->
+    <div id="searchResults">
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading" class="loading-indicator" style="display:none;">
+      <p>Please wait while we search the void...</p>
+      <img src="https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTY0MmUxMHlpN3dycmt0cWl4aWJ2NTJ6ZG50c3B5Zzk3eWNyZHdydyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/A53vF9xNk7AKnQPLDs/giphy.gif" alt="Loading..." id="loadingGif">
+    </div>
+
+    <!-- Pagination Controls -->
+    <div id="paginationControls" class="text-center" style="display: none;">
+      <button id="prevPage" class="btn" disabled>←<span style="margin-left: 6px"></span>Prev</button>
+      <span id="pageNumber" style="margin: 0 15px; font-size: 18px; font-weight: bold; color: #212529;"></span>
+      <button id="nextPage" class="btn" disabled>Next<span style="margin-left: 6px"></span>→</button>
+    </div>
+
+  </div> <!-- /.container -->
+
+  <script type="module" src="script.js"></script>
+</body>
+
+</html>

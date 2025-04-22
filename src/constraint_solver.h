@@ -403,11 +403,12 @@ std::vector<UrlRank> constraint_solver(
         }
         titleTerms.push_back(std::move(copiedInner));
     }
-    
+    std::unique_ptr<ISREndDoc> docISR = make_unique<ISREndDoc>(reader); 
     for (int chunkNum = 0; chunkNum < numChunks; ++chunkNum)
     {
       SeekObj* currMatch = queryISR->Seek(0, chunkNum);
-      std::unique_ptr<ISREndDoc> docISR = make_unique<ISREndDoc>(reader); 
+
+      SeekObj * x = docISR->Seek(0, chunkNum);
       if (!currMatch)
       {
         continue;
