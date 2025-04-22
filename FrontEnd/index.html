@@ -28,11 +28,7 @@
         <div class="form-group">
           <!-- Inside the searchBarContainer div -->
           <div class="searchBarContainer">
-            <!-- Image display area -->
-            <div id="imageDisplayContainer">
-              <img id="uploadedImage" src="" alt="Uploaded Image">
-            </div>
-          
+            
             <input type="text" class="searchBar" id="queryInput" required placeholder="Search the void..." />
           
             <!-- Search button -->
@@ -57,11 +53,17 @@
     <!-- AI Summary Expandable Box -->
     <div id="aiSummaryContainer" class="panel panel-default" style="display: none; margin-top: 20px;">
       <div class="panel-heading" style="cursor: pointer;" onclick="toggleAISummary()">
-        <h4 class="panel-title" style="font-size: 1.2em;">AI Summary <span id="aiToggleIcon"
-            class="pull-right glyphicon glyphicon-chevron-down"></span></h4>
+        <h4 class="panel-title" style="font-size: 1.2em;">
+          <span id="aiSummaryTitle"></span>
+          <span id="aiToggleIcon" class="pull-right glyphicon glyphicon-chevron-down"></span></h4>
       </div>
       <div class="panel-body" id="aiSummaryContent" style="display: none;">
-        <p id="aiSummaryText" style="white-space: pre-wrap; font-size: 1em; line-height: 1.6;"></p>
+        <div id="aiSummaryFlexContainer">
+          <div id="aiSummaryImageContainer">
+            <img id="aiSummaryImage" src="" alt="Uploaded Image">
+          </div>
+          <p id="aiSummaryText" style="white-space: pre-wrap; font-size: 1em; line-height: 1.6;"></p>
+        </div>
       </div>
     </div>
 

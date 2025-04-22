@@ -46,8 +46,9 @@ searchForm.addEventListener('submit', async function (e) {
   searchResultsContainer.innerHTML = '';
   document.getElementById('aiSummaryContainer').style.display = 'none';
   paginationControls.style.display = 'none';
-  imageDisplayContainer.style.display = 'none';
+  aiSummaryImageContainer.style.display = 'none';
   toggleAISummary();
+  document.getElementById('aiSummaryTitle').innerText = 'AI Summary';
 
   submitButton.classList.add('loading');
   submitButton.disabled = true;
@@ -181,10 +182,7 @@ searchForm.addEventListener('submit', async function (e) {
 
     loadingGif.style.display = 'none'; // Ensure GIF is hidden
     loadingGif.src = ''; // Clear GIF source
-    loadingIndicator.style.display = 'none';
-    submitButton.classList.remove('loading');
-    submitButton.disabled = false;
-
+    
     loadingIndicator.style.display = 'none';
     submitButton.classList.remove('loading');
     submitButton.disabled = false;
@@ -436,7 +434,7 @@ imageSearchIcon.addEventListener('drop', (e) => {
 async function handleImageSearch(e, file) {
   e.preventDefault();
 
-  let questionText = "Describe what is in the pdf in six words or less";
+  let questionText = "Describe what is in the pdf in seven words or less";
   console.log("Image selected:", file);
 
   // Reset UI and state
@@ -445,11 +443,14 @@ async function handleImageSearch(e, file) {
   searchResultsContainer.innerHTML = '';
   document.getElementById('aiSummaryContainer').style.display = 'none';
   paginationControls.style.display = 'none';
-  imageDisplayContainer.style.display = 'none';
+  aiSummaryImageContainer.style.display = 'none';
+  document.getElementById('queryInput').value = 'Looking over the image...';
+  document.getElementById('aiSummaryTitle').innerText = 'Image Search';
   toggleAISummary();
+  document.getElementById('aiSummaryTitle').innerText = 'Image Search';
 
-  submitButton.classList.add('loading');
-  submitButton.disabled = true;
+  //imageSearchBtn.classList.add('loading');
+  //imageSearchBtn.disabled = true;
   loadingIndicator.style.display = 'block';
 
   document.getElementById('searchSummaryBox').style.display = 'none';
@@ -481,10 +482,10 @@ async function handleImageSearch(e, file) {
     const imageUrl = URL.createObjectURL(file);
 
     // Show the image in the image display area
-    const imageDisplayContainer = document.getElementById('imageDisplayContainer');
-    const uploadedImage = document.getElementById('uploadedImage');
-    uploadedImage.src = imageUrl;
-    imageDisplayContainer.style.display = 'block';
+    // const aiSummaryImageContainer = document.getElementById('aiSummaryImageContainer');
+    // const uploadedImage = document.getElementById('uploadedImage');
+    // uploadedImage.src = imageUrl;
+    // aiSummaryImageContainer.style.display = 'block';
     
     img.onload = async () => {
       try {
@@ -541,39 +542,39 @@ async function handleImageSearch(e, file) {
 
         const data = await response.json();
         console.log(data);
-        const resultText = data.output[0].content[0].text;
+        let resultText = data.output[0].content[0].text;
+        if (resultText.endsWith(".")) {
+          resultText = resultText.slice(0, -1);
+        }
 
         if (!resultText) throw new Error("No valid response from API.");
         console.log("Response:", resultText);
         queryInput.value = resultText;
         searchForm.dispatchEvent(new Event('submit'));
 
-      } catch (error) {
+      } 
+      catch (error) {
         console.error("Error during image processing:", error);
-      } finally {
+      } 
+      finally {
         loadingIndicator.style.display = 'none';
-        submitButton.classList.remove('loading');
-        submitButton.disabled = false;
+        //imageSearchBtn.classList.remove('loading');
+        //imageSearchBtn.disabled = false;
 
         // Show the image in the image display area
-        const imageDisplayContainer = document.getElementById('imageDisplayContainer');
-        const uploadedImage = document.getElementById('uploadedImage');
-        uploadedImage.src = imageUrl;
-        imageDisplayContainer.style.display = 'block';
+        document.getElementById('aiSummaryImage').src = imageUrl;
+        document.getElementById('aiSummaryImageContainer').style.display = 'block';
+        document.getElementById('aiSummaryTitle').innerText = 'Image Search';
       }
     };
 
     // Start loading the image
     img.src = imageUrl; 
 
-  } catch (error) {
+  }
+  catch (error) {
     console.error("Error:", error.message);
     throw error;
-  } finally {
-    // Hide the loading state
-    loadingIndicator.style.display = 'none';
-    submitButton.classList.remove('loading');
-    submitButton.disabled = false;
   }
 }
 
@@ -582,8 +583,8 @@ document.getElementById("imageInput").addEventListener("change", function (event
   if (file) {
     const reader = new FileReader();
     reader.onload = function (e) {
-      document.getElementById("uploadedImage").src = e.target.result;
-      document.getElementById("imageDisplayContainer").style.display = "block";
+      document.getElementById("aiSummaryImage").src = e.target.result;
+      document.getElementById("aiSummaryImageContainer").style.display = "block";
     };
     reader.readAsDataURL(file);
   }

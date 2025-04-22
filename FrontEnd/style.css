@@ -98,7 +98,7 @@ h1::after {
   justify-content: center;
   align-items: center;
   gap: 10px;
-  max-width: 600px;
+  max-width: 650px;
   width: 90%;
   margin-bottom: 0;
 }
@@ -191,6 +191,37 @@ h1::after {
   vertical-align: middle;
 }
 
+.imageSearchBtn .icon {
+  display: inline-block;
+}
+
+.imageSearchBtn.loading .icon {
+  display: none;
+}
+
+.imageSearchBtn .loading-spinner {
+  display: none;
+}
+
+.imageSearchBtn.loading .loading-spinner {
+  display: inline-block;
+}
+
+.imageSearchBtn.loading .loading-spinner {
+  display: inline-block;
+}
+
+.imageSearchBtn .loading-spinner {
+  display: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-left-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  vertical-align: middle;
+}
+
 .imageSearchBtn {
   border-radius: 50%;
   width: 35px;
@@ -246,10 +277,10 @@ h1::after {
 }
 
 /* Style for the image container */
-#imageDisplayContainer {
+/* #imageDisplayContainer {
   display: none;
   text-align: center;
-}
+} */
 
 .searchBarContainer {
   display: flex;
@@ -257,42 +288,38 @@ h1::after {
   flex-wrap: nowrap;
 }
 
-#imageDisplayContainer {
-  display: none;
-  max-width: 80px;
-  max-height: 60px;
-  overflow: hidden;
-  flex-shrink: 0;
-  transition: transform 0.05s ease, z-index 0s;
+#aiSummaryImageContainer {
+  transition: transform 0.1s ease, z-index 0s;
 }
 
-#imageDisplayContainer:hover {
-  transform: scale(8);
+#aiSummaryImageContainer:hover {
+  transform: scale(1.1);
   z-index: 9999;
   position: relative;
 }
 
-.imageSearchBtn.drag-hover {
-  background-color: #e0e0e0;
-  border: 2px dashed #666;
+#aiSummaryContent {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
 }
 
-#uploadedImage {
+#aiSummaryFlexContainer {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+#aiSummaryImageContainer {
+  max-width: 300px;
+  flex-shrink: 0;
+  display: none;
+}
+
+#aiSummaryImageContainer img {
   width: 100%;
   height: auto;
-  display: block;
-  border-radius: 6px;
-}
-
-/* Style for the uploaded image */
-#uploadedImage {
-  max-width: 60%;
-  /* Adjust the max-width to control the image size */
-  height: auto;
-  /* Maintain the aspect ratio of the image */
-  display: inline-block;
-  margin: 0 auto;
-  /* Center the image horizontally */
+  border-radius: 8px;
 }
 
 @keyframes spin {
