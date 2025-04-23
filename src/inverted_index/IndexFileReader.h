@@ -35,7 +35,7 @@ constexpr size_t URL_ENTRY_HEADER_BYTES = 1;
 constexpr size_t URL_ENTRY_RANK_BYTES = 1;
 
 typedef size_t Location;
-/** @brief Penalty value used in LoadChunkOfPostingListClosest when a word is not found or no close posting exists. */
+/** @brief Penalty value used in FindClosestPostingDistancesToAnchor when a word is not found or no close posting exists. */
 constexpr Location NO_OCCURENCE_PENALTY = 1000;
 
 /**
@@ -63,260 +63,264 @@ struct SeekObj {
  * Uses memory mapping to accessindex chunk data. Allows searching for postings
  * and retrieving URL information based on location/index
  */
-class IndexFileReader {
-private:
-    static constexpr size_t FILENAME_BUFFER_SIZE = 32;
-    /** @brief Vector holding unique pointers to memory-mapped regions for each index chunk file */
-    std::vector<std::unique_ptr<MappedMemory>> mappedFiles;
+    class IndexFileReader {
+    private:
+        static constexpr size_t FILENAME_BUFFER_SIZE = 32;
+        /** @brief Vector holding unique pointers to memory-mapped regions for each index chunk file */
+        std::vector<std::unique_ptr<MappedMemory>> mappedFiles;
 
-    std::vector<std::unique_ptr<MappedMemory>> mappedHashFiles;
+        std::vector<std::unique_ptr<MappedMemory>> mappedHashFiles;
 
-    std::vector<const HashBlob*> hashBlobPtrs;   
+        std::vector<const HashBlob*> hashBlobPtrs;   
 
-    size_t FileSize(int f)
-    {
-        struct stat fileInfo;
-        if (fstat(f, &fileInfo) == -1) {
-            return 0;
-        }
-        return fileInfo.st_size;
-    }
-    /**
-     * @brief Checks if the requested chunk is valid.
-     * @param chunkNum The chunk index.
-     * @return True if the requested mapped files are valid, false otherwise.
-     */
-    bool checkChunkValidity(uint32_t chunkNum) const 
-    {
-        if (chunkNum >= mappedFiles.size() || !mappedFiles[chunkNum]) 
+        size_t FileSize(int f)
         {
-            fprintf(stderr, "DEBUG: Chunk %u not loaded or out of bounds.\n", chunkNum);
-            return false;
+            struct stat fileInfo;
+            if (fstat(f, &fileInfo) == -1) {
+                return 0;
+            }
+            return fileInfo.st_size;
         }
-        if (!hashBlobPtrs[chunkNum]) 
+        /**
+         * @brief Checks if the requested chunk is valid.
+         * @param chunkNum The chunk index.
+         * @return True if the requested mapped files are valid, false otherwise.
+         */
+        bool checkChunkValidity(uint32_t chunkNum) const 
         {
-            fprintf(stderr, "DEBUG: Hash file %u was not mapped or is invalid.\n", chunkNum);
-            return false;
-        }
-        return true;
-    }
-    struct ValidTuple
-    {
-        const SerialTuple* tup;
-        bool isValid;
-
-        ValidTuple() = default;
-        ValidTuple( const SerialTuple* inTup, bool valid) : tup(inTup), isValid(valid) {}
-    };
-    /**
-     * @brief Checks if hashblob is valid.
-     * @param chunkNum the chunk index.
-     * @param word word we're searching for.
-     * @return ValidTuple that has Serial Tuple and a boolean to see if hashblob is valid or not
-     */
-    ValidTuple checkHashBlobValidity(uint32_t chunkNum, const std::string & word) const 
-    {
-        const HashBlob *hashblob = hashBlobPtrs[chunkNum];
-        if (!hashblob) 
-        {
-            fprintf(stderr, "DEBUG: Hash blob pointer null for chunk %u.\n", chunkNum);
-            return ValidTuple(nullptr, false);
-        }
-
-        const SerialTuple* tup = hashblob->Find(word.c_str());
-        if (!tup) 
-        {
-            return ValidTuple(nullptr, false);
-        }
-        return ValidTuple(tup, true);
-    }
-    /**
-     * @brief Safely reads a uint64_t value from a memory buffer
-     * Advances the pointer past the read value. Checks for buffer boundaries
-     * @param currentPtr Reference to the pointer indicating the current read position in the buffer
-     * @param endPtr Pointer to the end of the valid buffer region
-     * @param value Reference to a uint64_t where the read value will be stored
-     * @return True if the read was successful, false if there was not enough space in the buffer
-     */
-    inline static bool readUint64_t(const uint8_t*& currentPtr, const uint8_t* endPtr, uint64_t& value) 
-    {
-        if (currentPtr == nullptr || endPtr == nullptr || currentPtr + sizeof(uint64_t) > endPtr) {
-            return false;
-        }
-        memcpy(&value, currentPtr, sizeof(uint64_t));
-        currentPtr += sizeof(uint64_t);
-        return true;
-    }
-    /**
-     * @brief Searches the seek table for the entry closest to target location.
-     * Uses a galloping search followed by binary search
-     * @param seekTableStart Pointer to the beginning of the seek table data.
-     * @param fileEnd Pointer to the end of the memory-mapped file (for bounds checking).
-     * @param numSeekTableEntries The total number of entries in the seek table.
-     * @param target The target location to search for.
-     * @param[out] outBestOffset The offset associated with the best found seek table entry.
-     * @param[out] outBestLocation The location associated with the best found seek table entry.
-     * @param[out] outIndex The posting index for the best entry.
-     * @param[in,out] outTableIndex A hint for the starting index in the seek table; updated with the index of the best entry found.
-     * @return True if a suitable entry was found or target is before the first entry, false on read error.
-     */
-    bool findBestSeekEntry(
-        const uint8_t* seekTableStart,
-        const uint8_t* fileEnd,
-        size_t numSeekTableEntries,
-        Location target,
-        Location& outBestOffset,
-        Location& outBestLocation,
-        uint64_t& outIndex,
-        int& outTableIndex)
-        const
-    {
-        outIndex = 0;
-        uint64_t entryOffset = 0;
-        uint64_t entryLocation = 0;
-        outBestOffset = entryOffset;
-        outBestLocation = entryLocation;
-
-        if (numSeekTableEntries > 0)
-        {
-
-            int cursor = (outTableIndex > 0) ? outTableIndex : 0;
-            int jump = 1;
-            const uint8_t* base = seekTableStart;
-            const uint8_t * tempPtr = base + cursor * ENTRY_SIZE;
-
-            if (!readUint64_t(tempPtr, fileEnd, entryOffset)) { return false; }
-            if (!readUint64_t(tempPtr, fileEnd, entryLocation)) { return false; }
-
-            while (cursor < numSeekTableEntries && target > entryLocation)
+            if (chunkNum >= mappedFiles.size() || !mappedFiles[chunkNum]) 
             {
-                jump *= 2;
-                cursor += jump;
+                fprintf(stderr, "DEBUG: Chunk %u not loaded or out of bounds.\n", chunkNum);
+                return false;
+            }
+            if (!hashBlobPtrs[chunkNum]) 
+            {
+                fprintf(stderr, "DEBUG: Hash file %u was not mapped or is invalid.\n", chunkNum);
+                return false;
+            }
+            return true;
+        }
+        struct ValidTuple
+        {
+            const SerialTuple* tup;
+            bool isValid;
 
-                if (cursor >= numSeekTableEntries) break;
-
-                const uint8_t * readPtr = (ENTRY_SIZE * cursor) + seekTableStart;
-
-                if (!readUint64_t(readPtr, fileEnd, entryOffset)) { return false; }
-                if (!readUint64_t(readPtr, fileEnd, entryLocation)) { return false; }
-
+            ValidTuple() = default;
+            ValidTuple( const SerialTuple* inTup, bool valid) : tup(inTup), isValid(valid) {}
+        };
+        /**
+         * @brief Checks if hashblob is valid.
+         * @param chunkNum the chunk index.
+         * @param word word we're searching for.
+         * @return ValidTuple that has Serial Tuple and a boolean to see if hashblob is valid or not
+         */
+        ValidTuple checkHashBlobValidity(uint32_t chunkNum, const std::string & word) const 
+        {
+            const HashBlob *hashblob = hashBlobPtrs[chunkNum];
+            if (!hashblob) 
+            {
+                fprintf(stderr, "DEBUG: Hash blob pointer null for chunk %u.\n", chunkNum);
+                return ValidTuple(nullptr, false);
             }
 
-            int best = -1;
-            if (cursor != 0)
+            const SerialTuple* tup = hashblob->Find(word.c_str());
+            if (!tup) 
             {
-                int low = cursor - jump;
-                int high = cursor;
-                if (cursor > (numSeekTableEntries - 1))
+                return ValidTuple(nullptr, false);
+            }
+            return ValidTuple(tup, true);
+        }
+        /**
+         * @brief Safely reads a uint64_t value from a memory buffer
+         * Advances the pointer past the read value. Checks for buffer boundaries
+         * @param currentPtr Reference to the pointer indicating the current read position in the buffer
+         * @param endPtr Pointer to the end of the valid buffer region
+         * @param value Reference to a uint64_t where the read value will be stored
+         * @return True if the read was successful, false if there was not enough space in the buffer
+         */
+        inline static bool readUint64_t(const uint8_t*& currentPtr, const uint8_t* endPtr, uint64_t& value) 
+        {
+            if (currentPtr == nullptr || endPtr == nullptr || currentPtr + sizeof(uint64_t) > endPtr) {
+                return false;
+            }
+            memcpy(&value, currentPtr, sizeof(uint64_t));
+            currentPtr += sizeof(uint64_t);
+            return true;
+        }
+        /**
+         * @brief Searches the seek table for the entry closest to target location.
+         * Uses a galloping search followed by binary search
+         * @param seekTableStart Pointer to the beginning of the seek table data.
+         * @param fileEnd Pointer to the end of the memory-mapped file (for bounds checking).
+         * @param numSeekTableEntries The total number of entries in the seek table.
+         * @param target The target location to search for.
+         * @param[out] outBestOffset The offset associated with the best found seek table entry.
+         * @param[out] outBestLocation The location associated with the best found seek table entry.
+         * @param[out] outIndex The posting index for the best entry.
+         * @param[in,out] outTableIndex A hint for the starting index in the seek table; updated with the index of the best entry found.
+         * @return True if a suitable entry was found or target is before the first entry, false on read error.
+         */
+        bool findBestSeekEntry(
+            const uint8_t* seekTableStart,
+            const uint8_t* fileEnd,
+            size_t numSeekTableEntries,
+            Location target,
+            Location& outBestOffset,
+            Location& outBestLocation,
+            uint64_t& outIndex,
+            int& outTableIndex)
+            const
+        {
+            outIndex = 0;
+            uint64_t entryOffset = 0;
+            uint64_t entryLocation = 0;
+            outBestOffset = entryOffset;
+            outBestLocation = entryLocation;
+
+            if (numSeekTableEntries > 0)
+            {
+
+                int cursor = (outTableIndex > 0) ? outTableIndex : 0;
+                int jump = 1;
+                const uint8_t* base = seekTableStart;
+                const uint8_t * tempPtr = base + cursor * ENTRY_SIZE;
+
+                if (!readUint64_t(tempPtr, fileEnd, entryOffset)) { return false; }
+                if (!readUint64_t(tempPtr, fileEnd, entryLocation)) { return false; }
+
+                while (cursor < numSeekTableEntries && target > entryLocation)
                 {
-                    high = numSeekTableEntries - 1;
-               
-                }
-                while (low <= high)
-                {
-                    int mid = (low + high) / 2;
-                    const uint8_t * readPtr = (ENTRY_SIZE * mid) + seekTableStart;
-    
+                    jump *= 2;
+                    cursor += jump;
+
+                    if (cursor >= numSeekTableEntries) break;
+
+                    const uint8_t * readPtr = (ENTRY_SIZE * cursor) + seekTableStart;
+
                     if (!readUint64_t(readPtr, fileEnd, entryOffset)) { return false; }
                     if (!readUint64_t(readPtr, fileEnd, entryLocation)) { return false; }
-    
-                    if (entryLocation <= target) 
+
+                }
+
+                int best = -1;
+                if (cursor != 0)
+                {
+                    int low = cursor - jump;
+                    int high = cursor;
+                    if (cursor > (numSeekTableEntries - 1))
                     {
-                        best = mid;
-                        outBestOffset = entryOffset;
-                        outBestLocation = entryLocation;
-                        low = mid + 1;
+                        high = numSeekTableEntries - 1;
+                
                     }
-                    else 
+                    while (low <= high)
                     {
-                        high = mid - 1; 
+                        int mid = (low + high) / 2;
+                        const uint8_t * readPtr = (ENTRY_SIZE * mid) + seekTableStart;
+        
+                        if (!readUint64_t(readPtr, fileEnd, entryOffset)) { return false; }
+                        if (!readUint64_t(readPtr, fileEnd, entryLocation)) { return false; }
+        
+                        if (entryLocation <= target) 
+                        {
+                            best = mid;
+                            outBestOffset = entryOffset;
+                            outBestLocation = entryLocation;
+                            low = mid + 1;
+                        }
+                        else 
+                        {
+                            high = mid - 1; 
+                        }
                     }
                 }
-            }
 
-            if (best == -1)
-            {
-                outBestOffset = 0;
-                outBestLocation = 0;
-                outTableIndex = -1;
-                outIndex = 0;
-                return true;
-            }
+                if (best == -1)
+                {
+                    outBestOffset = 0;
+                    outBestLocation = 0;
+                    outTableIndex = -1;
+                    outIndex = 0;
+                    return true;
+                }
 
-            outIndex = (best + 1) * BLOCK_SIZE;
-            outTableIndex = best;
+                outIndex = (best + 1) * BLOCK_SIZE;
+                outTableIndex = best;
+            }
+            return true;
         }
-        return true;
-    }
-public:
-    /** @brief Deleted default constructor. An IndexFileReader requires the number of chunks */
-    IndexFileReader() = delete;
-    /**
-     * @brief Constructs an IndexFileReader and memory-maps the specified number of index chunk files
-     * Attempts to open and mmap IndexChunk_00000, IndexChunk_00001, ..., up to numChunks-1
-     * Warnings are printed for files that cannot be opened or mapped, but construction continues
-     * @param numChunks The total number of index chunk files to manage
-     */
-    explicit IndexFileReader(uint32_t numChunks) : mappedFiles(numChunks), mappedHashFiles(numChunks), hashBlobPtrs(numChunks, nullptr) 
-    {
-        for (unsigned i = 0; i < numChunks; ++i)
+    public:
+        /** @brief Deleted default constructor. An IndexFileReader requires the number of chunks */
+        IndexFileReader() = delete;
+        /**
+         * @brief Constructs an IndexFileReader and memory-maps the specified number of index chunk files
+         * Attempts to open and mmap IndexChunk_00000, IndexChunk_00001, ..., up to numChunks-1
+         * Warnings are printed for files that cannot be opened or mapped, but construction continues
+         * @param numChunks The total number of index chunk files to manage
+         */
+        explicit IndexFileReader(uint32_t numChunks) : mappedFiles(numChunks), mappedHashFiles(numChunks), hashBlobPtrs(numChunks, nullptr) 
         {
-            char indexFilename[FILENAME_BUFFER_SIZE];
-            snprintf(indexFilename, sizeof(indexFilename), "IndexChunk_%05u", i);
-            int fd = open(indexFilename, O_RDONLY, 0666);
-            if (fd == -1) 
+            for (unsigned i = 0; i < numChunks; ++i)
             {
-                fprintf(stderr, "WARNING: Couldn't open index file '%s': %s\n", indexFilename, strerror(errno));
-                continue; 
-            }
-            FileDescriptor file(fd);
-            size_t fileSize = FileSize(file.get());
-            if (fileSize == 0) 
-            {
-                fprintf(stderr, "WARNING: Index file '%s' is empty or stat failed.\n", indexFilename);
-                continue;
-            }
-            void* map = mmap(NULL, fileSize, PROT_READ, MAP_PRIVATE, file.get(), 0); 
-            if (map == MAP_FAILED) 
-            {
-                fprintf(stderr, "WARNING: Couldn't mmap index file '%s': %s\n", indexFilename, strerror(errno));
-                continue;
-            }
-            if (madvise(map, fileSize, MADV_SEQUENTIAL) == -1) {
-                fprintf(stderr, "WARNING: madvise(MADV_SEQUENTIAL) failed for index file '%s': %s\n", indexFilename, strerror(errno));
-            }
-            mappedFiles[i] = std::make_unique<MappedMemory>(map, fileSize);
+                char indexFilename[FILENAME_BUFFER_SIZE];
+                snprintf(indexFilename, sizeof(indexFilename), "IndexChunk_%05u", i);
+                int fd = open(indexFilename, O_RDONLY, 0666);
+                if (fd == -1) 
+                {
+                    fprintf(stderr, "WARNING: Couldn't open index file '%s': %s\n", indexFilename, strerror(errno));
+                    continue; 
+                }
+                FileDescriptor file(fd);
+                size_t fileSize = FileSize(file.get());
+                if (fileSize == 0) 
+                {
+                    fprintf(stderr, "WARNING: Index file '%s' is empty or stat failed.\n", indexFilename);
+                    continue;
+                }
+                void* map = mmap(NULL, fileSize, PROT_READ, MAP_PRIVATE, file.get(), 0); 
+                if (map == MAP_FAILED) 
+                {
+                    fprintf(stderr, "WARNING: Couldn't mmap index file '%s': %s\n", indexFilename, strerror(errno));
+                    continue;
+                }
+                if (mlock(map, fileSize) == -1) 
+                {
+                    fprintf(stderr, "WARNING: mlock failed for index file '%s' (size %zu): %s. \n", indexFilename, fileSize, strerror(errno));
+                }
+                mappedFiles[i] = std::make_unique<MappedMemory>(map, fileSize);
 
-            char hashFilename[FILENAME_BUFFER_SIZE];
-            snprintf(hashFilename, sizeof(hashFilename), "HashFile_%05u", i);
-            int hashFd = open(hashFilename, O_RDONLY, 0666);
-            if (hashFd == -1) 
-            {
-                fprintf(stderr, "WARNING: Couldn't open hash file '%s': %s\n", hashFilename, strerror(errno));
-                continue; 
+                char hashFilename[FILENAME_BUFFER_SIZE];
+                snprintf(hashFilename, sizeof(hashFilename), "HashFile_%05u", i);
+                int hashFd = open(hashFilename, O_RDONLY, 0666);
+                if (hashFd == -1) 
+                {
+                    fprintf(stderr, "WARNING: Couldn't open hash file '%s': %s\n", hashFilename, strerror(errno));
+                    continue; 
+                }
+
+                FileDescriptor hashFileDesc(hashFd);
+                size_t hashFileSize = FileSize(hashFileDesc.get());
+                if (hashFileSize < sizeof(HashBlob)) 
+                { 
+                    fprintf(stderr, "WARNING: Hash file '%s' is too small (%zu bytes) or stat failed.\n", hashFilename, hashFileSize);
+                    continue;
+                }
+
+                void* hashMap = mmap(NULL, hashFileSize, PROT_READ, MAP_PRIVATE, hashFileDesc.get(), 0);
+                if (hashMap == MAP_FAILED) 
+                {
+                    fprintf(stderr, "WARNING: Couldn't mmap hash file '%s': %s\n", hashFilename, strerror(errno));
+                    continue;
+                }
+                if (mlock(hashMap,hashFileSize) == -1)
+                {
+                    fprintf(stderr, "WARNING: mlock failed for hash file '%s' (size %zu): %s. \n", hashFilename, hashFileSize, strerror(errno));
+                }
+                mappedHashFiles[i] = std::make_unique<MappedMemory>(hashMap, hashFileSize);
+
+                hashBlobPtrs[i] = static_cast<const HashBlob*>(mappedHashFiles[i]->get());
+
             }
-
-            FileDescriptor hashFileDesc(hashFd);
-            size_t hashFileSize = FileSize(hashFileDesc.get());
-            if (hashFileSize < sizeof(HashBlob)) 
-            { 
-                 fprintf(stderr, "WARNING: Hash file '%s' is too small (%zu bytes) or stat failed.\n", hashFilename, hashFileSize);
-                 continue;
-            }
-
-            void* hashMap = mmap(NULL, hashFileSize, PROT_READ, MAP_PRIVATE, hashFileDesc.get(), 0);
-            if (hashMap == MAP_FAILED) 
-            {
-                 fprintf(stderr, "WARNING: Couldn't mmap hash file '%s': %s\n", hashFilename, strerror(errno));
-                 continue;
-            }
-
-            mappedHashFiles[i] = std::make_unique<MappedMemory>(hashMap, hashFileSize);
-
-            hashBlobPtrs[i] = static_cast<const HashBlob*>(mappedHashFiles[i]->get());
-
         }
-    }
 
     /**
       * @brief Finds the first posting in a specific chunk's posting list for a given word whose location is >= target
@@ -505,24 +509,25 @@ public:
     }
     /**
     * @brief Loads a specific range of locations from a word's posting list within a given chunk.
-    * Retrieves all locations L such that startLoc < L < endLoc. 
+    * Retrieves all locations L such that startLoc < L < endOfDocLocation. 
     * Used for loading anchor locations for span calculations.
     * @param word The word whose posting list chunk to load.
     * @param chunkNum The index of the chunk file containing the posting list.
     * @param startLoc Start location of the document.
-    * @param endLoc End location of the document.
+    * @param endOfDocLocation End location of the document.
     * @param tableIndex hint for the initial seek table search index.
-    * @return A vector containing the locations strictly within the specified range (startLoc, endLoc).
+    * @return A vector containing the locations strictly within the specified range (startLoc, endOfDocLocation).
     * Returns an empty vector if the word is not found, the chunk is invalid, the range is invalid.
     */
     std::vector<Location> LoadChunkOfPostingList(
         const std::string& word, 
         uint32_t chunkNum,
         uint64_t startLoc,
-        uint64_t endLoc,
+        uint64_t endOfDocLocation,
         int tableIndex = -1) const
     {
         std::vector<Location> results;
+        // Avoid growth cost
         results.reserve(64);
         if (!checkChunkValidity(chunkNum))
         {
@@ -593,8 +598,8 @@ public:
         if (!found) return results;
         postingListBuf += (ENTRY_SIZE * numSeekTableEntries) + currentOffset;
         
-        // load locations within the [startLoc, endLoc) range
-        while (currentIndex < numPosts && currentLocation < endLoc)
+        // load locations within the [startLoc, endOfDocLocation) range
+        while (currentIndex < numPosts && currentLocation < endOfDocLocation)
         {
              if (postingListBuf >= fileEnd) break;
 
@@ -604,7 +609,7 @@ public:
 
              postingListBuf = nextPtr;
              currentLocation += delta;
-             if (currentLocation < endLoc && currentLocation > startLoc)
+             if (currentLocation < endOfDocLocation && currentLocation > startLoc)
              {
                 results.push_back(currentLocation);
              }
@@ -616,36 +621,39 @@ public:
     }
     /**
      * @brief Finds the closest occurrence of a word to each anchor term location
-     * For each location in targetLocations, this function finds the location L in the posting list
-     * for word (where L < endLoc) that minimizes abs(L - targetLocation). It returns the minimum absolute *difference* found for each target location.
+     * For each location in anchorLocations, this function finds the location L in the posting list
+     * for word (where L < endOfDocLocation) that minimizes abs(L - targetLocation). It returns the minimum absolute *difference* found for each target location.
+     * 
+     * Since both lists are sorted, we can basically use two pointers to calculate min diffs.
+     * 
      * @param word The word whose posting list to search.
      * @param chunkNum The index of the chunk file.
-     * @param targetLocations Anchor locations.
-     * @param endLoc location where matched document ends.
+     * @param anchorLocations Anchor locations.
+     * @param endOfDocLocation location where matched document ends.
      * @param tableIndex hint for seek table search index.
-     * @return A vector of the same size as targetLocations. Each element i contains the minimum absolute difference found between targetLocations[i] and an actual posting location for word.
+     * @return A vector of the same size as anchorLocations. Each element i contains the minimum absolute difference found between anchorLocations[i] and an actual posting location for word.
      */
-    std::vector<Location> LoadChunkOfPostingListClosest(
+    std::vector<Location> FindClosestPostingDistancesToAnchor(
         const std::string& word,
         uint32_t chunkNum,
-        const std::vector<Location>& targetLocations,
-        Location endLoc,
+        const std::vector<Location>& anchorLocations,
+        Location endOfDocLocation,
         int tableIndex = -1) const
     {      
-        if (targetLocations.empty()) 
+        if (anchorLocations.empty()) 
         {
-            // Won't happen
+            // Caller should not call this function with empty anchor vector
             fprintf(stderr, "DEBUG: EMPTY target locations\n");
-            return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
+            return std::vector<Location>(anchorLocations.size(), NO_OCCURENCE_PENALTY);
         }
         if (!checkChunkValidity(chunkNum))
         {
-            return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
+            return std::vector<Location>(anchorLocations.size(), NO_OCCURENCE_PENALTY);
         }
         const ValidTuple & validTup = checkHashBlobValidity(chunkNum, word);
         if (!validTup.isValid)
         {
-            return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
+            return std::vector<Location>(anchorLocations.size(), NO_OCCURENCE_PENALTY);
         }
 
         const void* mapPtr = mappedFiles[chunkNum]->get();
@@ -653,7 +661,7 @@ public:
         if (!mapPtr || fileSize == 0) 
         {
              fprintf(stderr, "ERROR: Mapped file for chunk %u is invalid or empty.\n", chunkNum);
-             return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
+             return std::vector<Location>(anchorLocations.size(), NO_OCCURENCE_PENALTY);
         }
 
         const uint8_t* fileStart = static_cast<const uint8_t*>(mapPtr);
@@ -664,20 +672,20 @@ public:
         {
             fprintf(stderr, "ERROR: Offset %llu out of bounds (%zu) for word '%s' chunk %u.\n",
             (unsigned long long)postingListOffset, fileSize, word.c_str(), chunkNum);
-            return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
+            return std::vector<Location>(anchorLocations.size(), NO_OCCURENCE_PENALTY);
         }
 
         const uint8_t* postingListBuf = fileStart + postingListOffset;
         if (postingListBuf >= fileEnd) 
         {
             fprintf(stderr, "ERROR: Posting list offset points beyond file end.\n");
-            return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
+            return std::vector<Location>(anchorLocations.size(), NO_OCCURENCE_PENALTY);
         }
 
         if (postingListBuf + NUM_ENTRIES_SIZE_BYTES > fileEnd) 
         {
              fprintf(stderr, "ERROR: Buffer too small for numSeekTableEntriesSize byte.\n");
-             return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
+             return std::vector<Location>(anchorLocations.size(), NO_OCCURENCE_PENALTY);
         }
         
         uint8_t numSeekTableEntriesSize = *postingListBuf;
@@ -693,60 +701,63 @@ public:
             if (postingListBuf + numSeekTableEntriesSize > fileEnd) 
             {
                 fprintf(stderr, "ERROR: Not enough space for numSeekTableEntries varint encoding.\n");
-                return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
+                return std::vector<Location>(anchorLocations.size(), NO_OCCURENCE_PENALTY);
             }
             nextPtr = decodeVarint(postingListBuf, numSeekTableEntries);
-            if (!nextPtr || nextPtr > fileEnd) return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
+            if (!nextPtr || nextPtr > fileEnd) return std::vector<Location>(anchorLocations.size(), NO_OCCURENCE_PENALTY);
             postingListBuf = nextPtr;
 
             nextPtr = decodeVarint(postingListBuf, numPosts);
-            if (!nextPtr || nextPtr > fileEnd) return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
+            if (!nextPtr || nextPtr > fileEnd) return std::vector<Location>(anchorLocations.size(), NO_OCCURENCE_PENALTY);
             postingListBuf = nextPtr;
         }
         else 
         {
             nextPtr = decodeVarint(postingListBuf, numPosts);
-            if (!nextPtr || nextPtr > fileEnd) return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
+            if (!nextPtr || nextPtr > fileEnd) return std::vector<Location>(anchorLocations.size(), NO_OCCURENCE_PENALTY);
             postingListBuf = nextPtr;
         }
 
-        if (numPosts == 0) return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);
+        if (numPosts == 0) return std::vector<Location>(anchorLocations.size(), NO_OCCURENCE_PENALTY);
 
         Location currentLocation = 0;
         Location currentOffset = 0;
         uint64_t currentIndex = 0;
         const uint8_t * seekTableStart = postingListBuf;
 
-        unsigned startLoc = (targetLocations[0] >= 25) ? targetLocations[0] - 25 : 0;
+        // Don't want to calculate min distances if they're far away from first anchor location or last anchor location.
+        Location startLoc = (anchorLocations[0] >= 32) ? anchorLocations[0] - 32 : 0;
+        endOfDocLocation = std::min(endOfDocLocation, anchorLocations.back() + 32);
+
         bool found = findBestSeekEntry(seekTableStart, fileEnd, numSeekTableEntries, startLoc, currentOffset, currentLocation, currentIndex, tableIndex);
 
-        if (!found) return std::vector<Location>(targetLocations.size(), NO_OCCURENCE_PENALTY);;
+        if (!found) return std::vector<Location>(anchorLocations.size(), NO_OCCURENCE_PENALTY);;
 
-        size_t numTargets = targetLocations.size();
-        // std::vector<Location> locations(numTargets, 0);
+        size_t numTargets = anchorLocations.size();
         std::vector<Location> minDifference(numTargets, std::numeric_limits<Location>::max());
 
         postingListBuf += (ENTRY_SIZE * numSeekTableEntries) + currentOffset;
 
         size_t targetIdx = 0;
-
+        // Loop until we run out of posts or done calculating min differences for each anchor location
         while (currentIndex < numPosts && targetIdx < numTargets)
         {
             if (postingListBuf >= fileEnd) break;
-            Location target = targetLocations[targetIdx];
+            Location target = anchorLocations[targetIdx];
             Location &minDist = minDifference[targetIdx];
             int64_t distCurr = std::abs(static_cast<int64_t>(currentLocation) - static_cast<int64_t>(target));
+            // Basic concept is that since its each list is always increasing. 
+            // If the current distance is greatly than the min difference, that means the next post's distance will also be greater, and we should move the targetIdx forward, 
             if (distCurr < minDist)
             {
                 minDist = distCurr;
-                // locations[targetIdx] = currentLocation;
                 uint64_t delta = 0;
                 nextPtr = decodeVarint(postingListBuf, delta);
                 if (!nextPtr || nextPtr > fileEnd) break; 
                 postingListBuf = nextPtr;
                 currentLocation += delta;
                 currentIndex++;
-                if (currentLocation >= endLoc)
+                if (currentLocation >= endOfDocLocation)
                 {
                     currentLocation -= delta;
                     break;
@@ -757,13 +768,13 @@ public:
                 ++targetIdx;
             }
         }
+        // fill out the rest of the minimal distance spans if there are less posts for the current word than the anchor. Fills the remaining with the currentLocation's distance.
         for (; targetIdx < numTargets; ++targetIdx) 
         {
-            Location target = targetLocations[targetIdx];
+            Location target = anchorLocations[targetIdx];
             Location &minDist = minDifference[targetIdx];
             int64_t distCurr = std::abs(static_cast<int64_t>(currentLocation) - static_cast<int64_t>(target));
 
-            // locations[targetIdx] = currentLocation;
             minDist = distCurr;
         }
         return minDifference;

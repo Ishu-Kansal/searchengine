@@ -130,7 +130,7 @@ int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors
                    const std::string & word = phraseTerms[i][j]->GetWord();
                    if (word != anchorWord)
                    {
-                       locationVector currPhraseMinDiffs = reader.LoadChunkOfPostingListClosest
+                       locationVector currPhraseMinDiffs = reader.FindClosestPostingDistancesToAnchor
                        (
                        word,
                        currChunk,
