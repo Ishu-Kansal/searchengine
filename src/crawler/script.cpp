@@ -43,15 +43,19 @@ void *create_dispatcher(void *) {
 }
 
 int main(int argc, char **argv) {
-  if (argc != 3) {
-    std::cerr << "Usage: ./script [num_batches] [crawlers_per_batch]";
+  if (argc != 4) {
+    std::cerr << "Usage: ./script [num_batches] [crawlers_per_batch] "
+                 "[start_dispatcher: 0/1]";
     return 1;
   }
 
-  pthread_t dispatcher;
-  pthread_create(&dispatcher, NULL, create_dispatcher, NULL);
+  int startDispatcher = atoi(argv[3]);
+  if (startDispatcher) {
+    pthread_t dispatcher;
+    pthread_create(&dispatcher, NULL, create_dispatcher, NULL);
 
-  sleep(2);
+    sleep(2);
+  }
 
   const int NUM_BATCHES = atoi(argv[1]);
   const int CRAWLERS_PER_BATCH = atoi(argv[2]);
@@ -74,6 +78,4 @@ int main(int argc, char **argv) {
   for (uint64_t i = 0; i < TOTAL; ++i) {
     pthread_join(threads[i], NULL);
   }
-
-  pthread_join(dispatcher, NULL);
 }

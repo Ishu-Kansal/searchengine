@@ -56,7 +56,7 @@ static constexpr std::string_view UNWANTED_LRM = "&lrm";
 static constexpr std::string_view UNWANTED_RLM = "&rlm";
 static constexpr size_t MAX_WORD_LENGTH = 50;
 
-const static int NUM_THREADS = 128;  // start small
+const static int NUM_THREADS = 256;  // start small
 
 uint32_t STATIC_RANK = 0;  // temp global variable
 
