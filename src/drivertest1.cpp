@@ -217,7 +217,7 @@ int main(int argc, char** argv)
 
   int matches = 0;
 
-  std::string test1 = argc > 1 ? argv[1] : "slow AND fast AND cycle";
+  std::string test1 = argc > 1 ? argv[1] : "pope NOT francis";
   std::string test2 = "united states of america";
   std::string test3 = "ann arbor michigan";
   std::string test4 = "computer science";

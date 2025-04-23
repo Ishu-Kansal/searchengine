@@ -133,14 +133,11 @@ public:
         {   
             termPtr->Seek(target, chunkNum);
             std::shared_ptr<SeekObj> childResult = termPtr->GetCurrentPost();
-            if (childResult)
+            if (childResult && childResult->location < minLocation)
             {
-                if (childResult->location < minLocation)
-                {
-                    minLocation = childResult->location;
-                    minLocation = childResult->location;
-                    nearestResult = childResult;
-                }
+                minLocation = childResult->location;
+                minLocation = childResult->location;
+                nearestResult = childResult;
             }
         }
         currPost = nearestResult; 

@@ -18,12 +18,8 @@ struct AnchorTermIndex
  int outerIndex;
  int innerIndex;
 
-
  AnchorTermIndex(int o, int i) : outerIndex(o), innerIndex(i) {}
 };
-// TO DO: WEIGHTS ARE ALL 0 RIGHT NOW, WILL NEED TO SET THEM TO REAL VALUES SOON AND DEBUG THEM TO FIND WHICH WEIGHTS ARE THE BEST FOR
-//       OUR RESULTS FOR THE ENGINE
-
 
 // Weights for computing the score of specific ranking components, enums for quick readjusting and no magic numbers
 enum DynamicWeights: int {
@@ -32,7 +28,6 @@ enum DynamicWeights: int {
    NEARTOPWEIGHT = 1,
 };
 
-
 // Weights for the section the dynamic ranking heuristic is being ranked on, e.g if its being ran on the URL of a document or the body
 // enums for quick readjusting and no magic numbers once again
 enum SectionWeights: int {
@@ -40,22 +35,19 @@ enum SectionWeights: int {
    BODYWEIGHT = 1
 };
 
-
 // enum class for requirements of what is considered a short span or a top span
 enum Requirements: int {
    TOPSPANSIZE = 256
 };
 
-
 using locationVector = std::vector<Location>;
-
 
 constexpr Location RANGE_TOLERANCE = 32;
 constexpr int MAX_SPANS = 8;
 
 // given all of the occurences assigns the weights and returns the actual dynamic rank
 // ***RME CLAUSE***
-// Requires: The number of short spans, ordered spans, phrase matches, top spans, and the type of section this is being scored on
+// Requires: The number of short minSpansVector, ordered minSpansVector, phrase matches, top minSpansVector, and the type of section this is being scored on
 // Modifies: Nothing
 // Effect: Scores a given rank of the document using weights with the given numbers above.
 int get_rank_score(int nearTopAnchorCount, int shortSpans, int topSpans, bool isBody) {
@@ -75,7 +67,7 @@ int get_rank_score(int nearTopAnchorCount, int shortSpans, int topSpans, bool is
    int shortSpansResult = shortSpans * SHORTSPANSWEIGHT;
    int nearTopAnchorResult = nearTopAnchorCount;
    int topSpansResult = topSpans * TOPSPANSWEIGHT;
-   // multiply by the type weight and the added up weights of the spans
+   // multiply by the type weight and the added up weights of the minSpansVector
    return sectionWeight * (shortSpansResult + nearTopAnchorResult + topSpansResult);
 }
 
@@ -83,9 +75,9 @@ int get_rank_score(int nearTopAnchorCount, int shortSpans, int topSpans, bool is
 // computes all of the variables that is needed for the rank score function using a variety of ISR'S pertaining to a SPECIFIC document
 // ***RME CLAUSE***
 // Requires: The rarest word's ISR as the anchor term, and vector of ISR's all other terms w/the anchor term being in the vector as well
-//           the int is the index of the phrase term in the search query to check for ordering.
-//           phraseTerms should be ordered like they are in the query, need a vector of vectors incase we have multiplle phraes in the query tree
-//           Needs a start location so we can seek to that location
+// the int is the index of the phrase term in the search query to check for ordering.
+//   phraseTerms should be ordered like they are in the query, need a vector of vectors incase we have multiplle phrares in the query tree
+// Needs a start location so we can seek to that location
 // Modifies: Nothing.
 // Effect: Returns the dynamic rank score for a single document.
 int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors, vector<vector<std::unique_ptr<ISRWord>>> &phraseTerms, uint64_t startLocation, uint64_t endLocation, const IndexFileReader & reader, uint32_t currChunk, bool isBody, int shortestSpanPossible)
@@ -94,12 +86,13 @@ int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors
    int topSpans = 0;
    int totalSpans = 0;
    int nearTopAnchor = 0;
+    // Loop through all query terms to find anchor incase, the number one rarest term is not present in this document
    for (int anchorTermIdx = 0; anchorTermIdx < rarestAnchorTermVectors.size(); ++anchorTermIdx)
    {
        auto & anchorTerm = phraseTerms[rarestAnchorTermVectors[anchorTermIdx].outerIndex][rarestAnchorTermVectors[anchorTermIdx].innerIndex];
 
-
        const std::string & anchorWord = anchorTerm->GetWord();
+       // Attempts to load all postings in this document for the current anchor
        locationVector anchorLocations = reader.LoadChunkOfPostingList(
            anchorWord,
            currChunk,  
@@ -107,9 +100,11 @@ int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors
            endLocation,
            anchorTerm->GetSeekTableIndex()
        );
-     
+       
        if (!anchorLocations.empty())
        {
+            // If the query is one term long
+            // count the number of occurence near the top of the document and treat it as its rank
             if (shortestSpanPossible == 1)
             {  
                 for (const auto & loc : anchorLocations)
@@ -121,54 +116,59 @@ int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors
                 }
             return nearTopAnchor;
             }
-           locationVector spans(anchorLocations.size(), 0);
-  
-           for (int i = 0; i < phraseTerms.size(); ++i)
-           {
+            // Vector to hold min span calculations for anchor word
+            locationVector minSpansVector(anchorLocations.size(), 0);
+            
+            // Loops through every term
+            for (int i = 0; i < phraseTerms.size(); ++i)
+            {
                for (int j = 0; j < phraseTerms[i].size(); ++j)
                {
-                   const std::string & word = phraseTerms[i][j]->GetWord();
-                   if (word != anchorWord)
-                   {
-                       locationVector currPhraseMinDiffs = reader.FindClosestPostingDistancesToAnchor
-                       (
-                       word,
-                       currChunk,
-                       anchorLocations,
-                       endLocation,
-                       phraseTerms[i][j]->GetSeekTableIndex()
-                       );
-                       for (int k = 0; k < spans.size(); ++k)
-                       {
-                           spans[k] += currPhraseMinDiffs[k];
-                       }
-                   }
+                    const std::string & word = phraseTerms[i][j]->GetWord();
+                    if (word != anchorWord)
+                    {
+                        // Calculates min distance between current term and anchor term in this document
+                        locationVector currPhraseMinDiffs = reader.FindClosestPostingDistancesToAnchor
+                        (
+                        word,
+                        currChunk,
+                        anchorLocations,
+                        endLocation,
+                        phraseTerms[i][j]->GetSeekTableIndex()
+                        );
+                        // Adds the min distances to current span
+                        for (int k = 0; k < minSpansVector.size(); ++k)
+                        {
+                            minSpansVector[k] += currPhraseMinDiffs[k];
+                        }
+                    }
                   
                }
            }
-
-
-           for (int i = 0; i < spans.size(); ++i)
+           // Once we are done calculating the min spans
+           // Check if the min spans match our requirements
+           for (int i = 0; i < minSpansVector.size(); ++i)
            {  
-               Location & currentTotalSpan = spans[i];
+                Location & currentTotalSpan = minSpansVector[i];
 
-               if (currentTotalSpan < (shortestSpanPossible << 1) && currentTotalSpan != 0)
-               {
-                   shortSpans++;
-                   if (anchorLocations[i] < startLocation + Requirements::TOPSPANSIZE)
-                   {
-                       topSpans++;
-                   }
-               }
-               if (anchorLocations[i] < startLocation + Requirements::TOPSPANSIZE)
-               {
-                   ++nearTopAnchor;
-               }
-              
+                // Checks if its a short span
+                if (currentTotalSpan < (shortestSpanPossible << 1) && currentTotalSpan != 0)
+                {
+                    shortSpans++;
+                    // Checks if its a top span
+                    if (anchorLocations[i] < startLocation + Requirements::TOPSPANSIZE)
+                    {
+                        topSpans++;
+                    }
+                }
+                // Checks if the anchor word is near the top of the page
+                if (anchorLocations[i] < startLocation + Requirements::TOPSPANSIZE)
+                {
+                    ++nearTopAnchor;
+                }
            }
            break;
        }
    }
-   /*std::cout << "shortSpans: " << shortSpans << ", orderedSpans: " << orderedSpans << "phraseMatches: " << phraseMatches << ", topSpans: " << topSpans << "isBody: " << isBody << '\n';*/
    return get_rank_score(nearTopAnchor, shortSpans , topSpans, isBody);
 }

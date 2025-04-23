@@ -55,6 +55,7 @@ constexpr std::array<int, 256> createShortestSpanTable()
 constexpr auto RECIPROCAL_TABLE = createReciprocalTable();
 constexpr auto SHORTEST_SPAN_TABLE = createShortestSpanTable();
 
+
 float matchScore(int queryLen, int partialUrlLen) 
 {
   if (partialUrlLen == 0) return 0.0f;
@@ -372,8 +373,6 @@ std::vector<UrlRank> constraint_solver(
     for (int chunkNum = 0; chunkNum < numChunks; ++chunkNum)
     {
       SeekObj* currMatch = queryISR->Seek(0, chunkNum);
-
-      SeekObj * x = docISR->Seek(0, chunkNum);
       if (!currMatch)
       {
         continue;
@@ -392,10 +391,6 @@ std::vector<UrlRank> constraint_solver(
           // use the index to get relevant doc data
           unique_ptr<Doc> doc = reader.FindUrl(index, chunkNum);
           if (!doc) break;
-          if (doc->url == "https://en.wikipedia.org/wiki/star")
-          {
-            cout << "";
-          }
 
           int shortestSpanPossible = getShortestSpan(queryLength);
           int dynamic_score = get_dynamic_rank(
@@ -424,10 +419,7 @@ std::vector<UrlRank> constraint_solver(
           ParsedUrlRanking parsedUrl = parseUrl(doc->url);
           int url_score = calculateURLscore(parsedUrl, orderedQueryTerms);
           if (parsedUrl.path.size() <= MAX_SHORT_URL_LEN) url_score += SHORT_URL_BOOST;
-          if (parsedUrl.path.size() >= 32)
-          {
-            // url_score -= SHORT_URL_BOOST;
-          } 
+
           // if (parsedUrl.host.size() < MAX_SHORT_URL_LEN) url_score += SHORT_URL_BOOST;
           // Add weights to the score later
           UrlRank urlRank(doc->url, dynamic_score + url_score); /*title_score + url_score + doc->staticRank*/
