@@ -336,7 +336,7 @@ struct SeekObj {
       *         - An error occurs during parsing (e.g., offset out of bounds, read error)
       *         - No posting with location >= target exists in the list
       */
-    std::unique_ptr<SeekObj> Find(
+    std::shared_ptr<SeekObj> Find(
         const std::string& word, 
         Location target, 
         uint32_t chunkNum,
@@ -416,7 +416,7 @@ struct SeekObj {
             {
                 // cout << "Deltas decoded: " << decodeCounter << "\n";
                 // cout << decodeCounter << "\n";
-                return std::make_unique<SeekObj>(currentOffset, currentLocation, delta, index, numPosts, tableIndex);
+                return std::make_shared<SeekObj>(currentOffset, currentLocation, delta, index, numPosts, tableIndex);
           
             }
             index++;
