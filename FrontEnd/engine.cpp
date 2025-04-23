@@ -18,25 +18,20 @@ Driver driver;
 std::string clean_url(std::string& url) {
   std::string cleaned = url;
 
-  // Remove "https://"
+  // Remove prefix only once, in priority order
   const std::string https_prefix = "https://";
+  const std::string http_prefix = "http://";
+  const std::string www_prefix = "www.";
+
   if (cleaned.rfind(https_prefix, 0) == 0) {
     cleaned.erase(0, https_prefix.length());
-  }
-
-  // Remove "http:/"
-  const std::string http_prefix = "http:/";
-  if (cleaned.rfind(http_prefix, 0) == 0) {
+  } else if (cleaned.rfind(http_prefix, 0) == 0) {
     cleaned.erase(0, http_prefix.length());
-  }
-
-  // Remove "www."
-  const std::string www_prefix = "www.";
-  if (cleaned.rfind(www_prefix, 0) == 0) {
+  } else if (cleaned.rfind(www_prefix, 0) == 0) {
     cleaned.erase(0, www_prefix.length());
   }
 
-  // Remove query string after '?'
+  // Then remove query string after '?'
   size_t query_pos = cleaned.find('?');
   if (query_pos != std::string::npos) {
     cleaned = cleaned.substr(0, query_pos);
@@ -81,31 +76,47 @@ struct ThreadData {
 
 // Thread worker function for fetching title and snippet
 void* snippet_thread_worker(void* arg) {
-    ThreadData* data = static_cast<ThreadData*>(arg);
-    SearchResult parsed = driver.get_url_and_parse(data->url);
+  ThreadData* data = static_cast<ThreadData*>(arg);
+  SearchResult parsed = driver.get_url_and_parse(data->url);
 
-    // Lock before modifying shared data
-    pthread_mutex_lock(&result_mutex);
+  pthread_mutex_lock(&result_mutex);
 
-    if (!is_valid_utf8(parsed.title) || parsed.title == "") {
+  std::string lowered_title = parsed.title;
+  std::string lowered_snippet = parsed.snippet;
+  std::transform(lowered_title.begin(), lowered_title.end(), lowered_title.begin(), ::tolower);
+  std::transform(lowered_snippet.begin(), lowered_snippet.end(), lowered_snippet.begin(), ::tolower);
+
+  bool should_clean_title = false;
+
+  if (!is_valid_utf8(parsed.title) || parsed.title.empty()) {
+      should_clean_title = true;
+  } else if (lowered_title.find("page not found") != std::string::npos ||
+             lowered_snippet.find("page not found") != std::string::npos) {
+      should_clean_title = true;
+  } else if (parsed.title.rfind("http", 0) == 0 || parsed.title.rfind("www", 0) == 0) {
+      should_clean_title = true;
+  }
+
+  if (should_clean_title) {
       parsed.title = clean_url(parsed.url);
-    }
+  }
 
-    if (!is_valid_utf8(parsed.snippet)) {
+  if (!is_valid_utf8(parsed.snippet) || lowered_snippet.find("page not found") != std::string::npos) {
       parsed.snippet = "";
-    }
-    
-    result["results"][data->idx] = {
+  }
+
+  result["results"][data->idx] = {
       {"url", parsed.url},
       {"title", parsed.title},
       {"snippet", parsed.snippet}
-    };
+  };
 
-    pthread_mutex_unlock(&result_mutex);
-
-    delete data; // Clean up dynamically allocated memory
-    return nullptr;
+  pthread_mutex_unlock(&result_mutex);
+  delete data;
+  return nullptr;
 }
+
+
 
 // Executes a query by calling the search backend (run_engine),
 // then concurrently fetching the matching URLs.
