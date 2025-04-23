@@ -27,10 +27,14 @@ Bloomfilter bf(1, 1);
 std::mt19937 mt{std::random_device{}()};
 std::queue<std::string> explore_queue{};
 std::vector<std::pair<std::string, uint32_t>> links_vector{};
+std::queue<std::string> wiki_queue{};
 
 uint64_t num_processed{};
 
 pthread_mutex_t queue_lock{};
+
+// max int for WIKI, p=1/(WIKI_RAND+1)
+const int WIKI_RAND = 49;
 
 int partition(int left, int right, int pivot_index) {
     int pivot_rank = links_vector[pivot_index].second;
@@ -102,9 +106,17 @@ void fill_queue() {
         // std::cout << "Here4" << std::endl;
 
         // Takes last K from vector and adds its to queue
+        std::random_device rd;
+        std::mt19937 gen2(rd());
+        std::uniform_int_distribution<> distr(0, WIKI_RAND);
         for (size_t i = 0; i < TOP_K_ELEMENTS; ++i) {
-            explore_queue.push(std::move(links_vector.back().first));
-            links_vector.pop_back();
+            if (distr(gen2) == 0) {
+                explore_queue.push(std::move(wiki_queue.front()));
+                explore_queue.pop();
+            } else {
+                explore_queue.push(std::move(links_vector.back().first));
+                links_vector.pop_back();
+            }
         }
     }
     // std::cout << "Exit fill_queue()" << std::endl;
@@ -122,12 +134,24 @@ std::string get_next_url() {
         explore_queue.pop();
         return res;
     } else if (!links_vector.empty()) {
-        // std::cout << "Explore queue empty, use last link from vector"
-        std::uniform_int_distribution<> gen{0, int(links_vector_size - 1)};
-        std::swap(links_vector[gen(mt)], links_vector.back());
-        std::string res = std::move(links_vector.back().first);
-        links_vector.pop_back();
-        return res;
+        std::random_device rd;
+        std::mt19937 gen2(rd());
+        std::uniform_int_distribution<> distr(0, WIKI_RAND);
+        // get the wikipedia link with RAND prob
+        if (distr(gen2) == 0) {
+            std::cout << "e_q empty, using link from wiki queue\n";
+            std::string wikilink = wiki_queue.front();
+            wiki_queue.pop();
+            return wikilink;
+        } else {
+            std::cout << "Explore queue empty, use last link from vector\n";
+            std::uniform_int_distribution<> gen{0, int(links_vector_size - 1)};
+            std::swap(links_vector[gen(mt)], links_vector.back());
+            std::string res = std::move(links_vector.back().first);
+            links_vector.pop_back();
+            return res;
+        }
+
     } else {
         return "";
     }
@@ -188,39 +212,6 @@ void get_handler(int fd) {
     const size_t header = next.size();
     send(fd, &header, sizeof(header), 0);
     send(fd, next.data(), next.size(), 0);
-}
-
-void add_handler(int fd, uint64_t size) {
-    if (size <= sizeof(uint64_t) || links_vector.size() > MAX_VECTOR_SIZE)
-        return;
-    uint64_t rank = 0;
-    ssize_t bytes = 0;
-    std::string url(size - sizeof(rank), 0);
-    if (url.size() == 0) return;
-    if ((bytes = recv(fd, &rank, sizeof(rank), MSG_WAITALL)) <= 0) return;
-    if ((bytes = recv(fd, url.data(), url.size(), MSG_WAITALL)) <= 0) return;
-
-    if (!bf.contains(url)) {
-        bf.insert(url);
-        links_vector.emplace_back(std::move(url), rank);
-    }
-}
-
-void *handler(void *fd) {
-    int sock = (uint64_t)(fd);
-    SocketWrapper sock_{sock};
-
-    header_t val;
-
-    if (recv(sock, &val, sizeof(val), 0) <= 0) {
-        return NULL;
-    }
-    if (val == GET_COMMAND) {
-        get_handler(sock);
-    } else {
-        add_handler(sock, val);
-    }
-    return NULL;
 }
 
 void init_dispatcher() {
@@ -304,9 +295,13 @@ void *adder(void *arg) {
         if (recv(fd, &rank, sizeof(rank), MSG_WAITALL) == 0) break;
         if (recv(fd, url.data(), url.size(), MSG_WAITALL) == 0) break;
         pthread_lock_guard guard{queue_lock};
-        if (links_vector.size() < MAX_VECTOR_SIZE && !bf.contains(url)) {
-            bf.insert(url);
-            links_vector.emplace_back(std::move(url), rank);
+        if (url.find("wikipedia") == std::string::npos) {
+            if (links_vector.size() < MAX_VECTOR_SIZE && !bf.contains(url)) {
+                bf.insert(url);
+                links_vector.emplace_back(std::move(url), rank);
+            }
+        } else {
+            wiki_queue.emplace(std::move(url), rank);
         }
     }
     return NULL;
