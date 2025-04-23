@@ -12,17 +12,19 @@
 #include "isr/isr.h"
 #include "ranker/dynamic_rank.h"
 
-constexpr size_t TOTAL_DOCS_TO_RETURN = 128;
 
+constexpr size_t TOTAL_DOCS_TO_RETURN = 128;
+/** @brief Weights for url matching */
 constexpr size_t HOST_MATCH_SCORE = 256;
 constexpr size_t PATH_MATCH_SCORE = 128;
 constexpr size_t HOST_MATCHED_ALL_QUERY_TERMS = 128;
 constexpr size_t PATH_MATCHED_ALL_QUERY_TERMS = 64;
 constexpr size_t SHORT_URL_BOOST = 32;
+/** @brief max len for url to be considered short */
 constexpr size_t MAX_SHORT_URL_LEN = 16;
 
 static bool bodyText = true;
-
+/** @brief function to compute precompute reciprocals so we don't have to do division during runtime */
 constexpr std::array<float, 256> createReciprocalTable() 
 {
   std::array<float, 256> table = {};
@@ -33,7 +35,9 @@ constexpr std::array<float, 256> createReciprocalTable()
   table[0] = 0.0f; 
   return table;
 }
-
+/** @brief function to compute the shortest span possible for given query len
+ * limits query size to 255
+ */
 constexpr std::array<int, 256> createShortestSpanTable()
 {
   std::array<int, 256> table = {};
@@ -45,6 +49,9 @@ constexpr std::array<int, 256> createShortestSpanTable()
   return table;
 }
 
+/** @brief precompute tables at compile time
+ * Doubt it saves much time though
+ */
 constexpr auto RECIPROCAL_TABLE = createReciprocalTable();
 constexpr auto SHORTEST_SPAN_TABLE = createShortestSpanTable();
 
@@ -127,6 +134,7 @@ ParsedUrlRanking parseUrl(const std::string& url_string) {
   {
        result.first_path_segment.pop_back();
   }
+  // Replaces hyphens and underscores with spaces
   std::replace(result.path.begin(), result.path.end(), '-', ' ');
   std::replace(result.path.begin(), result.path.end(), '_', ' ');
   std::replace(result.host.begin(), result.host.end(), '-', ' ');
@@ -225,52 +233,6 @@ void insertionSort(vector<UrlRank> & topRankedDocs, UrlRank & rankedDoc)
   topRankedDocs[pos] = std::move(docToInsert);
 }
 
-/*
-float calculateURLscore(const ParsedUrlRanking & parsedUrl, vector<vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms)
-{
-  float score = 0;
-  for (const auto & termsVector: orderedQueryTerms)
-  {
-    for (const auto & wordISR: termsVector)
-    {
-      const std::string_view & word = wordISR->GetWord();
-      if (parsedUrl.host.find(word) != std::string::npos)
-      {
-        float result = matchScore(word.size(), parsedUrl.host.size());
-        if (result > score)
-        {
-          score = result;
-        }
-        break;
-      }
-      if (parsedUrl.path.find(word) != std::string::npos)
-      {
-        float result = matchScore(word.size(), parsedUrl.path.size());
-        if (result > score)
-        {
-          score = result;
-        }
-        break;
-      }
-
-    }
-  }
-
-  if (score > 0.5f)
-  {
-    return HOST_MATCH_SCORE;
-  }
-  if (score > 0.3f)
-  {
-    return HOST_MATCH_SCORE >> 1;
-  }
-  if (score > 0.15f)
-  {
-
-  }
-}
-
-*/
 float calculateURLscore(const ParsedUrlRanking & parsedUrl,
                        const std::vector<std::vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms)
 {
