@@ -139,12 +139,12 @@ std::string get_next_url() {
         std::uniform_int_distribution<> distr(0, WIKI_RAND);
         // get the wikipedia link with RAND prob
         if (distr(gen2) == 0) {
-            std::cout << "e_q empty, using link from wiki queue\n";
+            // std::cout << "e_q empty, using link from wiki queue\n";
             std::string wikilink = wiki_queue.front();
             wiki_queue.pop();
             return wikilink;
         } else {
-            std::cout << "Explore queue empty, use last link from vector\n";
+            // std::cout << "Explore queue empty, use last link from vector\n";
             std::uniform_int_distribution<> gen{0, int(links_vector_size - 1)};
             std::swap(links_vector[gen(mt)], links_vector.back());
             std::string res = std::move(links_vector.back().first);
@@ -294,8 +294,9 @@ void *adder(void *arg) {
         std::string url(header - sizeof(rank), 0);
         if (recv(fd, &rank, sizeof(rank), MSG_WAITALL) == 0) break;
         if (recv(fd, url.data(), url.size(), MSG_WAITALL) == 0) break;
+        bool found = (url.find("wikipedia") != std::string::npos);
         pthread_lock_guard guard{queue_lock};
-        if (url.find("wikipedia") == std::string::npos) {
+        if (!found) {
             if (links_vector.size() < MAX_VECTOR_SIZE && !bf.contains(url)) {
                 bf.insert(url);
                 links_vector.emplace_back(std::move(url), rank);
