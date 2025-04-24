@@ -276,11 +276,22 @@ void init_dispatcher() {
 
 void *getter(void *arg) {
   int fd = (uint64_t)(arg);
+  uint32_t num_reqs{};
   char c;
-  while (recv(fd, &c, sizeof(c), MSG_WAITALL) == 1) {
-    get_handler(fd);
+  while (true) {
+    switch (recv(fd, &c, sizeof(c), MSG_WAITALL)) {
+      case 0:
+        close(fd);
+        return NULL;
+      case 1:
+        ++num_reqs;
+        std::cout << "Number of get requests: " << num_reqs << '\n';
+        get_handler(fd);
+        break;
+      case -1:
+        continue;
+    }
   }
-  close(fd);
   return NULL;
 }
 

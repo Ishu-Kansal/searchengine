@@ -74,6 +74,7 @@ sem_t* queue_sem;
 std::mt19937 mt{std::random_device{}()};
 
 std::atomic<int> ctr{}, num_processed{};
+std::atomic<int> get_requests{};
 
 pthread_mutex_t getter_lock{};
 sem_t* getter_request_sem{};
@@ -111,7 +112,9 @@ void* url_getter(void*) {
 
   while (true) {
     sem_wait(getter_request_sem);
-    send(sock, &req, sizeof(req), 0);
+    ++get_requests;
+    std::cout << "Number of get requests: " << get_requests << '\n';
+    send(sock, &req, sizeof(req), MSG_NOSIGNAL);
     recv(sock, &header, sizeof(header), MSG_WAITALL);
     recv(sock, &dist, sizeof(dist), MSG_WAITALL);
     std::string next_url(header, 0);
@@ -162,9 +165,9 @@ void* url_adder(void*) {
       std::tie(next, rank) = std::move(adderQueue.back());
       adderQueue.pop_back();
       size_t header = next.size();
-      send(sock, &header, sizeof(header), 0);
-      send(sock, &rank, sizeof(rank), 0);
-      send(sock, next.data(), next.size(), 0);
+      send(sock, &header, sizeof(header), MSG_NOSIGNAL);
+      send(sock, &rank, sizeof(rank), MSG_NOSIGNAL);
+      send(sock, next.data(), next.size(), MSG_NOSIGNAL);
     }
     // }
     // sleep(1);
