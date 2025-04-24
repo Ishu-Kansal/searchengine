@@ -209,9 +209,9 @@ void get_handler(int fd) {
     if (num_processed % DISPATCHER_SAVE_RATE == 0) saver();
   }
   const size_t header = next.url.size();
-  send(fd, &header, sizeof(header), 0);
-  send(fd, &next.rank, sizeof(next.rank), 0);
-  send(fd, next.url.data(), next.url.size(), 0);
+  send(fd, &header, sizeof(header), MSG_NOSIGNAL);
+  send(fd, &next.rank, sizeof(next.rank), MSG_NOSIGNAL);
+  send(fd, next.url.data(), next.url.size(), MSG_NOSIGNAL);
 }
 
 /*void add_handler(int fd, uint64_t size) {
@@ -277,7 +277,7 @@ void init_dispatcher() {
 void *getter(void *arg) {
   int fd = (uint64_t)(arg);
   char c;
-  while (recv(fd, &c, sizeof(c), 0) != 0) {
+  while (recv(fd, &c, sizeof(c), MSG_WAITALL) == 1) {
     get_handler(fd);
   }
   close(fd);
