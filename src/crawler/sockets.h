@@ -14,7 +14,7 @@
 #include <iostream>
 #include <memory>
 
-#include "../../utils/cunique_ptr.h"
+#include "../../utils/socket_wrapper.h"
 // #include "robotParser.h"
 class ParsedUrl {
  public:
@@ -122,11 +122,14 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
 
   int socketFD = connect_socket(address);
 
+  freeaddrinfo(address);
+
   if (socketFD < 0) {
     // << "Failed to create socket" << std::endl;
-    freeaddrinfo(address);
     return 3;
   }
+
+  SocketWrapper _wrapper{socketFD};
 
   // Connect the socket
   /*if (connect(socketFD, address->ai_addr, address->ai_addrlen) < 0) {
@@ -134,8 +137,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
     close(socketFD);
     freeaddrinfo(address);
     return 4;
-  }*/
-  freeaddrinfo(address);  // Done with the address info
+  }*/  // Done with the address info
   // std::cout << req;
   // Initialize SSL
 
@@ -144,7 +146,6 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   SSL_CTX *ctx = SSL_CTX_new(SSLv23_method());
   if (!ctx) {
     // << "Failed to create SSL context" << std::endl;
-    close(socketFD);
     return 5;
   }
 
@@ -152,7 +153,6 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   if (ssl == nullptr) {
     // << "could not create ssl object" << std::endl;
     SSL_CTX_free(ctx);
-    close(socketFD);
     return 6;
   }
 
@@ -166,7 +166,6 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
     // << "Failed to set socket timeout" << std::endl;
     SSL_free(ssl);
     SSL_CTX_free(ctx);
-    close(socketFD);
     return 7;
   }
 
@@ -188,7 +187,6 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
     // ERR_print_errors_fp(stderr);
     SSL_free(ssl);
     SSL_CTX_free(ctx);
-    close(socketFD);
     return 9;
   }
 
@@ -197,7 +195,6 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
     // SSL_shutdown(ssl);
     SSL_free(ssl);
     SSL_CTX_free(ctx);
-    close(socketFD);
     return 10;
   }
 
@@ -226,7 +223,6 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
         SSL_shutdown(ssl);
         SSL_free(ssl);
         SSL_CTX_free(ctx);
-        close(socketFD);
         return 11;
       }
       code = atoi(header.data() + 9);
@@ -234,7 +230,6 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
         SSL_shutdown(ssl);
         SSL_free(ssl);
         SSL_CTX_free(ctx);
-        close(socketFD);
         return 12;
       }
       if (code == 301) break;
@@ -267,15 +262,10 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
     return code;
   }
 
-  if (bytes < 0) {
-    // // << "Error reading from SSL socket" << std::endl;
-  }
-
   // Clean up
   SSL_shutdown(ssl);
   SSL_free(ssl);
   SSL_CTX_free(ctx);
-  close(socketFD);
   if (code == 404) {
     return 404;
   }
