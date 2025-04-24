@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <atomic>
 #include <cstdint>
 #include <fstream>
 #include <memory>
@@ -276,7 +277,7 @@ void init_dispatcher() {
 
 void *getter(void *arg) {
   int fd = (uint64_t)(arg);
-  uint32_t num_reqs{};
+  std::atomic<uint32_t> num_reqs{};
   char c;
   while (true) {
     switch (recv(fd, &c, sizeof(c), MSG_WAITALL)) {

@@ -361,7 +361,7 @@ void* runner(void* arg) {
     std::string& url = cur.url;
 
     if (url.empty()) {
-      sleep(1);
+      // sleep(1);
       continue;
     }
 
