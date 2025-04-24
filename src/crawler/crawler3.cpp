@@ -119,8 +119,8 @@ void* url_getter(void*) {
     std::string next_url(header, 0);
     recv(sock, next_url.data(), next_url.size(), MSG_WAITALL);
     ++get_requests;
-    std::cout << "Number of get requests: " << get_requests << " and url "
-              << next_url << '\n';
+   // std::cout << "Number of get requests: " << get_requests << " and url "
+     //         << next_url << '\n';
     {
       pthread_lock_guard guard{getter_lock};
       getterQueue.emplace_back(std::move(next_url), dist);
@@ -376,7 +376,8 @@ void* runner(void* arg) {
     if (args.status != 0) {
       static const struct timespec time{.tv_sec = 0, .tv_nsec = 500'000'000};
       nanosleep(&time, NULL);
-      // std::cout << "Could not retrieve HTML\n" << std::endl;
+      std::cout << "Could not retrieve HTML, status: " << args.status << " for " << url << std::endl;
+      perror("");
       continue;
     }
     // Parse the html code

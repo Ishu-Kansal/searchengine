@@ -286,7 +286,7 @@ void *getter(void *arg) {
         return NULL;
       case 1:
         ++num_reqs;
-        std::cout << "Number of get requests: " << num_reqs << '\n';
+       // std::cout << "Number of get requests: " << num_reqs << '\n';
         get_handler(fd);
         break;
       case -1:
