@@ -376,8 +376,8 @@ void* runner(void* arg) {
     if (args.status != 0) {
       static const struct timespec time{.tv_sec = 0, .tv_nsec = 500'000'000};
       nanosleep(&time, NULL);
-      std::cout << "Could not retrieve HTML, status: " << args.status << " for " << url << std::endl;
-      perror("");
+     // std::cout << "Could not retrieve HTML, status: " << args.status << " for " << url << std::endl;
+     // perror("");
       continue;
     }
     // Parse the html code
