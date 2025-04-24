@@ -163,7 +163,7 @@ int get_domain_weight(cstring_view domain) {
     case 'n':
       return domain == ".net" ? RELEVANT : NONRECOGNIZED;
     case 'o':
-      return domain == ".org" ? ORG : NONRECOGNIZED;
+      return domain == ".org" ? RELEVANT : NONRECOGNIZED;
     case 'i':
       return domain == ".info" ? LESSRELEVANT : NONRECOGNIZED;
     default:

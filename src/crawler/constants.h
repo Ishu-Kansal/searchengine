@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <iostream>
 
 constexpr int MAX_EXPECTED_LINKS = 10'000'000;
 constexpr uint32_t MAX_PROCESSED = 100'000;
@@ -24,3 +25,22 @@ constexpr const char *const SERVER_PORT_STR = "8080";
 constexpr const char *filterName = "dispatcher_filter.bin";
 constexpr const char *queueName = "dispatcher_queue.bin";
 constexpr const char *statsName = "dispatcher_stats.bin";
+
+struct UrlHostPair {
+  std::string url;
+  std::string host;
+  uint64_t rank;
+
+  friend std::ostream &operator<<(std::ostream &os, const UrlHostPair &uhp) {
+    return os << ' ' << uhp.url << ' ' << uhp.host << ' ' << uhp.rank << '\n';
+  }
+
+  friend std::istream &operator>>(std::istream &is, UrlHostPair &uhp) {
+    return is >> uhp.url >> uhp.host >> uhp.rank;
+  }
+};
+
+struct UrlRankPair {
+  std::string url;
+  uint64_t rank;
+};

@@ -25,15 +25,34 @@
 Bloomfilter bf(1, 1);
 
 std::mt19937 mt{std::random_device{}()};
-std::queue<std::string> explore_queue{};
-std::vector<std::pair<std::string, uint32_t>> links_vector{};
+std::queue<UrlHostPair> explore_queue{};
+std::vector<UrlHostPair> links_vector{};
 
 uint64_t num_processed{};
 
 pthread_mutex_t queue_lock{};
+std::unordered_map<std::string, uint32_t> ref_cts{};
+
+std::string get_host(const std::string &url_string) {
+  std::string host;
+
+  size_t scheme_end = url_string.find("://");
+  if (scheme_end == std::string::npos) {
+    return "EMPTY";
+  }
+  size_t authority_start = scheme_end + 3;
+
+  size_t authority_end = url_string.find_first_of("/?#", authority_start);
+
+  if (authority_end == std::string::npos) {
+    return url_string.substr(authority_start);
+  } else {
+    return url_string.substr(authority_start, authority_end - authority_start);
+  }
+}
 
 int partition(int left, int right, int pivot_index) {
-  int pivot_rank = links_vector[pivot_index].second;
+  int pivot_rank = links_vector[pivot_index].rank;
 
   // Move the pivot to the end
   std::swap(links_vector[pivot_index], links_vector[right]);
@@ -41,7 +60,7 @@ int partition(int left, int right, int pivot_index) {
   // Move all less ranked elements to the left
   int store_index = left;
   for (int i = left; i < right; i++) {
-    if (links_vector[i].second < pivot_rank) {
+    if (links_vector[i].rank < pivot_rank) {
       std::swap(links_vector[store_index], links_vector[i]);
       store_index += 1;
     }
@@ -103,14 +122,14 @@ void fill_queue() {
 
     // Takes last K from vector and adds its to queue
     for (size_t i = 0; i < TOP_K_ELEMENTS; ++i) {
-      explore_queue.push(std::move(links_vector.back().first));
+      explore_queue.push(std::move(links_vector.back()));
       links_vector.pop_back();
     }
   }
   // std::cout << "Exit fill_queue()" << std::endl;
 }
 
-std::string get_next_url() {
+UrlHostPair get_next_url() {
   const size_t links_vector_size = links_vector.size();
 
   if (explore_queue.empty() && links_vector_size + 100 > MAX_VECTOR_SIZE) {
@@ -118,18 +137,18 @@ std::string get_next_url() {
   }
 
   if (!explore_queue.empty()) {
-    std::string res = std::move(explore_queue.front());
+    UrlHostPair res = std::move(explore_queue.front());
     explore_queue.pop();
     return res;
   } else if (!links_vector.empty()) {
     // std::cout << "Explore queue empty, use last link from vector"
     std::uniform_int_distribution<> gen{0, int(links_vector_size - 1)};
     std::swap(links_vector[gen(mt)], links_vector.back());
-    std::string res = std::move(links_vector.back().first);
+    UrlHostPair res = std::move(links_vector.back());
     links_vector.pop_back();
     return res;
   } else {
-    return "";
+    return {};
   }
 }
 
@@ -142,13 +161,12 @@ void saver() {
 
   std::ofstream outputFile{queueName,
                            std::ofstream::out | std::ios_base::trunc};
-  if (!outputFile) assert(false);
 
   int ctr = 0;
-  std::queue<std::string> temp_queue{};
+  std::queue<UrlHostPair> temp_queue{};
   std::cout << "Writing queue...\n";
   while (ctr < 1000 && !explore_queue.empty()) {
-    outputFile << explore_queue.front() << '\n';
+    outputFile << explore_queue.front();
     temp_queue.push(std::move(explore_queue.front()));
     ++ctr;
     explore_queue.pop();
@@ -158,8 +176,8 @@ void saver() {
     temp_queue.pop();
   }
   int right_ptr = int(links_vector.size()) - 1;
-  while (ctr < 1000 && right_ptr >= 0) {
-    outputFile << links_vector[right_ptr].first << '\n';
+  while (right_ptr >= 0 && ctr < 1000) {
+    outputFile << links_vector[right_ptr];
     --right_ptr;
     ++ctr;
   }
@@ -176,10 +194,11 @@ void print_dispatcher() {
 }
 
 void get_handler(int fd) {
-  std::string next;
+  UrlHostPair next;
   {
     pthread_lock_guard guard{queue_lock};
     next = get_next_url();
+    ref_cts[next.host]--;
 
     num_processed++;
     if (num_processed % 1000 == 0) {
@@ -188,12 +207,13 @@ void get_handler(int fd) {
     }
     if (num_processed % DISPATCHER_SAVE_RATE == 0) saver();
   }
-  const size_t header = next.size();
+  const size_t header = next.url.size();
   send(fd, &header, sizeof(header), 0);
-  send(fd, next.data(), next.size(), 0);
+  send(fd, &next.rank, sizeof(next.rank), 0);
+  send(fd, next.url.data(), next.url.size(), 0);
 }
 
-void add_handler(int fd, uint64_t size) {
+/*void add_handler(int fd, uint64_t size) {
   if (size <= sizeof(uint64_t) || links_vector.size() > MAX_VECTOR_SIZE) return;
   uint64_t rank = 0;
   ssize_t bytes = 0;
@@ -223,14 +243,14 @@ void *handler(void *fd) {
     add_handler(sock, val);
   }
   return NULL;
-}
+}*/
 
 void init_dispatcher() {
   std::ifstream if1{queueName}, if2{statsName};
   if (if1.good()) {
     bf = Bloomfilter(filterName);
-    std::string url;
-    while (if1 >> url) explore_queue.push(url);
+    UrlHostPair url;
+    while (if1 >> url) explore_queue.emplace(url);
     if2 >> num_processed;
   } else {
     bf = Bloomfilter(MAX_EXPECTED_LINKS, MAX_FALSE_POSITIVE_RATE);
@@ -241,7 +261,8 @@ void init_dispatcher() {
     }
     std::string line;
     while (std::getline(infile, line)) {
-      explore_queue.push(line);
+      auto host = get_host(line);
+      explore_queue.emplace(line, std::move(host), 10);
       bf.insert(line);
     }
     infile.close();
@@ -301,13 +322,19 @@ void *adder(void *arg) {
   uint64_t rank;
   while (recv(fd, &header, sizeof(header), MSG_WAITALL) != 0) {
     uint64_t rank{};
-    std::string url(header - sizeof(rank), 0);
+    std::string url(header, 0);
     if (recv(fd, &rank, sizeof(rank), MSG_WAITALL) == 0) break;
     if (recv(fd, url.data(), url.size(), MSG_WAITALL) == 0) break;
+    std::string host = get_host(url);
+    UrlHostPair p;
+    p.rank = rank;
+    p.host = std::move(host);
+    p.url = std::move(url);
     pthread_lock_guard guard{queue_lock};
-    if (links_vector.size() < MAX_VECTOR_SIZE && !bf.contains(url)) {
-      bf.insert(url);
-      links_vector.emplace_back(std::move(url), rank);
+    if (links_vector.size() < MAX_VECTOR_SIZE && !bf.contains(p.url) &&
+        ref_cts[p.host] < 10'000) {
+      bf.insert(p.url);
+      links_vector.emplace_back(std::move(p));
     }
   }
   close(fd);

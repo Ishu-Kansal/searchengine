@@ -82,7 +82,7 @@ sem_t* getter_response_sem{};
 pthread_mutex_t adder_lock{};
 sem_t* adder_request_sem{};
 
-std::vector<std::string> getterQueue{};
+std::vector<UrlRankPair> getterQueue{};
 std::vector<std::pair<std::string, uint64_t>> adderQueue{};
 
 std::string dispatcher_address{};
@@ -107,26 +107,28 @@ void* url_getter(void*) {
 
   char req = 1;
   size_t header{};
+  uint64_t dist{};
 
   while (true) {
     sem_wait(getter_request_sem);
     send(sock, &req, sizeof(req), 0);
     recv(sock, &header, sizeof(header), MSG_WAITALL);
+    recv(sock, &dist, sizeof(dist), MSG_WAITALL);
     std::string next_url(header, 0);
     recv(sock, next_url.data(), next_url.size(), MSG_WAITALL);
     {
       pthread_lock_guard guard{getter_lock};
-      getterQueue.emplace_back(std::move(next_url));
+      getterQueue.emplace_back(std::move(next_url), dist);
       sem_post(getter_response_sem);
     }
   }
 }
 
-std::string get_string() {
+UrlRankPair get_string() {
   sem_post(getter_request_sem);
   sem_wait(getter_response_sem);
   pthread_lock_guard guard{getter_lock};
-  std::string result = std::move(getterQueue.back());
+  UrlRankPair result = std::move(getterQueue.back());
   getterQueue.pop_back();
   return result;
 }
@@ -159,7 +161,7 @@ void* url_adder(void*) {
       pthread_lock_guard guard{adder_lock};
       std::tie(next, rank) = std::move(adderQueue.back());
       adderQueue.pop_back();
-      size_t header = sizeof(rank) + next.size();
+      size_t header = next.size();
       send(sock, &header, sizeof(header), 0);
       send(sock, &rank, sizeof(rank), 0);
       send(sock, next.data(), next.size(), 0);
@@ -350,7 +352,8 @@ void* runner(void* arg) {
 
   while (num_processed < MAX_PROCESSED) {
     // Get the next url to be processed
-    std::string url = get_string();
+    UrlRankPair cur = get_string();
+    std::string& url = cur.url;
 
     if (url.empty()) {
       sleep(1);
@@ -399,6 +402,10 @@ void* runner(void* arg) {
       if (!check_url(next_url)) {
         continue;
       }
+
+      uint64_t rank =
+          std::max(std::min(cur.rank, uint64_t{2}), uint64_t{5}) * 2;
+      rank += static_rank;
 
       add_url(std::move(next_url), static_rank);
     }
