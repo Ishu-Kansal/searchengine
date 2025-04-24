@@ -5,6 +5,8 @@
 #include "Plugin.h"
 #include "Mutex.h"
 #include "json.hpp" // Download from https://github.com/nlohmann/json"
+
+#include "../src/inverted_index/IndexFileReader.h"
 #include "../src/driver.h"
 
 using json = nlohmann::json;
@@ -14,6 +16,9 @@ pthread_mutex_t result_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Shared driver instance
 Driver driver;
+
+uint32_t numChunks = 100;
+IndexFileReader reader(numChunks);
 
 std::string clean_url(std::string& url) {
   std::string cleaned = url;
@@ -122,8 +127,12 @@ void* snippet_thread_worker(void* arg) {
 // then concurrently fetching the matching URLs.
 // This modified version returns just the URLs.
 json run_query(std::string &query) {
+  std::cout << "In run_query" << std::endl;
+
   std::string summary;
-  std::vector<std::string> urls = driver.run_engine(query, summary);
+  std::vector<std::string> urls = driver.run_engine(query, summary, reader);
+
+  std::cout << "Finished run_engine" << std::endl;
 
   result["results"] = json::array();
   for (std::string& url : urls) {
@@ -223,6 +232,7 @@ private:
     hdr += "\r\nContent-Type: application/json; charset=utf-8";
     hdr += "\r\nContent-Length: " + std::to_string(body.size());
     hdr += "\r\nConnection: close\r\n\r\n";
+    std::cout << "Send response" << std::endl;
     return hdr + body;
   }
 
@@ -246,6 +256,8 @@ public:
   std::string ProcessRequest(std::string request) override {
     lock.Lock();
     std::string out;
+
+    std::cout << "Received request" << std::endl;
 
     if (request.find(search_endpoint) != std::string::npos) {
       out = handle_search(request);

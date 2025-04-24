@@ -5,6 +5,7 @@
 
 #include <string>
 #include <vector>
+#include "../src/inverted_index/IndexFileReader.h"
 
 struct SearchResult {
     std::string url;
@@ -17,8 +18,8 @@ class Driver {
         Driver();
     
         // Runs the full query pipeline and returns the matching URLs
-        std::vector<std::string> run_engine(std::string& query, std::string& summary);
-    
+        std::vector<std::string> run_engine(std::string &query, std::string &summary, IndexFileReader &reader);
+
         // Given a URL, fetches and parses HTML into SearchResult metadata
         SearchResult get_url_and_parse(const std::string& url);
     

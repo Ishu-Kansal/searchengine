@@ -158,7 +158,9 @@ std::vector<UrlRank> run_engine_helper(
 {
    std::vector<std::vector<std::unique_ptr<ISRWord>>> sequences;
 
+   std::cout << "Calling parser" << std::endl;
    QueryParser parser(query, numChunks, reader);
+   std::cout << "Out of parser" << std::endl;
    std::unique_ptr<Constraint> constraint = parser.Parse();
 
    if (constraint)
@@ -177,6 +179,7 @@ std::vector<UrlRank> run_engine_helper(
           sequences_length += sequence.size();
       }
 
+      std::cout << "Calling constraint solver" << std::endl;
       std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, numChunks, reader, matches, sequences_length);
 
       return raw_results;
@@ -188,13 +191,11 @@ std::vector<UrlRank> run_engine_helper(
    }
 }
 
-std::vector<std::string> Driver::run_engine(std::string& query, std::string& summary) {
+std::vector<std::string> Driver::run_engine(std::string& query, std::string& summary, IndexFileReader& reader) {
    const std::string data_filename = "websites_data.jsonl";
    const uint32_t numChunks = 100;
 
    const uint32_t chunkNum = 0;
-
-   IndexFileReader reader(numChunks);
 
    int matches = 0;
 
