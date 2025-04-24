@@ -12,6 +12,7 @@
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -373,6 +374,8 @@ void* runner(void* arg) {
 
     // Continue if html code was not retrieved
     if (args.status != 0) {
+      static const struct timespec time{.tv_nsec = 500'000'000, .tv_sec = 0};
+      nanosleep(&time, NULL);
       // std::cout << "Could not retrieve HTML\n" << std::endl;
       continue;
     }

@@ -1,11 +1,11 @@
 #pragma once
 
+#include <fcntl.h>
 #include <netdb.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <poll.h>
 #include <string.h>
-#include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -321,8 +321,8 @@ int getHTML(std::string url_in, std::string &output) {
       status = runSocket(req2, newishURL, output);
 
       // std::cout << "redirected output:\n" << output << std::endl;
-      return status;
     }
+    return status;
   }
   return 0;
 }
