@@ -288,11 +288,11 @@ float calculateURLscore(const ParsedUrlRanking & parsedUrl,
       }
       if (hostMatchScore > 0.3f)
       {
-        return HOST_MATCH_SCORE >> 1 + currScore;
+        return (HOST_MATCH_SCORE >> 1) + currScore;
       }
       if (hostMatchScore > 0.15f)
       {
-        return HOST_MATCH_SCORE >> 2 + currScore;
+        return (HOST_MATCH_SCORE >> 2) + currScore;
       }
     }
     else
@@ -303,11 +303,11 @@ float calculateURLscore(const ParsedUrlRanking & parsedUrl,
       }
       if (hostMatchScore > 0.5f)
       {
-        return HOST_MATCH_SCORE >> 1 + currScore;
+        return (HOST_MATCH_SCORE >> 1) + currScore;
       }
       if (hostMatchScore > 0.3f)
       {
-        return HOST_MATCH_SCORE >> 2 + currScore;
+        return (HOST_MATCH_SCORE >> 2) + currScore;
       }
     }
     if (parsedUrl.path.size() <= MAX_SHORT_URL_LEN)
@@ -318,11 +318,11 @@ float calculateURLscore(const ParsedUrlRanking & parsedUrl,
       }
       else if (pathMatchScore > 0.3f)
       {
-        return HOST_MATCH_SCORE >> 1 + currScore;
+        return (HOST_MATCH_SCORE >> 1) + currScore;
       }
       else if (pathMatchScore > 0.15f)
       {
-        return HOST_MATCH_SCORE >> 2 + currScore;
+        return (HOST_MATCH_SCORE >> 2) + currScore;
       }
     }
     else
@@ -333,11 +333,11 @@ float calculateURLscore(const ParsedUrlRanking & parsedUrl,
       }
       else if (pathMatchScore > 0.5f)
       {
-        return PATH_MATCH_SCORE >> 1 + currScore;
+        return (PATH_MATCH_SCORE >> 1) + currScore;
       }
       else if (pathMatchScore > 0.3f)
       {
-        return PATH_MATCH_SCORE >> 2 + currScore;
+        return (PATH_MATCH_SCORE >> 2) + currScore;
       }
     }
     return currScore;

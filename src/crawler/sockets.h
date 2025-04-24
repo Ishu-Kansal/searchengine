@@ -5,6 +5,7 @@
 #include <openssl/ssl.h>
 #include <poll.h>
 #include <string.h>
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
