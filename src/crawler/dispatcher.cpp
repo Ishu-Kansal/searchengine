@@ -251,7 +251,10 @@ void init_dispatcher() {
   if (if1.good()) {
     bf = Bloomfilter(filterName);
     UrlHostPair url;
-    while (if1 >> url) explore_queue.emplace(url);
+    while (if1 >> url) {
+      explore_queue.emplace(url);
+      ref_cts[url.host]++;
+    }
     if2 >> num_processed;
   } else {
     bf = Bloomfilter(MAX_EXPECTED_LINKS, MAX_FALSE_POSITIVE_RATE);
@@ -263,6 +266,7 @@ void init_dispatcher() {
     std::string line;
     while (std::getline(infile, line)) {
       auto host = get_host(line);
+      ref_cts[host]++;
       explore_queue.emplace(line, std::move(host), 10);
       bf.insert(line);
     }
@@ -335,6 +339,7 @@ void *adder(void *arg) {
     if (links_vector.size() < MAX_VECTOR_SIZE && !bf.contains(p.url) &&
         ref_cts[p.host] < 10'000) {
       bf.insert(p.url);
+      ref_cts[p.host]++;
       links_vector.emplace_back(std::move(p));
     }
   }
