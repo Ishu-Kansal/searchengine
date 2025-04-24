@@ -4,7 +4,7 @@
 #include <iostream>
 
 constexpr uint64_t MAX_EXPECTED_LINKS = 500'000'000;
-constexpr uint32_t MAX_PROCESSED = 150'000;
+constexpr uint32_t MAX_PROCESSED = 75'000;
 constexpr uint64_t MAX_QUEUE_SIZE = 10'000;
 constexpr uint64_t MAX_VECTOR_SIZE = 500'000;
 constexpr uint64_t NUM_RANDOM = 200'000;
@@ -12,7 +12,7 @@ constexpr uint64_t TOP_K_ELEMENTS = 100'000;
 constexpr uint64_t DISPATCHER_SAVE_RATE = 25'000;
 constexpr double MAX_FALSE_POSITIVE_RATE = 1e-2;
 
-constexpr uint64_t NUM_CHUNKS = 15;  // start small
+constexpr uint64_t NUM_CHUNKS = 5;  // start small
 
 using header_t = uint64_t;
 constexpr uint64_t GET_COMMAND = 1;
