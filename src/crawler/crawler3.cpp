@@ -112,13 +112,14 @@ void* url_getter(void*) {
 
   while (true) {
     sem_wait(getter_request_sem);
-    ++get_requests;
-    std::cout << "Number of get requests: " << get_requests << '\n';
     send(sock, &req, sizeof(req), MSG_NOSIGNAL);
     recv(sock, &header, sizeof(header), MSG_WAITALL);
     recv(sock, &dist, sizeof(dist), MSG_WAITALL);
     std::string next_url(header, 0);
     recv(sock, next_url.data(), next_url.size(), MSG_WAITALL);
+    ++get_requests;
+    std::cout << "Number of get requests: " << get_requests << " and url "
+              << next_url << '\n';
     {
       pthread_lock_guard guard{getter_lock};
       getterQueue.emplace_back(std::move(next_url), dist);
