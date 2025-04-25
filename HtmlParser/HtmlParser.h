@@ -156,7 +156,7 @@ class HtmlParser {
     links.emplace_back(url);
 
     // move past the next >
-    while (buffer[index] != '>') {
+    while (index < length && buffer[index] != '>') {
       index++;
     }
     index++;
