@@ -15,6 +15,7 @@
 #include <memory>
 
 #include "../../utils/socket_wrapper.h"
+#include "../../utils/ssl_cleaner.h"
 // #include "robotParser.h"
 class ParsedUrl {
  public:
@@ -131,30 +132,18 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
 
   SocketWrapper _wrapper{socketFD};
 
-  // Connect the socket
-  /*if (connect(socketFD, address->ai_addr, address->ai_addrlen) < 0) {
-    // << "Failed to connect to host" << std::endl;
-    close(socketFD);
-    freeaddrinfo(address);
-    return 4;
-  }*/  // Done with the address info
-  // std::cout << req;
-  // Initialize SSL
-
-  SSL_library_init();
-  assert(SSLv23_method() != nullptr);
   SSL_CTX *ctx = SSL_CTX_new(SSLv23_method());
   if (!ctx) {
-    // << "Failed to create SSL context" << std::endl;
     return 5;
   }
 
   SSL *ssl = SSL_new(ctx);
   if (ssl == nullptr) {
-    // << "could not create ssl object" << std::endl;
     SSL_CTX_free(ctx);
     return 6;
   }
+
+  SSL_Cleaner cleaner_{ctx, ssl};
 
   struct timeval tv;
   tv.tv_sec = 5;  // 5 seconds
@@ -163,38 +152,16 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
                        sizeof tv);
 
   if (ret != 0) {
-    // << "Failed to set socket timeout" << std::endl;
-    SSL_free(ssl);
-    SSL_CTX_free(ctx);
     return 7;
   }
-
-  /*int val = 1;
-  ret = setsockopt(socketFD, SOL_SOCKET, SO_NOSIGPIPE, &val, sizeof(val));
-
-  if (ret != 0) {
-    // << "Failed to set socket timeout" << std::endl;
-    SSL_free(ssl);
-    SSL_CTX_free(ctx);
-    close(socketFD);
-    return 8;
-  }*/
 
   SSL_set_fd(ssl, socketFD);
 
   if (SSL_connect(ssl) <= 0) {
-    // // << "Failed to establish SSL connection" << std::endl;
-    // ERR_print_errors_fp(stderr);
-    SSL_free(ssl);
-    SSL_CTX_free(ctx);
     return 9;
   }
 
   if (SSL_write(ssl, req.c_str(), req.length()) <= 0) {
-    // // << "Failed to send request" << std::endl;
-    // SSL_shutdown(ssl);
-    SSL_free(ssl);
-    SSL_CTX_free(ctx);
     return 10;
   }
 
@@ -220,16 +187,10 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
       header = response;
       // code = stoi(header.substr(9, 3));
       if (header.size() < 9) {
-        SSL_shutdown(ssl);
-        SSL_free(ssl);
-        SSL_CTX_free(ctx);
         return 11;
       }
       code = atoi(header.data() + 9);
       if (code == 0) {
-        SSL_shutdown(ssl);
-        SSL_free(ssl);
-        SSL_CTX_free(ctx);
         return 12;
       }
       if (code == 301) break;
@@ -262,10 +223,6 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
     return code;
   }
 
-  // Clean up
-  SSL_shutdown(ssl);
-  SSL_free(ssl);
-  SSL_CTX_free(ctx);
   if (code == 404) {
     return 404;
   }

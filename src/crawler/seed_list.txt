@@ -1,4 +1,3 @@
-https://en.wikipedia.org/wiki/University_of_Michigan
 https://umich.edu
 https://www.wccnet.edu/
 https://rackham.umich.edu/
@@ -32,7 +31,6 @@ https://www.umflint.edu
 https://hamiltonlabs.com
 https://www.itprotoday.com/microsoft-windows/hamilton-c-shell
 https://hamiltonlabs.com/NicoleHamilton/
-https://en.wikipedia.org/wiki/Hamilton_C_shell
 https://www.clickondetroit.com
 https://www.cnn.com
 https://www.bbc.com/

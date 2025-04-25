@@ -430,7 +430,6 @@ void* runner(void* arg) {
     pthread_detach(t);
   }
   pthread_lock_guard guard{cout_lock};
-  std::cout << "Thread: " << thread_id << " joined\n";
   return NULL;
 }
 
