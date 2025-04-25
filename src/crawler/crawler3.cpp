@@ -522,9 +522,46 @@ int main(int argc, char** argv) {
 
   std::cout << "Finished writing file" << std::endl;
 
+  std::cout << "Cleaning up semaphores..." << std::endl;
+
+  for (int i = 0; i < NUM_THREADS; ++i) {
+    if (sems[i] != SEM_FAILED) {
+       if (sem_close(sems[i]) == -1) {
+           perror("sem_close failed for sems[i]");
+       }
+    }
+  }
+
+  // Close and unlink other semaphores
+  if (queue_sem != SEM_FAILED) {
+    if (sem_close(queue_sem) == -1) perror("sem_close failed for queue_sem");
+    if (sem_unlink("/crawler_sem") == -1) ;
+  }
+  if (getter_request_sem != SEM_FAILED) {
+    if (sem_close(getter_request_sem) == -1) perror("sem_close failed for getter_request_sem");
+    if (sem_unlink("/getter_request_sem") == -1) ;
+  }
+   if (getter_response_sem != SEM_FAILED) {
+    if (sem_close(getter_response_sem) == -1) perror("sem_close failed for getter_response_sem");
+    if (sem_unlink("/getter_response_sem") == -1) ; 
+  }
+   if (adder_request_sem != SEM_FAILED) {
+    if (sem_close(adder_request_sem) == -1) perror("sem_close failed for adder_request_sem");
+    if (sem_unlink("/adder_request_sem") == -1) ;
+  }
+
+  std::cout << "Semaphore cleanup finished." << std::endl;
+
   pthread_mutex_destroy(&queue_lock);
   pthread_mutex_destroy(&chunk_lock);
   pthread_mutex_destroy(&cout_lock);
+  pthread_mutex_destroy(&getter_lock);
+  pthread_mutex_destroy(&adder_lock);
+  
+   for (int i = 0; i < NUM_CHUNKS; ++i) {
+      pthread_mutex_destroy(chunk_locks + i);
+  }
+
 
   // std::cout << "Time taken: " << duration.count() << " ms" << std::endl;
   return 0;
