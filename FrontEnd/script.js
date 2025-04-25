@@ -145,7 +145,7 @@ searchForm.addEventListener('submit', async function (e) {
       
       for (let i = 0; i < searchData.length; i++) {
         if (searchData[i].summary) {
-          searchSummaryText.textContent += searchData[i].summary + '\n';
+          searchSummaryText.textContent += 'Machine ' + i + ': ' + searchData[i].summary + '\n';
           searchSummaryBox.style.display = 'block';
         }
         console.log(searchData[i].results);
@@ -289,13 +289,25 @@ async function fetchSnippetsForPage(pageIndex) {
   }
 
   try {
-    const snippetResponse = await fetch('/api/snippets/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
-      },
-      body: JSON.stringify({ urls: urlsToFetch })
-    });
+    let snippetResponse;
+    if (distribute_query) {
+      snippetResponse = await fetch('http://' + server_ip_addresses[0] + ':' + server_ports[0] + '/api/snippets/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8'
+        },
+        body: JSON.stringify({ urls: urlsToFetch })
+      });
+    }
+    else {
+      snippetResponse = await fetch('/api/snippets/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8'
+        },
+        body: JSON.stringify({ urls: urlsToFetch })
+      });
+    }
 
     if (!snippetResponse.ok) {
       throw new Error(`Snippet API error: ${snippetResponse.status}`);
