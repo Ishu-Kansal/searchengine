@@ -36,6 +36,7 @@ int main(int argc, char **argv) {
   }
 
   const int NUM_BATCHES = atoi(argv[1]);
+  ip = argv[2];
   const int CRAWLERS_PER_BATCH = 2;
   const int TOTAL = NUM_BATCHES * CRAWLERS_PER_BATCH;
 
