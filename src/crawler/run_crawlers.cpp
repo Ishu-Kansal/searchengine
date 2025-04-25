@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
   sem = sem_open("/script_sem", O_CREAT, 0666, CRAWLERS_PER_BATCH);
   assert(sem != SEM_FAILED);
 
-  for (int i = 0; i < TOTAL; ++i) {
+  for (uint32_t i = 0; i < TOTAL; ++i) {
     sem_wait(sem);
     pthread_create(threads + i, NULL, spawner, (void *)(i));
   }
