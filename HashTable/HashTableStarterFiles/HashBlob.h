@@ -75,7 +75,7 @@ struct SerialTuple {
 
   static char *Write(char *buffer, char *bufferEnd, const HashBucket *b) {
     // Error checks
-    if (!b) {
+    if (!b || b->tuple.key.empty()) {
       return buffer;
     }
     size_t len = BytesRequired(b);
@@ -99,7 +99,10 @@ struct SerialTuple {
     size_t keyLen = b->tuple.key.size() + 1;
     std::memcpy(buffer, b->tuple.key.c_str(), keyLen);
     buffer += keyLen;
-    size_t total = keyLen + 24;
+
+    size_t base = sizeof(SerialTuple::Length) + sizeof(SerialTuple::Value) + sizeof(SerialTuple::HashValue);
+    size_t total = keyLen + base;
+    
     // Aligns buffer
     size_t padding = len - total;
     if (padding > 0) {
