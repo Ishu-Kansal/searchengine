@@ -165,6 +165,11 @@ void* url_adder(void*) {
     // for (int i = 0; i < 10'000; ++i) {
     sem_wait(adder_request_sem);
     {
+      if (adderQueue.empty()) {
+        pthread_lock_guard cout_guard{cout_lock};
+        std::cerr << "WARNING: url_adder woke but adderQueue is empty! Skipping." << std::endl;
+        continue;
+    }
       pthread_lock_guard guard{adder_lock};
       std::tie(next, rank) = std::move(adderQueue.back());
       adderQueue.pop_back();
