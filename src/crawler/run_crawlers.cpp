@@ -31,7 +31,7 @@ void *spawner(void *arg) {
 
 int main(int argc, char **argv) {
   if (argc != 3) {
-    std::cerr << "Usage: ./script [num_batches] [external_ip]";
+    std::cerr << "Usage: ./run_crawlers [num_batches] [external_ip]";
     return 1;
   }
 
