@@ -191,7 +191,7 @@ std::vector<UrlRank> run_engine_helper(
    }
 }
 
-std::vector<std::string> Driver::run_engine(std::string& query, std::string& summary, IndexFileReader& reader) {
+std::vector<std::pair<std::string, int>> Driver::run_engine(std::string& query, std::string& summary, IndexFileReader& reader) {
    const std::string data_filename = "websites_data.jsonl";
    const uint32_t numChunks = 100;
 
@@ -206,14 +206,14 @@ std::vector<std::string> Driver::run_engine(std::string& query, std::string& sum
    std::chrono::duration<double> elapsed = end - start;
    std::cout << "Query execution time: " << elapsed.count() << " seconds" << std::endl;
 
-   std::vector<std::string> urls;
+   std::vector<std::pair<std::string, int>> urls;
    if (!results.empty())
    {
       std::cout << "Found " << matches << " results for query (showing top " << results.size() << "):" << std::endl;
       for (const auto &url_sv : results)
       {
          std::cout << "  Rank: " << url_sv.rank << " - " << url_sv.url << std::endl;
-         urls.emplace_back(url_sv.url);
+         urls.emplace_back(url_sv.url, url_sv.rank);
       }
    }
 
