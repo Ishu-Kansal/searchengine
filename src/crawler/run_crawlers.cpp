@@ -29,7 +29,7 @@ void *spawner(void *arg) {
 }
 
 int main(int argc, char **argv) {
-  if (argc != 3 || argc != 4) {
+  if (argc != 3 && argc != 4) {
     std::cerr << "Usage: ./run_crawlers [num_batches] [external_ip] optional:[start_id]";
     return 1;
   }
