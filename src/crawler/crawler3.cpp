@@ -61,6 +61,8 @@ const static int NUM_THREADS = 384;  // start small
 
 uint32_t STATIC_RANK = 0;  // temp global variable
 
+std::atomic<uint32_t> num_created{};
+
 std::queue<std::string> explore_queue{};
 std::vector<std::pair<std::string, uint32_t>> links_vector;
 IndexChunk chunks[NUM_CHUNKS];
@@ -301,6 +303,7 @@ struct Args {
 };
 
 void* add_to_index(void* addr) {
+  --num_created;
   Args* arg = reinterpret_cast<Args*>(addr);
   ++ctr;
 #ifdef NO_INDEX
@@ -419,12 +422,15 @@ void* runner(void* arg) {
     }
     // --------------------------------------------------
     sem_wait(sems[thread_id]);
+    ++num_created;
     pthread_t t;
     pthread_create(
         &t, NULL, add_to_index,
         new Args{std::move(parser), std::move(url), static_rank, thread_id});
     pthread_detach(t);
   }
+  pthread_lock_guard guard{cout_lock};
+  std::cout << "Thread: " << thread_id << " joined\n";
   return NULL;
 }
 
@@ -494,12 +500,17 @@ int main(int argc, char** argv) {
   for (int i = 0; i < NUM_THREADS; i++) {
     sems[i] = sem_open(sem_names[i].data(), O_CREAT, 0666, 1);
     if (sems[i] == SEM_FAILED) assert(false);
-    pthread_create(threads + i, NULL, runner, (void*)(uint64_t)(i));
+    assert(pthread_create(threads + i, NULL, runner, (void*)(uint64_t)(i)) ==
+           0);
   }
   std::cout << "STARTED THREADS...\n";
   for (int i = 0; i < NUM_THREADS; i++) {
-    pthread_join(threads[i], NULL);
+    assert(pthread_join(threads[i], NULL) == 0);
   }
+
+  while (num_created) usleep(1000);
+
+  std::cout << "num created: " << num_created << std::endl;
 
   std::cout << "FINISHED THREADS...\n";
 
