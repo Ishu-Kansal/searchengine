@@ -4,6 +4,10 @@ let allResults = [];
 let currentPage = 0;
 const pageSize = 10;
 
+const distribute_query = false;
+const server_ip_addresses = ['10.0.0.141', '10.0.0.141', '10.0.0.141'];
+const server_ports = ['8000', '8000', '8000'];
+
 // DOM References
 const searchForm = document.getElementById('searchForm');
 const queryInput = document.getElementById('queryInput');
@@ -31,6 +35,7 @@ const gifs = [
   'https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTY0MmUxMHlpN3dycmt0cWl4aWJ2NTJ6ZG50c3B5Zzk3eWNyZHdydyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/A53vF9xNk7AKnQPLDs/giphy.gif' // Cookie monster
 ];
 
+// When text search is submitted
 searchForm.addEventListener('submit', async function (e) {
   e.preventDefault();
 
@@ -56,15 +61,16 @@ searchForm.addEventListener('submit', async function (e) {
 
   document.getElementById('searchSummaryBox').style.display = 'none';
 
+  // Choose a random GIF
   let gifIndex = Math.floor(Math.random() * gifs.length);
   gifTimeout = null;
 
   // Hide GIF initially
   loadingGif.style.display = 'none';
   loading.style.display = 'none';
-  loadingGif.src = ''; // Clear any existing GIF
+  loadingGif.src = '';
 
-  // Start a delayed timer to show the GIF after .25 second
+  // Start a delayed timer to start showing GIFs after 1 second
   gifTimeout = setTimeout(() => {
     loadingGif.src = gifs[gifIndex];
     loadingGif.style.display = 'block';
@@ -89,7 +95,9 @@ searchForm.addEventListener('submit', async function (e) {
         messages: [
           {
             role: "system",
-            content: "You are a non-interactive information assistant. When given a search query, respond with one clear, neutral, and self-contained paragraph that explains the topic. Do not include links. Do not ask questions. Do not invite further interaction."
+            content: "You are a non-interactive information assistant. When given a search query, \
+              respond with one clear, neutral, and self-contained paragraph that explains the topic. \
+              Do not include links. Do not ask questions. Do not invite further interaction."
           },
           {
             role: "user",
@@ -99,61 +107,138 @@ searchForm.addEventListener('submit', async function (e) {
       })
     });
 
-    const searchPromise = fetch('/api/search/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
-      },
-      body: JSON.stringify({ query })
-    });
+    if (distribute_query) {
+      const searchPromises = [];
+      for (let i = 0; i < server_ip_addresses.length; i++) {
+        searchPromises.push(
+          fetch('http://' + server_ip_addresses[i] + ':' + server_ports[i] + '/api/search/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json; charset=utf-8'
+            },
+            body: JSON.stringify({ query })
+          })
+        );
+      }
 
-    const [searchResponse] = await Promise.all([searchPromise]);
+      const results = await Promise.allSettled(searchPromises.map(p =>
+        p.then(res => res.ok ? res.json() : Promise.reject(res.status))
+      ));
 
-    // Handle Search Results
-    if (!searchResponse.ok) {
-      const errorText = await searchResponse.text();
-      throw new Error(`Search API error: ${searchResponse.status} - ${errorText}`);
-    }
+      const searchData = results
+        .filter(r => r.status === 'fulfilled')
+        .map(r => r.value);
 
-    const searchData = await searchResponse.json();
-    console.log('Search API response completed');
+      console.log('Search API responses completed');
 
-    // Display searchData.summary above results
-    if (searchData.summary) {
+      if (searchData.length <= 0) {
+        searchSummaryBox.style.display = 'none';
+        throw new Error('Search API error');
+      }
+
+      // TODO: Aggregate all summaries into one
       const searchSummaryBox = document.getElementById('searchSummaryBox');
       const searchSummaryText = document.getElementById('searchSummaryText');
+      searchSummaryText.textContent = '';
 
-      searchSummaryText.textContent = searchData.summary;
-      searchSummaryBox.style.display = 'block';
-    } else {
-      document.getElementById('searchSummaryBox').style.display = 'none';
-    }
+      const resultMap = new Map();
+      
+      for (let i = 0; i < searchData.length; i++) {
+        if (searchData[i].summary) {
+          searchSummaryText.textContent += searchData[i].summary + '\n';
+          searchSummaryBox.style.display = 'block';
+        }
+        console.log(searchData[i].results);
+        for (let j = 0; j < searchData[i].results.length; j++) {
+          if (!resultMap.has(searchData[i].results[j].url)) {
+            resultMap.set(searchData[i].results[j].url, searchData[i].results[j]);
+          }
+        }
+      }
 
-    if (!Array.isArray(searchData.results)) {
-      throw new Error("Invalid data format received from server.");
-    }
+      allResults = Array.from(resultMap.values()).sort((a, b) => b.rank - a.rank);
 
-    if (searchData.results.length === 0) {
-      searchResultsContainer.innerHTML = `
-        <p style="text-align: center; color: #a58d8d; margin-top: 30px;">
-          No results found for your query.
-        </p>`;
-    } else {
-      allResults = searchData.results;
+      if (allResults.length === 0) {
+        searchResultsContainer.innerHTML = `
+          <p style="text-align: center; color:rgb(0, 0, 0); margin-top: 30px;">
+            No results found for your query
+          </p>`;
+      }
+      else {
+        fetchedPages.clear();
+      
+        renderPage(0); // Show results right away
 
-      fetchedPages.clear();
+        // Start fetching snippets immediately after search response
+        fetchSnippetsForPage(0).then(() => {
+          renderPage(currentPage); // Re-render with snippets
+          paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
+        }).catch(error => {
+          console.error('Snippet Fetch Error:', error);
+        });
 
-      renderPage(0); // Show results right away
-
-      // Start fetching snippets immediately after search response
-      fetchSnippetsForPage(0).then(() => {
-        renderPage(currentPage); // Re-render with snippets
         paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
-      }).catch(error => {
-        console.error('Snippet Fetch Error:', error);
+      }
+    }
+    else {
+      const searchPromise = fetch('/api/search/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8'
+        },
+        body: JSON.stringify({ query })
       });
 
-      paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
+      const [searchResponse] = await Promise.all([searchPromise]);
+
+      // Handle Search Results
+      if (!searchResponse.ok) {
+        const errorText = await searchResponse.text();
+        throw new Error(`Search API error: ${searchResponse.status} - ${errorText}`);
+      }
+
+      const searchData = await searchResponse.json();
+      console.log('Search API response completed');
+
+      // Display searchData.summary above results
+      if (searchData.summary) {
+        const searchSummaryBox = document.getElementById('searchSummaryBox');
+        const searchSummaryText = document.getElementById('searchSummaryText');
+
+        searchSummaryText.textContent = searchData.summary;
+        searchSummaryBox.style.display = 'block';
+      }
+      else {
+        document.getElementById('searchSummaryBox').style.display = 'none';
+      }
+
+      if (!Array.isArray(searchData.results)) {
+        throw new Error("Invalid data format received from server.");
+      }
+
+      if (searchData.results.length === 0) {
+        searchResultsContainer.innerHTML = `
+          <p style="text-align: center; color:rgb(0, 0, 0); margin-top: 30px;">
+            No results found for your query
+          </p>`;
+      }
+      else {
+        allResults = searchData.results;
+
+        fetchedPages.clear();
+
+        renderPage(0); // Show results right away
+
+        // Start fetching snippets immediately after search response
+        fetchSnippetsForPage(0).then(() => {
+          renderPage(currentPage); // Re-render with snippets
+          paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
+        }).catch(error => {
+          console.error('Snippet Fetch Error:', error);
+        });
+
+        paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
+      }
     }
 
     const [aiResponse] = await Promise.all([aiPromise]);
@@ -166,14 +251,15 @@ searchForm.addEventListener('submit', async function (e) {
     }).catch(error => {
       console.error("AI Summary Error:", error);
     });
-
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Search Error:', error);
     searchResultsContainer.innerHTML = `
       <p style="text-align: center; color: #ec2225; margin-top: 30px;">
         An error occurred: ${error.message}. Please try again.
       </p>`;
-  } finally {
+  }
+  finally {
     clearTimeout(gifTimeout);
     gifTimeout = null;
 
@@ -227,7 +313,8 @@ async function fetchSnippetsForPage(pageIndex) {
     });
 
     fetchedPages.add(pageIndex); // Mark this page as fetched
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Snippet Fetch Error:', error);
   }
 }
@@ -328,7 +415,8 @@ prevButton.addEventListener('click', () => {
           //scrollToMaintainBottomOffset(offsetFromBottom);
         }
         paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
-      }).catch(error => {
+      })
+      .catch(error => {
         console.error('Snippet Fetch Error:', error);
       });
     }
@@ -351,7 +439,8 @@ nextButton.addEventListener('click', () => {
           //scrollToMaintainBottomOffset(offsetFromBottom);
         }
         paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
-      }).catch(error => {
+      })
+      .catch(error => {
         console.error('Snippet Fetch Error:', error);
       });
     }
@@ -541,7 +630,6 @@ async function handleImageSearch(e, file) {
         });
 
         const data = await response.json();
-        console.log(data);
         let resultText = data.output[0].content[0].text;
         if (resultText.endsWith(".")) {
           resultText = resultText.slice(0, -1);

@@ -359,7 +359,20 @@ void FileNotFound( int talkSocket )
       }
       std::string path = request.substr(pathStart, pathEnd - pathStart);
       path = UnencodeUrlEncoding(path);
-   
+
+      if (method == "OPTIONS") {
+         std::cout << "Replying to options" << std::endl;
+         std::string header = "HTTP/1.1 200 OK\r\n";
+         header += "Access-Control-Allow-Origin: *\r\n";
+         header += "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
+         header += "Access-Control-Allow-Headers: Content-Type\r\n";
+         header += "Content-Length: 0\r\n";
+         header += "Connection: close\r\n\r\n";
+         send(ts, header.c_str(), header.size(), 0);
+         close(ts);
+         return nullptr;
+      }
+
       // Plugin handles request (regardless of method)
       if (Plugin && Plugin->MagicPath(path)) {
          std::string response = Plugin->ProcessRequest(request);
@@ -367,7 +380,7 @@ void FileNotFound( int talkSocket )
          close(ts);
          return nullptr;
       }
-   
+
       // Only GET methods should reach here
       if (method != "GET") {
          close(ts);
@@ -390,6 +403,9 @@ void FileNotFound( int talkSocket )
          off_t fileSize = FileSize(fd);
          const char *mimeType = Mimetype(path);
          std::string header = "HTTP/1.1 200 OK\r\n";
+         header += "Access-Control-Allow-Origin: *\r\n";
+         header += "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
+         header += "Access-Control-Allow-Headers: Content-Type\r\n";
          header += "Content-Type: " + std::string(mimeType) + "\r\n";
          header += "Content-Length: " + std::to_string(fileSize) + "\r\n";
          header += "Connection: close\r\n\r\n";

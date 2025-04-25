@@ -345,6 +345,11 @@ h1::after {
   border-radius: 8px;
 }
 
+#aiSummaryImage {
+  max-height: 300px;
+  width: auto;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -358,7 +363,7 @@ h1::after {
 .result {
   margin: 2rem 0;
   text-align: left;
-  border-bottom: 1px dashed rgba(0, 0, 0, 0.1);
+  /*border-bottom: 1px dashed rgba(0, 0, 0, 0.1);*/
   padding-bottom: 1.5rem;
 }
 

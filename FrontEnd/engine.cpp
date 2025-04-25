@@ -127,29 +127,24 @@ void* snippet_thread_worker(void* arg) {
 // then concurrently fetching the matching URLs.
 // This modified version returns just the URLs.
 json run_query(std::string &query) {
-  std::cout << "In run_query" << std::endl;
-
   std::string summary;
-  std::vector<std::string> urls = driver.run_engine(query, summary, reader);
-
-  std::cout << "Finished run_engine" << std::endl;
+  std::vector<std::pair<std::string, int>> urls = driver.run_engine(query, summary, reader);
 
   result["results"] = json::array();
-  for (std::string& url : urls) {
-    if (!is_valid_utf8(url)) {
+  for (auto& url_rank : urls) {
+    if (!is_valid_utf8(url_rank.first)) {
       continue;
     }
 
-    std::string cleaned = clean_url(url);
+    std::string cleaned = clean_url(url_rank.first);
 
     result["results"].push_back({
-        {"url", url},
+        {"url", url_rank.first},
         {"title", cleaned},
-        {"snippet", ""}
+        {"snippet", ""},
+        {"rank", url_rank.second}
     });
   }
-
-  std::cout << "Summary: " << summary << std::endl;
 
   if (urls.size() == 0) {
     std::cout << "No results found" << std::endl;
@@ -231,8 +226,11 @@ private:
     std::string hdr = "HTTP/1.1 " + std::to_string(code) + " " + msg;
     hdr += "\r\nContent-Type: application/json; charset=utf-8";
     hdr += "\r\nContent-Length: " + std::to_string(body.size());
+    hdr += "\r\nAccess-Control-Allow-Origin: *";
+    hdr += "\r\nAccess-Control-Allow-Methods: POST, GET, OPTIONS";
+    hdr += "\r\nAccess-Control-Allow-Headers: Content-Type";
     hdr += "\r\nConnection: close\r\n\r\n";
-    std::cout << "Send response" << std::endl;
+    std::cout << "Send response, code: " << code << std::endl;
     return hdr + body;
   }
 
@@ -256,8 +254,6 @@ public:
   std::string ProcessRequest(std::string request) override {
     lock.Lock();
     std::string out;
-
-    std::cout << "Received request" << std::endl;
 
     if (request.find(search_endpoint) != std::string::npos) {
       out = handle_search(request);
