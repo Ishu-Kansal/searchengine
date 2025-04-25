@@ -4,9 +4,9 @@ let allResults = [];
 let currentPage = 0;
 const pageSize = 10;
 
-const distribute_query = false;
-const server_ip_addresses = ['34.45.6.50', '34.10.225.191'];
-const server_ports = ['8000', '8000'];
+const distribute_query = true;
+const server_ip_addresses = ['35.192.117.196', '35.222.111.74', '34.58.101.252', '34.71.3.113'];
+const server_ports = ['8000', '8000', '8000', '8000'];
 
 // DOM References
 const searchForm = document.getElementById('searchForm');
@@ -153,7 +153,7 @@ searchForm.addEventListener('submit', async function (e) {
       
       for (let i = 0; i < searchData.length; i++) {
         if (searchData[i].summary) {
-          searchSummaryText.textContent += 'Machine ' + i + ' - ' + searchData[i].summary + '\n';
+          searchSummaryText.textContent += server_ip_addresses[i] + ' - ' + searchData[i].summary + '\n';
           searchSummaryBox.style.display = 'block';
         }
         console.log(searchData[i].results);
