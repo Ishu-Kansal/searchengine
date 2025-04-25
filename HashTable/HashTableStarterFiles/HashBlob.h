@@ -16,6 +16,13 @@
 #include <sys/mman.h>
 
 #include "HashTable.h"
+
+#ifdef DEBUG
+#define DEBUG_MSG(stream) std::cout << "[DEBUG] " << stream << std::endl
+#else
+#define DEBUG_MSG(stream) ((void)0)
+#endif
+
 using Hash = HashTable<const std::string, size_t>;
 using Pair = Tuple<const std::string, size_t>;
 using HashBucket = Bucket<const std::string, size_t>;
@@ -285,13 +292,28 @@ public:
       // the hashtable out as a HashBlob, and note
       // the blob address.
       // Your code here.
-      blob = HashBlob::Create(hashtable);
+      HashBlob *tempBlob = HashBlob::Create(hashtable);
+      if (!tempBlob) {
+         std::cerr << "Failed to create HashBlob in memory" << std::endl;
+
+         return;
+      }
       fileDescrip = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0666);
 
       size_t requiredSize = HashBlob::BytesRequired(hashtable);
       ftruncate(fileDescrip, requiredSize);
       void *map = mmap(nullptr, requiredSize, PROT_WRITE, MAP_SHARED, fileDescrip, 0);
+      if (map == MAP_FAILED) 
+      {
+         HashBlob::Discard(tempBlob);
+         close(fileDescrip);
+         return;
+      }   
       std::memcpy(map, blob, requiredSize);
+      HashBlob::Discard(tempBlob);
+      tempBlob = nullptr;
+
+      blob = reinterpret_cast<HashBlob *>(map);
    }
 
    ~HashFile()

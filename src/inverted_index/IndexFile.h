@@ -19,13 +19,11 @@
 #include "Index.h"
 #include "RAII_utils.h"
 
-
 #ifdef DEBUG
 #define DEBUG_MSG(stream) std::cout << "[DEBUG] " << stream << std::endl
 #else
 #define DEBUG_MSG(stream) ((void)0)
 #endif
-
 
 /**
  * @brief Number of bits used for byteOffset within block
