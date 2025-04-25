@@ -29,18 +29,13 @@ void *spawner(void *arg) {
 }
 
 int main(int argc, char **argv) {
-  if (argc != 3 && argc != 4) {
-    std::cerr << "Usage: ./run_crawlers [num_batches] [external_ip] optional:[start_id]";
+  if (argc != 3) {
+    std::cerr << "Usage: ./run_crawlers [num_batches] [external_ip]";
     return 1;
   }
 
   const int NUM_BATCHES = atoi(argv[1]);
   ip = argv[2];
-  int start_id = 0;
-  if (argc == 4)
-  {
-    start_id = atoi(argv[3]);
-  }
   
   const int CRAWLERS_PER_BATCH = 1;
   const int TOTAL = NUM_BATCHES * CRAWLERS_PER_BATCH;
@@ -56,7 +51,7 @@ int main(int argc, char **argv) {
 
   for (uint64_t i = 0; i < TOTAL; ++i) {
     sem_wait(sem);
-    pthread_create(threads + i, NULL, spawner, (void *)(start_id + i));
+    pthread_create(threads + i, NULL, spawner, (void *)(i));
   }
 
   for (uint64_t i = 0; i < TOTAL; ++i) {
