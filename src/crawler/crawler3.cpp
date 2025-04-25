@@ -89,6 +89,9 @@ sem_t* adder_request_sem{};
 std::vector<UrlRankPair> getterQueue{};
 std::vector<std::pair<std::string, uint64_t>> adderQueue{};
 
+std::vector<pthread_t> add_to_index_threads;
+pthread_mutex_t add_to_index_threads_lock;
+
 std::string dispatcher_address{};
 
 int adder_socket;
@@ -427,12 +430,32 @@ void* runner(void* arg) {
     }
     // --------------------------------------------------
     sem_wait(sems[thread_id]);
-    ++num_created;
+    /*
+      ++num_created;
     pthread_t t;
     pthread_create(
         &t, NULL, add_to_index,
         new Args{std::move(parser), std::move(url), static_rank, thread_id});
     pthread_detach(t);
+    */
+   pthread_t t;
+   Args* index_args = new Args{std::move(parser), std::move(url), static_rank, thread_id};
+   int create_res = pthread_create(&t, NULL, add_to_index, index_args);
+
+   if (create_res == 0) 
+   {
+       {
+           pthread_lock_guard guard{add_to_index_threads_lock};
+           add_to_index_threads.push_back(t);
+       }
+   } 
+   else 
+   {
+       errno = create_res; 
+       perror("runner: Failed to create add_to_index thread");
+       delete index_args; 
+       sem_post(sems[thread_id]);
+   }
   }
   pthread_lock_guard guard{cout_lock};
   return NULL;
@@ -459,7 +482,7 @@ int main(int argc, char** argv) {
 
   std::vector<std::string> sem_names{};
   for (int i = 0; i < NUM_THREADS; ++i) {
-    sem_names.push_back("/sem_" + std::to_string(i));
+    sem_names.push_back("/sem_" + std::to_string(id) + "_" + std::to_string(i));
     sem_unlink(sem_names[i].data());
   }
 
@@ -485,18 +508,45 @@ int main(int argc, char** argv) {
   assert(!pthread_mutex_init(&getter_lock, NULL));
   assert(!pthread_mutex_init(&adder_lock, NULL));
 
-  sem_unlink("/getter_request_sem");
-  sem_unlink("/getter_response_sem");
-  sem_unlink("/adder_request_sem");
+  // sem_unlink("/getter_request_sem");
+  // sem_unlink("/getter_response_sem");
+  // sem_unlink("/adder_request_sem");
 
-  getter_request_sem = sem_open("/getter_request_sem", O_CREAT, 0666, 0);
-  getter_response_sem = sem_open("/getter_response_sem", O_CREAT, 0666, 0);
-  adder_request_sem = sem_open("/adder_request_sem", O_CREAT, 0666, 0);
+  // getter_request_sem = sem_open("/getter_request_sem", O_CREAT, 0666, 0);
+  // getter_response_sem = sem_open("/getter_response_sem", O_CREAT, 0666, 0);
+  // adder_request_sem = sem_open("/adder_request_sem", O_CREAT, 0666, 0);
 
-  assert(getter_request_sem != SEM_FAILED &&
-         getter_response_sem != SEM_FAILED && adder_request_sem != SEM_FAILED);
+  std::string getter_req_sem_name = "/getter_request_sem_" + std::to_string(id);
+  std::string getter_res_sem_name = "/getter_response_sem_" + std::to_string(id);
+  std::string adder_req_sem_name = "/adder_request_sem_" + std::to_string(id);
+
+  sem_unlink(getter_req_sem_name.c_str());
+  sem_unlink(getter_res_sem_name.c_str());
+  sem_unlink(adder_req_sem_name.c_str());
+
+  getter_request_sem = sem_open(getter_req_sem_name.c_str(), O_CREAT, 0666, 0);
+  getter_response_sem = sem_open(getter_res_sem_name.c_str(), O_CREAT, 0666, 0);
+  adder_request_sem = sem_open(adder_req_sem_name.c_str(), O_CREAT, 0666, 0);
+
+
+  if (getter_request_sem == SEM_FAILED || getter_response_sem == SEM_FAILED || adder_request_sem == SEM_FAILED) 
+  {
+      perror("Failed to open dispatcher semaphores");
+
+      if (getter_request_sem != SEM_FAILED) sem_close(getter_request_sem);
+      if (getter_response_sem != SEM_FAILED) sem_close(getter_response_sem);
+      if (adder_request_sem != SEM_FAILED) sem_close(adder_request_sem);
+
+      sem_unlink(getter_req_sem_name.c_str());
+      sem_unlink(getter_res_sem_name.c_str());
+      sem_unlink(adder_req_sem_name.c_str());
+
+      exit(EXIT_FAILURE);
+
+  }
 
   pthread_t adder, getter;
+
   assert(pthread_create(&adder, NULL, url_adder, NULL) == 0);
   assert(pthread_create(&getter, NULL, url_getter, NULL) == 0);
 
@@ -507,22 +557,42 @@ int main(int argc, char** argv) {
     assert(pthread_create(threads + i, NULL, runner, (void*)(uint64_t)(i)) ==
            0);
   }
-  std::cout << "STARTED THREADS...\n";
+  std::cout << "STARTED RUNNER THREADS...\n";
   for (int i = 0; i < NUM_THREADS; i++) {
     assert(pthread_join(threads[i], NULL) == 0);
   }
 
-  while (num_created) usleep(1000);
+  //  while (num_created) usleep(1000);
 
-  std::cout << "num created: " << num_created << std::endl;
+  // std::cout << "num created: " << num_created << std::endl;
 
-  std::cout << "FINISHED THREADS..." << std::endl;
+  std::cout << "FINISHED RUNNER THREADS..." << std::endl;
+
+  std::cout << "Waiting for add_to_index threads to complete..." << std::endl;
+
+  size_t index_thread_count = add_to_index_threads.size();
+
+  for (pthread_t handle : add_to_index_threads) 
+  {
+      int join_res = pthread_join(handle, NULL);
+
+       if (join_res != 0) 
+       {
+           errno = join_res;
+           perror("Failed to join add_to_index thread");
+       }
+
+  }
+
+  std::cout << "Joined " << index_thread_count << " add_to_index threads." << std::endl;
+
+  std::cout << "CRAWLER: Writing index chunks to files..." << std::endl;
 
   // IndexFile chunkFile(id, chunk);
   for (int i = 0; i < NUM_CHUNKS; ++i) {
     pthread_lock_guard guard{chunk_locks[i]};
     IndexFile(id * NUM_CHUNKS + i, chunks[i]);
-    perror("Wrote with status: ");
+    // perror("Wrote with status: ");
   }
 
   std::cout << "Finished writing file" << std::endl;
@@ -534,6 +604,12 @@ int main(int argc, char** argv) {
        if (sem_close(sems[i]) == -1) {
            perror("sem_close failed for sems[i]");
        }
+       if (sem_unlink(sem_names[i].data()) == -1) {
+
+      if (errno != ENOENT) 
+      {
+        perror("sem_unlink failed for sems[i]");
+      }
     }
   }
 
@@ -562,6 +638,7 @@ int main(int argc, char** argv) {
   pthread_mutex_destroy(&cout_lock);
   pthread_mutex_destroy(&getter_lock);
   pthread_mutex_destroy(&adder_lock);
+  pthread_mutex_destroy(&add_to_index_threads_lock);
   
    for (int i = 0; i < NUM_CHUNKS; ++i) {
       pthread_mutex_destroy(chunk_locks + i);
