@@ -5,8 +5,8 @@ let currentPage = 0;
 const pageSize = 10;
 
 const distribute_query = true;
-const server_ip_addresses = ['35.192.117.196', '35.222.111.74', '34.58.101.252', '34.71.3.113'];
-const server_ports = ['8000', '8000', '8000', '8000'];
+const server_ip_addresses = ['35.192.117.196', '35.222.111.74'/*, '34.58.101.252', '34.71.3.113'*/];
+const server_ports = ['8000', '8000'/*, '8000', '8000'*/];
 
 // DOM References
 const searchForm = document.getElementById('searchForm');
@@ -156,7 +156,7 @@ searchForm.addEventListener('submit', async function (e) {
           searchSummaryText.textContent += server_ip_addresses[i] + ' - ' + searchData[i].summary + '\n';
           searchSummaryBox.style.display = 'block';
         }
-        console.log(searchData[i].results);
+        //console.log(searchData[i].results);
         for (let j = 0; j < searchData[i].results.length; j++) {
           if (!resultMap.has(searchData[i].results[j].url)) {
             resultMap.set(searchData[i].results[j].url, searchData[i].results[j]);
@@ -299,7 +299,8 @@ async function fetchSnippetsForPage(pageIndex) {
   try {
     let snippetResponse;
     if (distribute_query) {
-      snippetResponse = await fetch('http://' + server_ip_addresses[0] + ':' + server_ports[0] + '/api/snippets/', {
+      const randomIndex = Math.floor(Math.random() * server_ip_addresses.length);
+      snippetResponse = await fetch('http://' + server_ip_addresses[randomIndex] + ':' + server_ports[randomIndex] + '/api/snippets/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json; charset=utf-8'
@@ -544,7 +545,7 @@ async function handleImageSearch(e, file) {
   e.preventDefault();
 
   let questionText = "Describe what is in the image in as few words as possible, no more than 3 words";
-  console.log("Image selected:", file);
+  //console.log("Image selected:", file);
 
   // Reset UI and state
   currentPage = 0;
@@ -620,7 +621,7 @@ async function handleImageSearch(e, file) {
         const uploadData = await uploadResponse.json();
         if (!uploadData.id) throw new Error("File upload failed.");
         const fileId = uploadData.id;
-        console.log("Uploaded file ID:", fileId);
+        //console.log("Uploaded file ID:", fileId);
 
         // Query using file_id
         const response = await fetch("https://api.openai.com/v1/responses", {
@@ -656,7 +657,7 @@ async function handleImageSearch(e, file) {
         }
 
         if (!resultText) throw new Error("No valid response from API.");
-        console.log("Response:", resultText);
+        //console.log("Response:", resultText);
         queryInput.value = resultText;
         searchForm.dispatchEvent(new Event('submit'));
 
