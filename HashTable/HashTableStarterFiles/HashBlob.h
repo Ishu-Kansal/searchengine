@@ -309,7 +309,7 @@ public:
          close(fileDescrip);
          return;
       }   
-      std::memcpy(map, blob, requiredSize);
+      std::memcpy(map, tempBlob, requiredSize);
       HashBlob::Discard(tempBlob);
       tempBlob = nullptr;
 
