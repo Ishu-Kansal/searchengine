@@ -16,5 +16,5 @@ clean:
 	rm -rf crawler debug dispatcher
 
 debug: CXXFLAGS += -g3 -DDEBUG -fsanitize=address -fsanitize=undefined -D_GLIBCXX_DEBUG
-debug: crawler2.cpp ../../HtmlParser/HtmlTags.cpp
+debug: crawler3.cpp ../../HtmlParser/HtmlTags.cpp
 	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) $(LIBS) -o debug
