@@ -35,6 +35,8 @@ uint64_t num_processed{};
 pthread_mutex_t queue_lock{};
 std::unordered_map<std::string, uint32_t> ref_cts{};
 
+std::atomic<uint64_t> ctr{};
+
 std::string get_host(const std::string &url_string) {
   std::string host;
 
@@ -286,6 +288,7 @@ void *getter(void *arg) {
         return NULL;
       case 1:
         ++num_reqs;
+        ++ctr;
         get_handler(fd);
         break;
       case -1:
@@ -395,6 +398,14 @@ void *add_requests(void *) {
   }
 }
 
+void *metric_collector(void *) {
+  while (true) {
+    ctr = 0;
+    sleep(3600);
+    std::cout << "Num processed over last hour: " << ctr << '\n';
+  }
+}
+
 int main(int argc, char **argv) {
   std::cout << "STARTING DISPATCHER...\n";
 
@@ -403,6 +414,10 @@ int main(int argc, char **argv) {
   init_dispatcher();
 
   pthread_mutex_init(&queue_lock, NULL);
+
+  pthread_t ctr_thread;
+  pthread_create(&ctr_thread, NULL, metric_collector, NULL);
+  pthread_detach(ctr_thread);
 
   pthread_t getter, adder;
   pthread_create(&getter, NULL, get_requests, NULL);
