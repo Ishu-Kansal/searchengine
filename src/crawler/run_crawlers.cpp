@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -16,14 +17,11 @@ std::string ip{};
 void *spawner(void *arg) {
   const uint32_t id = (uint64_t)(arg);
   const std::string id_str = std::to_string(id);
-  while (true) {
-    if (pid_t pid = fork()) {
-      int status;
-      waitpid(pid, &status, 0);
-      if (status == 0) break;
-    } else {
-      execl("./crawler", "crawler", id_str.c_str(), ip.c_str(), NULL);
-    }
+  int status = 1;
+  if (pid_t pid = fork()) {
+    waitpid(pid, &status, 0);
+  } else {
+    execl("./crawler", "crawler", id_str.c_str(), ip.c_str(), NULL);
   }
   sem_post(sem);
   return NULL;
