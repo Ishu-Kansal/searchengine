@@ -4,7 +4,7 @@ let allResults = [];
 let currentPage = 0;
 const pageSize = 10;
 
-const distribute_query = true;
+const distribute_query = false;
 const server_ip_addresses = ['34.45.6.50', '34.10.225.191'];
 const server_ports = ['8000', '8000'];
 
@@ -49,11 +49,19 @@ searchForm.addEventListener('submit', async function (e) {
   currentPage = 0;
   allResults = [];
   searchResultsContainer.innerHTML = '';
-  document.getElementById('aiSummaryContainer').style.display = 'none';
-  paginationControls.style.display = 'none';
-  aiSummaryImageContainer.style.display = 'none';
-  toggleAISummary();
+
+  document.getElementById('aiSummaryContainer').style.display = 'block';
+  document.getElementById('aiSummaryContent').style.display = 'block';
+  document.getElementsByClassName('panel-heading')[0].style.borderBottomLeftRadius = '0px';
+  document.getElementsByClassName('panel-heading')[0].style.borderBottomRightRadius = '0px';
+  const icon = document.getElementById('aiToggleIcon');
+  icon.classList.remove('glyphicon-chevron-down');
+  icon.classList.add('glyphicon-chevron-up');
   document.getElementById('aiSummaryTitle').innerText = 'AI Summary';
+  document.getElementById('aiSummaryText').innerText = 'Generating...';
+  aiSummaryImageContainer.style.display = 'none';
+  
+  paginationControls.style.display = 'none';
 
   submitButton.classList.add('loading');
   submitButton.disabled = true;
@@ -145,7 +153,7 @@ searchForm.addEventListener('submit', async function (e) {
       
       for (let i = 0; i < searchData.length; i++) {
         if (searchData[i].summary) {
-          searchSummaryText.textContent += 'Machine ' + i + ': ' + searchData[i].summary + '\n';
+          searchSummaryText.textContent += 'Machine ' + i + ' - ' + searchData[i].summary + '\n';
           searchSummaryBox.style.display = 'block';
         }
         console.log(searchData[i].results);
