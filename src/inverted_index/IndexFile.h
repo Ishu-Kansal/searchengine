@@ -19,6 +19,14 @@
 #include "Index.h"
 #include "RAII_utils.h"
 
+
+#ifdef DEBUG
+#define DEBUG_MSG(stream) std::cout << "[DEBUG] " << stream << std::endl
+#else
+#define DEBUG_MSG(stream) ((void)0)
+#endif
+
+
 /**
  * @brief Number of bits used for byteOffset within block
  * Determines size of a block (2^BLOCK_OFFSET_BITS) 32 64 128 256
@@ -70,7 +78,7 @@ constexpr uint8_t NO_SEEK_TABLE_MARKER = 0;
 static int openIndexChunkFile(uint32_t chunkNum, char* outFilename,
                               size_t filenameBufferSize) {
   if (chunkNum > MAX_CHUNK_NUM) {
-    std::cerr << "Error: Chunk number " << chunkNum << " exceeds maximum "
+    std::cout << "Error: Chunk number " << chunkNum << " exceeds maximum "
               << MAX_CHUNK_NUM << std::endl;
     exit(EXIT_FAILURE);
   }
@@ -78,8 +86,8 @@ static int openIndexChunkFile(uint32_t chunkNum, char* outFilename,
 
   int fd = open(outFilename, O_RDWR | O_CREAT | O_TRUNC, 0666);
   if (fd == -1) {
-    std::cerr << "Error: Could not open or create file '" << outFilename
-              << "': " << strerror(errno) << std::endl;
+    std::cout << "Error: Could not open or create file '" << outFilename
+              << "': " << '\n';
     exit(EXIT_FAILURE);
   }
   return fd;
@@ -321,6 +329,9 @@ class IndexFile {
 
     ssize_t bytesWritten =
         write(fileDescrip_.get(), dataBuffer.data(), dataBuffer.size());
+
+    DEBUG_MSG("Number of bytes written for chunk #" << chunkNum << ": " << bytesWritten << '\n');
+
     if (bytesWritten == -1) {
       cerr << "Error writing to " << indexFilename_;
       exit(EXIT_FAILURE);
@@ -332,8 +343,12 @@ class IndexFile {
     char hashFilename[32];
     snprintf(hashFilename, sizeof(hashFilename), "HashFile_%05u", chunkNum);
     HashFile hashfile(hashFilename, &dictionary);
+
+    DEBUG_MSG("IndexFile Constructor: Finished successfully for chunkNum " << chunkNum);
   }
-  ~IndexFile() = default;
+  ~IndexFile() {
+    DEBUG_MSG("IndexFile Destructor: Called for chunk file '" << indexFilename_);
+  }
 
   IndexFile(const IndexFile&) = delete;
   IndexFile& operator=(const IndexFile&) = delete;

@@ -4,7 +4,7 @@
 #include <iostream>
 
 constexpr uint64_t MAX_EXPECTED_LINKS = 500'000'000;
-constexpr uint32_t MAX_PROCESSED = 75'000;
+constexpr uint32_t MAX_PROCESSED = 25'000;
 constexpr uint64_t MAX_QUEUE_SIZE = 10'000;
 constexpr uint64_t MAX_VECTOR_SIZE = 500'000;
 constexpr uint64_t NUM_RANDOM = 200'000;
