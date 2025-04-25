@@ -43,7 +43,7 @@ constexpr size_t CHUNK_BUFFER_INITIAL_RESERVE = 100'000'000ULL;
 /**
  * @brief Capacity reservation for temporary posting list buffer
  */
-constexpr size_t POSTING_LIST_BUFFER_INITIAL_RESERVE = 1'000'000'000ULL;
+constexpr size_t POSTING_LIST_BUFFER_INITIAL_RESERVE = 1'000'000ULL;
 
 /**
  * @brief Maximum chunk number allowed for filename (ensures %05u fits)
