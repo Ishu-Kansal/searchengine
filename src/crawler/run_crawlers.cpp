@@ -23,6 +23,7 @@ void *spawner(void *arg) {
   } else {
     execl("./crawler", "crawler", id_str.c_str(), ip.c_str(), NULL);
   }
+  std::cerr << "Process exited with status: " << status << '\n';
   sem_post(sem);
   return NULL;
 }

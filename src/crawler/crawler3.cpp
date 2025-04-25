@@ -512,13 +512,16 @@ int main(int argc, char** argv) {
 
   std::cout << "num created: " << num_created << std::endl;
 
-  std::cout << "FINISHED THREADS...\n";
+  std::cout << "FINISHED THREADS..." << std::endl;
 
   // IndexFile chunkFile(id, chunk);
   for (int i = 0; i < NUM_CHUNKS; ++i) {
     pthread_lock_guard guard{chunk_locks[i]};
     IndexFile(id * NUM_CHUNKS + i, chunks[i]);
+    perror("Wrote with status: ");
   }
+
+  std::cout << "Finished writing file" << std::endl;
 
   pthread_mutex_destroy(&queue_lock);
   pthread_mutex_destroy(&chunk_lock);
