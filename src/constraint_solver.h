@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cctype>
 #include <sstream>
+#include <array>
 
 #include "isr/isr.h"
 #include "ranker/dynamic_rank.h"

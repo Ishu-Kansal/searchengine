@@ -4,9 +4,9 @@ let allResults = [];
 let currentPage = 0;
 const pageSize = 10;
 
-const distribute_query = false;
-const server_ip_addresses = ['10.0.0.141', '10.0.0.141', '10.0.0.141'];
-const server_ports = ['8000', '8000', '8000'];
+const distribute_query = true;
+const server_ip_addresses = ['34.45.6.50', '34.10.225.191'];
+const server_ports = ['8000', '8000'];
 
 // DOM References
 const searchForm = document.getElementById('searchForm');
