@@ -57,10 +57,10 @@ std::string Driver::decode_html_entities(const std::string& input) {
 
         // Check for numeric entity
         if (!entity.empty() && entity[0] == '#') {
-          char decoded_char = '?';  // fallback
+          char decoded_char = ' ';  // fallback
           try {
             if (!entity.empty() && entity[0] == '#') {
-              std::string decoded_char = "?";  // fallback
+              std::string decoded_char = "";  // fallback
               try {
                 int code = 0;
                 if (entity[1] == 'x' || entity[1] == 'X') {
@@ -88,13 +88,13 @@ std::string Driver::decode_html_entities(const std::string& input) {
                       static_cast<char>(0x80 | (code & 0x3F))};
                 }
               } catch (...) {
-                decoded_char = "?";
+                decoded_char = "";
               }
               output += decoded_char;
               i = semicolon + 1;
             }
           } catch (...) {
-            decoded_char = '?';
+            decoded_char = ' ';
           }
           output += decoded_char;
           i = semicolon + 1;

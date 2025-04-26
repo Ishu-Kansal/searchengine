@@ -158,7 +158,8 @@ searchForm.addEventListener('submit', async function (e) {
         }
         //console.log(searchData[i].results);
         for (let j = 0; j < searchData[i].results.length; j++) {
-          if (!resultMap.has(searchData[i].results[j].url)) {
+          // Filter out duplicate and empty urls
+          if (!resultMap.has(searchData[i].results[j].url) && searchData[i].results[j].url !== '') {
             resultMap.set(searchData[i].results[j].url, searchData[i].results[j]);
           }
         }
