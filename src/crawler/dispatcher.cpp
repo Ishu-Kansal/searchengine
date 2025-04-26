@@ -157,39 +157,44 @@ UrlHostPair get_next_url() {
 }
 
 void saver() {
-  remove(filterName);
-  remove(queueName);
-  std::cout << "Writing filter...\n";
+  std::cout << "Writing filter..." << std::endl;
   bf.writeBFtoFile(filterName);
-  std::cout << "Finished writing filter...\n";
+  std::cout << "Finished writing filter..." << std::endl;
+
+  std::ofstream statsFile{statsName, std::ofstream::out | std::ios_base::trunc};
+  if (statsFile) {
+    statsFile << num_processed;
+    statsFile.flush();
+    statsFile.close();
+  }
 
   std::ofstream outputFile{queueName,
                            std::ofstream::out | std::ios_base::trunc};
 
-  int ctr = 0;
-  std::queue<UrlHostPair> temp_queue{};
-  std::cout << "Writing queue...\n";
-  while (ctr < 1000 && !explore_queue.empty()) {
-    outputFile << explore_queue.front();
-    temp_queue.push(std::move(explore_queue.front()));
-    ++ctr;
-    explore_queue.pop();
+  if (outputFile) {
+    int ctr = 0;
+    std::queue<UrlHostPair> temp_queue{};
+    std::cout << "Writing queue..." << std::endl;
+    while (ctr < 1000 && !explore_queue.empty()) {
+      outputFile << explore_queue.front();
+      temp_queue.push(std::move(explore_queue.front()));
+      ++ctr;
+      explore_queue.pop();
+    }
+    while (!temp_queue.empty()) {
+      explore_queue.push(std::move(temp_queue.front()));
+      temp_queue.pop();
+    }
+    int right_ptr = int(links_vector.size()) - 1;
+    while (right_ptr >= 0 && ctr < 1000) {
+      outputFile << links_vector[right_ptr];
+      --right_ptr;
+      ++ctr;
+    }
+    outputFile.flush();
+    outputFile.close();
+    std::cout << "Finished writing queue..." << std::endl;
   }
-  while (!temp_queue.empty()) {
-    explore_queue.push(std::move(temp_queue.front()));
-    temp_queue.pop();
-  }
-  int right_ptr = int(links_vector.size()) - 1;
-  while (right_ptr >= 0 && ctr < 1000) {
-    outputFile << links_vector[right_ptr];
-    --right_ptr;
-    ++ctr;
-  }
-  outputFile.flush();
-  std::cout << "Finished writing queue...\n";
-  std::ofstream statsFile{statsName, std::ofstream::out | std::ios_base::trunc};
-  statsFile << num_processed;
-  statsFile.flush();
 }
 
 void print_dispatcher() {
