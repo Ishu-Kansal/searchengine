@@ -19,7 +19,7 @@ constexpr size_t HOST_MATCH_SCORE = 256;
 constexpr size_t PATH_MATCH_SCORE = 128;
 constexpr size_t HOST_MATCHED_ALL_QUERY_TERMS = 128;
 constexpr size_t PATH_MATCHED_ALL_QUERY_TERMS = 64;
-constexpr size_t SHORT_URL_BOOST = 32;
+constexpr size_t SHORT_URL_BOOST = 64;
 /** @brief max len for url to be considered short */
 constexpr size_t MAX_SHORT_URL_LEN = 16;
 
