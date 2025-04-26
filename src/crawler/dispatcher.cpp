@@ -257,6 +257,7 @@ void *handler(void *fd) {
 void init_dispatcher() {
   std::ifstream if1{queueName}, if2{statsName};
   if (if1.good()) {
+    std::cout << "Here" << std::endl;
     bf = Bloomfilter(filterName);
     UrlHostPair url;
     while (if1 >> url) {
@@ -264,6 +265,7 @@ void init_dispatcher() {
       ref_cts[url.host]++;
     }
     if2 >> num_processed;
+    std::cout << "Here2" << std::endl;
   } else {
     bf = Bloomfilter(MAX_EXPECTED_LINKS, MAX_FALSE_POSITIVE_RATE);
     std::ifstream infile("seed_list.txt");
