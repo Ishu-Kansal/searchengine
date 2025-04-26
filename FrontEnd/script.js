@@ -4,7 +4,7 @@ let allResults = [];
 let currentPage = 0;
 const pageSize = 10;
 
-const distribute_query = true;
+const distribute_query = false;
 const server_ip_addresses = ['35.192.117.196', '35.222.111.74'/*, '34.58.101.252', '34.71.3.113'*/];
 const server_ports = ['8000', '8000'/*, '8000', '8000'*/];
 

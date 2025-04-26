@@ -109,6 +109,7 @@ TokenStream::TokenStream( std::string &query ) : location( 0 ) {
       // Finds space in query
       if (std::isspace(c)) {
          if (!current.empty()) {
+            current.erase(std::remove(current.begin(), current.end(), '\''), current.end());
             tokens.push_back(current);
             current.clear();
          }
@@ -150,6 +151,7 @@ TokenStream::TokenStream( std::string &query ) : location( 0 ) {
 
    // Push the last collected token if any
    if (!current.empty()) {
+      current.erase(std::remove(current.begin(), current.end(), '\''), current.end());
       tokens.push_back(current);
    }
 

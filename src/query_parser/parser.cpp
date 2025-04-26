@@ -57,13 +57,10 @@ std::unique_ptr<Constraint> QueryParser::FindSimpleConstraint() {
 
     bool parsing_negative = false;
 
-    if (stream.Peek() == "(") {
-        return FindNestedConstraint();
-    }
-
-    std::unordered_set<std::string> special_tokens = {"OR", "|", "||", "AND", "&", "&&", "-", "NOT", "\"", "(", ")"};
+    std::unordered_set<std::string> special_tokens = {"OR", "|", "||", "AND", "&", "&&", "-", "\"", "(", ")"};
 
     while (!stream.Peek().empty() && !special_tokens.count(stream.Peek())) {
+        std::cout << "inside special tokens" << std::endl;
         std::string word = stream.GetWord();
         if (word.empty()) break;
 
@@ -87,6 +84,7 @@ std::unique_ptr<Constraint> QueryParser::FindSimpleConstraint() {
         return std::make_unique<ContainerConstraint>(positive_words, negative_words, reader);
     }
 }
+
 
 std::unique_ptr<Constraint> QueryParser::FindPhrase() {
     std::string quoteChar = stream.GetWord();

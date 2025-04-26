@@ -417,7 +417,9 @@ public:
     bool anotherOne = false;
     bool excludedTermFound = false;
     ISRContainer(std::vector<std::unique_ptr<ISR>> childISRs, std::vector<std::unique_ptr<ISR>> excludedISRs, const IndexFileReader& reader)
-        : terms(std::move(childISRs)), excluded(std::move(excludedISRs)) {
+        : terms(std::move(childISRs)), excluded(std::move(excludedISRs) ) {
+
+        docEndISR = std::make_unique<ISREndDoc>(reader);
 
     }
     unsigned CountContained, CountExcluded;
@@ -476,7 +478,7 @@ public:
                 // 3. Seek all the other contained terms to past the document begin.
                 for (auto & termPtr : terms)
                 {
-                    termPtr->Seek(target, chunkNum);
+                    termPtr->Seek(nearestStartLocation, chunkNum);
                     std::shared_ptr<SeekObj> childResult = termPtr->GetCurrentPost();
                     // 5. If any ISR reaches the end, there is no match.
                     if (!childResult)
