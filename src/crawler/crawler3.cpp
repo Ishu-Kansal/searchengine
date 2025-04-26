@@ -560,7 +560,7 @@ int main(int argc, char** argv) {
   std::cout << "STARTED RUNNER THREADS...\n";
 
   int num_joined = 0;
-  const struct timespec timeout_limit = {.tv_sec = std::time(nullptr) + 60 * 15, .tv_nsec = 0};
+  const struct timespec timeout_limit = {.tv_sec = std::time(nullptr) + 60 * 25, .tv_nsec = 0};
 
   for (int i = 0; i < NUM_THREADS; i++) {
    // assert(pthread_join(threads[i], NULL) == 0);
