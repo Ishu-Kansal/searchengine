@@ -217,6 +217,7 @@ int runSocket(std::string req, std::string url_in, std::string &output) {
   if (code == 301) {
     int locPos = header.find("location");
     int endPos = header.find("\r\n", locPos);
+    if (locPos + 10 >= header.size()) return 404;
     std::string newURL = header.substr(locPos + 10, endPos - locPos - 10);
     // std::cout << "redirecting to " << newURL << std::endl;
     output = newURL;
