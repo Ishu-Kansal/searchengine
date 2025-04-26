@@ -558,8 +558,19 @@ int main(int argc, char** argv) {
            0);
   }
   std::cout << "STARTED RUNNER THREADS...\n";
+
+  int num_joined = 0;
+  const struct timespec timeout_limit = {.tv_sec = std::time(nullptr) + 60 * 15, .tv_nsec = 0};
+
   for (int i = 0; i < NUM_THREADS; i++) {
-    assert(pthread_join(threads[i], NULL) == 0);
+   // assert(pthread_join(threads[i], NULL) == 0);
+   int res = pthread_timedjoin_np(threads[i], NULL, &timeout_limit);
+   if (res) {
+       std::cout << "Failed to join thread: " << i << '\n';
+   }
+   else {
+	   ++num_joined;
+   }
   }
 
   //  while (num_created) usleep(1000);
@@ -587,7 +598,7 @@ int main(int argc, char** argv) {
   std::cout << "Joined " << index_thread_count << " add_to_index threads." << std::endl;
 
   std::cout << "CRAWLER: Writing index chunks to files..." << std::endl;
-
+  if (num_joined == NUM_THREADS) {
   // IndexFile chunkFile(id, chunk);
   for (int i = 0; i < NUM_CHUNKS; ++i) {
     pthread_lock_guard guard{chunk_locks[i]};
@@ -596,7 +607,7 @@ int main(int argc, char** argv) {
   }
 
   std::cout << "Finished writing file" << std::endl;
-
+  }
   std::cout << "Cleaning up semaphores..." << std::endl;
 
   for (int i = 0; i < NUM_THREADS; ++i) {
