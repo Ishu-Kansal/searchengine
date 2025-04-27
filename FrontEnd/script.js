@@ -5,7 +5,7 @@ let currentPage = 0;
 const pageSize = 10;
 
 const distribute_query = true;
-const server_ip_addresses = ['35.192.117.196', '35.222.111.74'/*, '34.58.101.252', '34.71.3.113'*/];
+const server_ip_addresses = ['34.136.244.115', '35.222.111.74'/*, '34.58.101.252', '34.71.3.113'*/];
 const server_ports = ['8000', '8000'/*, '8000', '8000'*/];
 
 // DOM References
@@ -50,6 +50,7 @@ searchForm.addEventListener('submit', async function (e) {
   allResults = [];
   searchResultsContainer.innerHTML = '';
 
+  // Set up AI summary container to say Generating...
   document.getElementById('aiSummaryContainer').style.display = 'block';
   document.getElementById('aiSummaryContent').style.display = 'block';
   document.getElementsByClassName('panel-heading')[0].style.borderBottomLeftRadius = '0px';
@@ -60,13 +61,17 @@ searchForm.addEventListener('submit', async function (e) {
   document.getElementById('aiSummaryTitle').innerText = 'AI Summary';
   document.getElementById('aiSummaryText').innerText = 'Generating...';
   aiSummaryImageContainer.style.display = 'none';
+  let aiText = "";
   
+  // Hide pagination controls
   paginationControls.style.display = 'none';
 
+  // Add loading animation to search button and prevent it from being clicked again
   submitButton.classList.add('loading');
   submitButton.disabled = true;
   loadingIndicator.style.display = 'block';
 
+  // Hide search summary containing number of found documents and speed
   document.getElementById('searchSummaryBox').style.display = 'none';
 
   // Choose a random GIF
@@ -89,9 +94,8 @@ searchForm.addEventListener('submit', async function (e) {
     }, 2000);
   }, 1000);
 
-  let aiText = "";
-
   try {
+    // Send a request to OpenAI to summarize the topic of the search query
     const aiPromise = fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -116,6 +120,7 @@ searchForm.addEventListener('submit', async function (e) {
     });
 
     if (distribute_query) {
+      // Send the search query to every machine listed at the top
       const searchPromises = [];
       for (let i = 0; i < server_ip_addresses.length; i++) {
         searchPromises.push(
@@ -129,16 +134,19 @@ searchForm.addEventListener('submit', async function (e) {
         );
       }
 
+      // Wait for the results to come back
       const results = await Promise.allSettled(searchPromises.map(p =>
         p.then(res => res.ok ? res.json() : Promise.reject(res.status))
       ));
 
+      // Filter out results that did not come back
       const searchData = results
         .filter(r => r.status === 'fulfilled')
         .map(r => r.value);
 
       console.log('Search API responses completed');
 
+      // If no results, error
       if (searchData.length <= 0) {
         searchSummaryBox.style.display = 'none';
         throw new Error('Search API error');
@@ -150,23 +158,68 @@ searchForm.addEventListener('submit', async function (e) {
       searchSummaryText.textContent = '';
 
       const resultMap = new Map();
-      
+
+      let totalMatches = 0;
+      let maxTime = 0.0;
+      const detailedSummaries = [];
+
+      // Aggregate all search summaries
       for (let i = 0; i < searchData.length; i++) {
         if (searchData[i].summary) {
-          searchSummaryText.textContent += server_ip_addresses[i] + ' - ' + searchData[i].summary + '\n';
+          const summary = searchData[i].summary;
+          
+          // Extract matches and time from the summary string
+          const match = summary.match(/Found (\d+) matches in ([\d.]+) seconds/);
+          if (match) {
+            totalMatches += parseInt(match[1]);
+            maxTime = Math.max(maxTime, parseFloat(match[2]));
+          }
+
+          detailedSummaries.push(server_ip_addresses[i] + ' - ' + summary);
           searchSummaryBox.style.display = 'block';
         }
-        //console.log(searchData[i].results);
+
+        // Filter out duplicate and empty URLs
         for (let j = 0; j < searchData[i].results.length; j++) {
-          // Filter out duplicate and empty urls
           if (!resultMap.has(searchData[i].results[j].url) && searchData[i].results[j].url !== '') {
             resultMap.set(searchData[i].results[j].url, searchData[i].results[j]);
           }
         }
       }
 
+      // Set aggregated summary
+      searchSummaryText.textContent = `Found ${totalMatches} matches in ${maxTime.toFixed(3)} seconds`;
+
+      // Create Expand Button
+      const expandButton = document.createElement('button');
+      expandButton.textContent = 'Show Detailed Summary';
+      expandButton.style.marginTop = '10px';
+      expandButton.style.padding = '8px 12px';
+      expandButton.style.borderRadius = '8px';
+      expandButton.style.border = '1px solid #ccc';
+      expandButton.style.backgroundColor = '#e7e7e7';
+      expandButton.style.cursor = 'pointer';
+
+      // Append the button below the summary box
+      searchSummaryBox.appendChild(expandButton);
+
+      // Expand/Collapse behavior
+      let expanded = false;
+      expandButton.addEventListener('click', () => {
+        if (!expanded) {
+          searchSummaryText.textContent += '\n\n' + detailedSummaries.join('\n');
+          expandButton.textContent = 'Hide Detailed Summary';
+        } else {
+          searchSummaryText.textContent = `Found ${totalMatches} matches in ${maxTime.toFixed(3)} seconds`;
+          expandButton.textContent = 'Show Detailed Summary';
+        }
+        expanded = !expanded;
+      });
+
+      // Sort the results by rank
       allResults = Array.from(resultMap.values()).sort((a, b) => b.rank - a.rank);
 
+      // If there are no results, display error
       if (allResults.length === 0) {
         searchResultsContainer.innerHTML = `
           <p style="text-align: center; color:rgb(0, 0, 0); margin-top: 30px;">
@@ -176,11 +229,13 @@ searchForm.addEventListener('submit', async function (e) {
       else {
         fetchedPages.clear();
       
-        renderPage(0); // Show results right away
+        // Show results right away
+        renderPage(0);
 
-        // Start fetching snippets immediately after search response
+        // Start fetching snippets immediately displaying after search response
         fetchSnippetsForPage(0).then(() => {
-          renderPage(currentPage); // Re-render with snippets
+          // Re-render page with snippets
+          renderPage(currentPage); 
           paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
         }).catch(error => {
           console.error('Snippet Fetch Error:', error);
@@ -232,15 +287,18 @@ searchForm.addEventListener('submit', async function (e) {
           </p>`;
       }
       else {
-        allResults = searchData.results;
+        // Filter out empty urls
+        allResults = searchData.results.filter(result => result.url !== '');
 
         fetchedPages.clear();
 
-        renderPage(0); // Show results right away
+        // Show results right away
+        renderPage(0);
 
         // Start fetching snippets immediately after search response
         fetchSnippetsForPage(0).then(() => {
-          renderPage(currentPage); // Re-render with snippets
+          // Re-render page with snippets
+          renderPage(currentPage);
           paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
         }).catch(error => {
           console.error('Snippet Fetch Error:', error);
@@ -275,8 +333,10 @@ searchForm.addEventListener('submit', async function (e) {
     clearInterval(gifInterval);
     gifInterval = null;
 
-    loadingGif.style.display = 'none'; // Ensure GIF is hidden
-    loadingGif.src = ''; // Clear GIF source
+    // Hide GIF
+    loadingGif.style.display = 'none'; 
+    // Clear GIF source
+    loadingGif.src = ''; 
     
     loadingIndicator.style.display = 'none';
     submitButton.classList.remove('loading');
