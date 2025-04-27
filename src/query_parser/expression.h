@@ -39,7 +39,7 @@ public:
             return wordIsr; // Ownership transferred out
         }
         else {
-            std::cout << "Run ISR on sequence (as OR): ";
+            std::cout << "Run ISR on sequence (as AND): ";
             std::vector<std::unique_ptr<ISR>> terms;
             for (const std::string& word : words) {
                 std::cout << word << " ";
@@ -51,7 +51,7 @@ public:
             }
             std::cout << std::endl;
 
-            return std::make_unique<ISROr>(std::move(terms), reader_);
+            return std::make_unique<ISRAnd>(std::move(terms), reader_);
         }
     }
 };
@@ -131,5 +131,48 @@ public:
         std::cout << std::endl;
 
         return std::make_unique<ISRPhrase>(std::move(terms), reader_);
+    }
+};
+
+// ---------- NOT Constraint ----------
+
+class ContainerConstraint : public Constraint {
+    std::vector<std::string> positive;
+    std::vector<std::string> negative;
+
+public:
+    ContainerConstraint(const std::vector<std::string>& pos, const std::vector<std::string>& neg, const IndexFileReader& reader)
+        : Constraint(reader), positive(pos), negative(neg) {}
+
+    ~ContainerConstraint() override = default;
+
+    std::unique_ptr<ISR> Eval(std::vector<std::vector<std::unique_ptr<ISRWord>>>& sequences) const override {
+        std::cout << "Run ISRContainer: positive terms and NOT negative terms" << std::endl;
+
+        sequences.emplace_back();
+        std::vector<std::unique_ptr<ISR>> contained;
+        for (const std::string& word : positive) {
+            auto wordIsr = std::make_unique<ISRWord>(word, reader_);
+            auto wordIsr2 = std::make_unique<ISRWord>(word, reader_);
+            contained.push_back(std::move(wordIsr));
+            sequences.back().push_back(std::move(wordIsr2));
+        }
+
+        sequences.emplace_back();
+        std::vector<std::unique_ptr<ISR>> excluded;
+        for (const std::string& word : negative) {
+            auto wordIsr = std::make_unique<ISRWord>(word, reader_);
+            auto wordIsr2 = std::make_unique<ISRWord>(word, reader_);
+            excluded.push_back(std::move(wordIsr));
+            sequences.back().push_back(std::move(wordIsr2));
+        }
+
+        std::cout << "Run ISRContainer: [";
+        for (const auto& word : positive) std::cout << word << " ";
+        std::cout << "] NOT [";
+        for (const auto& word : negative) std::cout << word << " ";
+        std::cout << "]" << std::endl;        
+
+        return std::make_unique<ISRContainer>(std::move(contained), std::move(excluded), reader_);
     }
 };

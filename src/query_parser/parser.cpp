@@ -52,27 +52,39 @@ bool QueryParser::FindAndOp() {
 }
 
 std::unique_ptr<Constraint> QueryParser::FindSimpleConstraint() {
-    if (stream.Peek() == "\"" || stream.Peek() == "'") {
-        return FindPhrase();
-    }
+    std::vector<std::string> positive_words;
+    std::vector<std::string> negative_words;
 
-    if (stream.Match("(")) {
-        auto constraint = FindConstraint();
-        if (!constraint || !stream.Match(")")) return nullptr;
-        return constraint;
-    }
+    bool parsing_negative = false;
 
-    std::vector<std::string> words;
-    std::unordered_set<std::string> not_words = {"OR", "|", "||", "AND", "&", "&&", "-", "\"", "(", ")"};
+    std::unordered_set<std::string> special_tokens = {"OR", "|", "||", "AND", "&", "&&", "-", "\"", "(", ")"};
 
-    while (!stream.Peek().empty() && !not_words.count(stream.Peek())) {
+    while (!stream.Peek().empty() && !special_tokens.count(stream.Peek())) {
+        std::cout << "inside special tokens" << std::endl;
         std::string word = stream.GetWord();
         if (word.empty()) break;
-        words.push_back(word);
+
+        if (word == "NOT") {
+            parsing_negative = true;
+            continue;
+        }
+
+        if (parsing_negative) {
+            negative_words.push_back(word);
+        } else {
+            positive_words.push_back(word);
+        }
     }
 
-    return std::make_unique<SequenceConstraint>(words, reader);
+    if (positive_words.empty()) return nullptr;
+
+    if (negative_words.empty()) {
+        return std::make_unique<SequenceConstraint>(positive_words, reader);
+    } else {
+        return std::make_unique<ContainerConstraint>(positive_words, negative_words, reader);
+    }
 }
+
 
 std::unique_ptr<Constraint> QueryParser::FindPhrase() {
     std::string quoteChar = stream.GetWord();
