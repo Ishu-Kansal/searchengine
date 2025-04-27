@@ -524,7 +524,9 @@ public:
                             break;
                         }
                     }
+                    break;
                 }
+                if (excludedTermFound) break;
             }
             if (!excludedTermFound) break;
         }
