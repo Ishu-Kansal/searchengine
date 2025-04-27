@@ -168,7 +168,6 @@ searchForm.addEventListener('submit', async function (e) {
         if (searchData[i].summary) {
           const summary = searchData[i].summary;
           
-          // Extract matches and time from the summary string
           const match = summary.match(/Found (\d+) matches in ([\d.]+) seconds/);
           if (match) {
             totalMatches += parseInt(match[1]);
@@ -187,49 +186,48 @@ searchForm.addEventListener('submit', async function (e) {
         }
       }
 
-      // Create a container to hold the summary and button side by side
-      const summaryContainer = document.createElement('div');
-      summaryContainer.style.display = 'flex';
-      summaryContainer.style.alignItems = 'center';
-      summaryContainer.style.gap = '10px'; // spacing between text and button
+      // Create a container for the aggregated text and button
+      const summaryHeader = document.createElement('div');
+      summaryHeader.style.display = 'flex';
+      summaryHeader.style.justifyContent = 'space-between';
+      summaryHeader.style.alignItems = 'center';
 
-      // Create the aggregated summary text
-      const aggregateSummary = document.createElement('span');
-      aggregateSummary.textContent = `Found ${totalMatches} matches in ${maxTime.toFixed(3)} seconds`;
+      // Aggregated summary text
+      const aggregatedSummary = document.createElement('div');
+      aggregatedSummary.textContent = `Found ${totalMatches} matches in ${maxTime.toFixed(3)} seconds`;
 
-      // Create Expand Button
+      // Expand button
       const expandButton = document.createElement('button');
       expandButton.textContent = 'Show Detailed Summary';
-      expandButton.style.padding = '4px 8px';
-      expandButton.style.borderRadius = '5px';
-      expandButton.style.border = '1px solid #888';
-      expandButton.style.background = 'none';
+      expandButton.style.padding = '4px 10px';
+      expandButton.style.borderRadius = '6px';
+      expandButton.style.border = '1px solid #aaa';
+      expandButton.style.backgroundColor = 'transparent';
       expandButton.style.cursor = 'pointer';
-      expandButton.style.fontSize = '14px';
+      expandButton.style.fontSize = '0.9rem';
 
-      // Assemble
-      summaryContainer.appendChild(aggregateSummary);
-      summaryContainer.appendChild(expandButton);
+      // Assemble header
+      summaryHeader.appendChild(aggregatedSummary);
+      summaryHeader.appendChild(expandButton);
 
-      // Clear and set up the search summary box
+      // Clear and insert the new header into searchSummaryText
       searchSummaryText.innerHTML = '';
-      searchSummaryText.appendChild(summaryContainer);
+      searchSummaryText.appendChild(summaryHeader);
 
       // Expand/Collapse behavior
       let expanded = false;
       expandButton.addEventListener('click', () => {
         if (!expanded) {
-          const detailedText = '\n\n' + detailedSummaries.join('\n');
-          const detailedElement = document.createElement('pre');
-          detailedElement.id = 'detailedSummary';
-          detailedElement.style.marginTop = '10px';
-          detailedElement.textContent = detailedText;
-          searchSummaryText.appendChild(detailedElement);
+          const detailedText = document.createElement('div');
+          detailedText.id = 'detailedSummaryText';
+          detailedText.style.marginTop = '10px';
+          detailedText.textContent = detailedSummaries.join('\n');
+          searchSummaryText.appendChild(detailedText);
           expandButton.textContent = 'Hide Detailed Summary';
         } else {
-          const detailedElement = document.getElementById('detailedSummary');
-          if (detailedElement) {
-            searchSummaryText.removeChild(detailedElement);
+          const detailedText = document.getElementById('detailedSummaryText');
+          if (detailedText) {
+            detailedText.remove();
           }
           expandButton.textContent = 'Show Detailed Summary';
         }
