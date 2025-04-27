@@ -127,6 +127,7 @@ int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors
                         else return nearTopAnchor;
                     }
                 }
+            }
             // Vector to hold min span calculations for anchor word
             locationVector minSpansVector(anchorLocations.size(), 0);
             
