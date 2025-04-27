@@ -97,12 +97,13 @@ int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors
         {
             // If the query is one term long
             // count the number of occurence near the top of the document and treat it as its rank
+            if (isBody) return 0;
             return reader.LoadChunkOfPostingList
             (
                 anchorWord,
                 currChunk,  
                 startLocation,
-                startLocation + Requirements::TOPSPANSIZE,
+                std::min(startLocation + Requirements::TOPSPANSIZE, endLocation),
                 anchorTerm->GetSeekTableIndex()
             ).size();
 
