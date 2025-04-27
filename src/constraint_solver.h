@@ -68,6 +68,19 @@ int getShortestSpan(int queryLen)
   return SHORTEST_SPAN_TABLE[queryLen];
 }
 
+std::string to_lower_copy(const std::string& input) 
+{
+  std::string result;
+  result.reserve(input.length()); 
+  std::transform(
+      input.begin(),
+      input.end(),
+      std::back_inserter(result),
+      [](unsigned char c) { return std::tolower(c); }
+  );
+  return result;
+}
+
 struct ParsedUrlRanking 
 {
   std::string host;               // e.g., "www.example.com", "example.co.uk:8080"
@@ -113,6 +126,12 @@ ParsedUrlRanking parseUrl(const std::string& url_string) {
       {
            result.path = "/";
       }
+  }
+
+  std::string lower_url_temp = to_lower_copy(url_string);
+  if (lower_url_temp.find("wikipedia") != std::string::npos) {
+      result.host = to_lower_copy(result.host);
+      result.path = to_lower_copy(result.path);
   }
 
   if (result.path.length() > 1 && result.path[0] == '/') 
