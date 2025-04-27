@@ -452,41 +452,44 @@ std::vector<UrlRank> constraint_solver(
           if (!doc) break;
 
           int shortestSpanPossible = getShortestSpan(queryLength);
-          int dynamic_score = get_dynamic_rank(
-            rarestTermInOrder,
-            orderedQueryTerms, 
-            docStartLoc, 
-            docEndLoc,
-            reader,
-            chunkNum,
-            bodyText,
-            shortestSpanPossible);
-          // std::cout << "Dynamic rank: " << dynamic_score << '\n';
-          // Dynamic score for title words
-          
-          int title_score = get_dynamic_rank(
-            rarestTermInOrder,
-            titleTerms,
-            docStartLoc,
-            docEndLoc,
-            reader,
-            chunkNum,
-            !bodyText,
-            shortestSpanPossible);
-          ParsedUrlRanking parsedUrl = parseUrl(doc->url);
-          int url_score = calculateURLscore(parsedUrl, orderedQueryTerms);
-          if (parsedUrl.path.size() <= MAX_SHORT_URL_LEN) url_score += SHORT_URL_BOOST;
-          if (shortestSpanPossible == 1)
+          if (shortestSpanPossible > 1 || doc->url.size() < 64)
           {
-            url_score += calculateSingleWordQueryScore(parsedUrl, orderedQueryTerms[0][0]);
+              ParsedUrlRanking parsedUrl = parseUrl(doc->url);
+              int url_score = calculateURLscore(parsedUrl, orderedQueryTerms);
+              if (parsedUrl.path.size() <= MAX_SHORT_URL_LEN) url_score += SHORT_URL_BOOST;
+              if (shortestSpanPossible == 1)
+              {
+                url_score += calculateSingleWordQueryScore(parsedUrl, orderedQueryTerms[0][0]);
+              }
+              int dynamic_score = get_dynamic_rank(
+                rarestTermInOrder,
+                orderedQueryTerms, 
+                docStartLoc, 
+                docEndLoc,
+                reader,
+                chunkNum,
+                bodyText,
+                shortestSpanPossible);
+              // std::cout << "Dynamic rank: " << dynamic_score << '\n';
+              // Dynamic score for title words
+            
+              int title_score = get_dynamic_rank(
+                rarestTermInOrder,
+                titleTerms,
+                docStartLoc,
+                docEndLoc,
+                reader,
+                chunkNum,
+                !bodyText,
+                shortestSpanPossible);
+              
+              // if (parsedUrl.host.size() < MAX_SHORT_URL_LEN) url_score += SHORT_URL_BOOST;
+              // Add weights to the score later
+              UrlRank urlRank(doc->url, dynamic_score + url_score + title_score); /*title_score + url_score + doc->staticRank*/
+              // cout << urlRank.rank << '\n';
+              insertionSort(topNdocs, urlRank); 
           }
-          
-
-          // if (parsedUrl.host.size() < MAX_SHORT_URL_LEN) url_score += SHORT_URL_BOOST;
-          // Add weights to the score later
-          UrlRank urlRank(doc->url, dynamic_score + url_score + title_score); /*title_score + url_score + doc->staticRank*/
-          // cout << urlRank.rank << '\n';
-          insertionSort(topNdocs, urlRank); 
+        
           currMatch = queryISR->NextDocument(currLoc, chunkNum); 
           if (!currMatch) 
           {
