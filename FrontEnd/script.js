@@ -205,12 +205,12 @@ searchForm.addEventListener('submit', async function (e) {
       expandButton.style.border = 'none';
       expandButton.style.backgroundColor = 'transparent';
       expandButton.style.cursor = 'pointer';
-      expandButton.style.fontSize = 'inherit';
+      expandButton.style.fontSize = '0.9em';
       expandButton.style.color = '#212529';
 
       // Make text darker on hover
       expandButton.addEventListener('mouseenter', () => {
-        expandButton.style.color = '#004c99';
+        expandButton.style.color = '#0a58ca';
       });
 
       // Return to original color
