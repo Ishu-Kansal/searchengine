@@ -174,7 +174,8 @@ searchForm.addEventListener('submit', async function (e) {
               maxTime = seconds;
             }
 
-            detailedSummaries.push(`${server_ip_addresses[i]} - ${matches} matches, ${seconds} seconds`);
+            // Format matches with commas for detailed summary
+            detailedSummaries.push(`${server_ip_addresses[i]} - ${matches.toLocaleString()} matches, ${seconds} seconds`);
           }
           
           searchSummaryBox.style.display = 'block';
@@ -196,7 +197,7 @@ searchForm.addEventListener('submit', async function (e) {
 
       // Aggregated summary text
       const aggregatedSummary = document.createElement('div');
-      aggregatedSummary.textContent = `Found ${totalMatches} matches in ${maxTime.toFixed(3)} seconds`;
+      aggregatedSummary.textContent = `Found ${totalMatches.toLocaleString()} matches in ${maxTime.toFixed(3)} seconds`;
 
       // Expand button
       const expandButton = document.createElement('button');

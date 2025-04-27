@@ -17,7 +17,7 @@ pthread_mutex_t result_mutex = PTHREAD_MUTEX_INITIALIZER;
 // Shared driver instance
 Driver driver;
 
-uint32_t numChunks = 100;
+const uint32_t numChunks = 460;
 IndexFileReader reader(numChunks);
 
 std::string clean_url(std::string& url) {
@@ -128,7 +128,7 @@ void* snippet_thread_worker(void* arg) {
 // This modified version returns just the URLs.
 json run_query(std::string &query) {
   std::string summary;
-  std::vector<std::pair<std::string, int>> urls = driver.run_engine(query, summary, reader);
+  std::vector<std::pair<std::string, int>> urls = driver.run_engine(query, summary, reader, numChunks);
 
   result["results"] = json::array();
   for (auto& url_rank : urls) {
