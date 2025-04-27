@@ -93,41 +93,32 @@ int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors
 
        const std::string & anchorWord = anchorTerm->GetWord();
        // Attempts to load all postings in this document for the current anchor
-       locationVector anchorLocations = reader.LoadChunkOfPostingList(
-           anchorWord,
-           currChunk,  
-           startLocation,
-           endLocation,
-           anchorTerm->GetSeekTableIndex()
-       );
+        if (shortestSpanPossible == 1)
+        {
+            // If the query is one term long
+            // count the number of occurence near the top of the document and treat it as its rank
+            locationVector anchorLocations = reader.LoadChunkOfPostingList(
+                anchorWord,
+                currChunk,  
+                startLocation,
+                startLocation + Requirements::TOPSPANSIZE,
+                anchorTerm->GetSeekTableIndex()
+            );
+            return anchorLocations.size();
+
+        }
+        locationVector anchorLocations = reader.LoadChunkOfPostingList(
+            anchorWord,
+            currChunk,  
+            startLocation,
+            endLocation,
+            anchorTerm->GetSeekTableIndex()
+        );
+       
+       
        
        if (!anchorLocations.empty())
        {
-            // If the query is one term long
-            // count the number of occurence near the top of the document and treat it as its rank
-            if (shortestSpanPossible == 1)
-            {  
-                Location threshold = startLocation + Requirements::TOPSPANSIZE;
-                if (anchorLocations.size() > 32)
-                {
-                    auto it_first_outside_range = std::lower_bound(
-                        anchorLocations.begin(),
-                        anchorLocations.end(),
-                        threshold);
-
-                    nearTopAnchor = std::distance(anchorLocations.begin(), it_first_outside_range);
-
-                    return nearTopAnchor;
-                }
-                else
-                {
-                    for (const auto & loc : anchorLocations) 
-                    {
-                        if (loc < threshold) nearTopAnchor++;
-                        else return nearTopAnchor;
-                    }
-                }
-            }
             // Vector to hold min span calculations for anchor word
             locationVector minSpansVector(anchorLocations.size(), 0);
             
