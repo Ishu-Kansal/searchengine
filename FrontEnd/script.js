@@ -152,7 +152,6 @@ searchForm.addEventListener('submit', async function (e) {
         throw new Error('Search API error');
       }
 
-      // TODO: Aggregate all summaries into one
       const searchSummaryBox = document.getElementById('searchSummaryBox');
       const searchSummaryText = document.getElementById('searchSummaryText');
       searchSummaryText.textContent = '';
@@ -166,15 +165,18 @@ searchForm.addEventListener('submit', async function (e) {
       // Aggregate all search summaries
       for (let i = 0; i < searchData.length; i++) {
         if (searchData[i].summary) {
-          const summary = searchData[i].summary;
-          
-          const match = summary.match(/Found (\d+) matches in ([\d.]+) seconds/);
-          if (match) {
-            totalMatches += parseInt(match[1]);
-            maxTime = Math.max(maxTime, parseFloat(match[2]));
-          }
+          const summaryParts = searchData[i].summary.match(/Found (\d+) matches in ([\d.]+) seconds/);
+          if (summaryParts) {
+            const matches = parseInt(summaryParts[1], 10);
+            const seconds = parseFloat(summaryParts[2]);
+            totalMatches += matches;
+            if (seconds > maxTime) {
+              maxTime = seconds;
+            }
 
-          detailedSummaries.push(server_ip_addresses[i] + ' - ' + summary);
+            detailedSummaries.push(`${server_ip_addresses[i]} - ${matches} matches, ${seconds} seconds`);
+          }
+          
           searchSummaryBox.style.display = 'block';
         }
 
@@ -198,13 +200,23 @@ searchForm.addEventListener('submit', async function (e) {
 
       // Expand button
       const expandButton = document.createElement('button');
-      expandButton.textContent = 'Show Detailed Summary';
+      expandButton.textContent = 'See Details';
       expandButton.style.padding = '4px 10px';
-      expandButton.style.borderRadius = '6px';
-      expandButton.style.border = '1px solid #aaa';
+      expandButton.style.border = 'none';
       expandButton.style.backgroundColor = 'transparent';
       expandButton.style.cursor = 'pointer';
-      expandButton.style.fontSize = '0.9rem';
+      expandButton.style.fontSize = 'inherit';
+      expandButton.style.color = '#212529';
+
+      // Make text darker on hover
+      expandButton.addEventListener('mouseenter', () => {
+        expandButton.style.color = '#004c99';
+      });
+
+      // Return to original color
+      expandButton.addEventListener('mouseleave', () => {
+        expandButton.style.color = '#212529'; 
+      });
 
       // Assemble header
       summaryHeader.appendChild(aggregatedSummary);
@@ -223,13 +235,13 @@ searchForm.addEventListener('submit', async function (e) {
           detailedText.style.marginTop = '10px';
           detailedText.textContent = detailedSummaries.join('\n');
           searchSummaryText.appendChild(detailedText);
-          expandButton.textContent = 'Hide Detailed Summary';
+          expandButton.textContent = 'Hide Details';
         } else {
           const detailedText = document.getElementById('detailedSummaryText');
           if (detailedText) {
             detailedText.remove();
           }
-          expandButton.textContent = 'Show Detailed Summary';
+          expandButton.textContent = 'Show Details';
         }
         expanded = !expanded;
       });
