@@ -254,6 +254,28 @@ void insertionSort(vector<UrlRank> & topRankedDocs, UrlRank & rankedDoc)
   topRankedDocs[pos] = std::move(docToInsert);
 }
 
+bool isSpecificWordInPath(const std::string& path, const std::string& word) 
+{
+  if (word.empty() || path.length() < word.length()) return false;
+
+      size_t foundPos = path.find(word);
+
+      if (foundPos == std::string::npos) {
+          return false;
+      }
+
+      bool beforeOk = (foundPos == 0) || (path[foundPos - 1] == '/');
+
+      size_t afterPos = foundPos + word.length();
+      bool afterOk = (afterPos == path.length()) ||
+                      (afterPos < path.length() && (path[afterPos] == '/'));
+
+      if (beforeOk && afterOk) {
+          return true;
+      }
+
+  return false;
+}
 float calculateURLscore(const ParsedUrlRanking & parsedUrl,
                        const std::vector<std::vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms)
 {
@@ -362,6 +384,23 @@ float calculateURLscore(const ParsedUrlRanking & parsedUrl,
     }
     return currScore;
 }
+int calculateSingleWordQueryScore(const ParsedUrlRanking & parsedUrl,
+  const std::unique_ptr<ISRWord> & queryWord)
+  {
+    auto foundWiki = parsedUrl.host.find("wikipedia");
+    auto foundDict = parsedUrl.host.find("dictionary");
+    const auto & word = queryWord->GetWord();
+    if (foundWiki == std::string::npos && foundDict == std::string::npos) 
+    {
+      return 0;
+    }
+    if (isSpecificWordInPath(parsedUrl.path, word))
+    {
+      return 1000;
+    }
+    return 0;
+  }
+
 // actual constraint solver function
 std::vector<UrlRank> constraint_solver(
   std::unique_ptr<ISR> &queryISR,
@@ -437,6 +476,11 @@ std::vector<UrlRank> constraint_solver(
           ParsedUrlRanking parsedUrl = parseUrl(doc->url);
           int url_score = calculateURLscore(parsedUrl, orderedQueryTerms);
           if (parsedUrl.path.size() <= MAX_SHORT_URL_LEN) url_score += SHORT_URL_BOOST;
+          if (shortestSpanPossible == 1)
+          {
+            url_score += calculateSingleWordQueryScore(parsedUrl, orderedQueryTerms[0][0]);
+          }
+          
 
           // if (parsedUrl.host.size() < MAX_SHORT_URL_LEN) url_score += SHORT_URL_BOOST;
           // Add weights to the score later
