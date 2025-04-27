@@ -55,7 +55,7 @@ int get_rank_score(int nearTopAnchorCount, int shortSpans, int topSpans, bool is
    // assign the weights based on what we are running the ranker on
    // urls will get higher weights than titles, titles will get higher weights than body, and body gets a normal weight
    if (isBody) {
-       sectionWeight = BODYWEIGHT;
+       sectionWeight = BODYWEIGHT;  
    }
    else {
        sectionWeight = TITLEWEIGHT;
@@ -107,14 +107,16 @@ int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors
             // count the number of occurence near the top of the document and treat it as its rank
             if (shortestSpanPossible == 1)
             {  
-                for (const auto & loc : anchorLocations)
-                {
-                    if (loc < startLocation + Requirements::TOPSPANSIZE)
-                    {
-                        ++nearTopAnchor;
-                    }
-                }
-            return nearTopAnchor;
+                Location threshold = startLocation + Requirements::TOPSPANSIZE;
+
+                auto it_first_outside_range = std::lower_bound(
+                                                  anchorLocations.begin(),
+                                                  anchorLocations.end(),
+                                                  threshold);
+
+                nearTopAnchor = std::distance(anchorLocations.begin(), it_first_outside_range);
+
+                return nearTopAnchor;
             }
             // Vector to hold min span calculations for anchor word
             locationVector minSpansVector(anchorLocations.size(), 0);
