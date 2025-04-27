@@ -108,16 +108,25 @@ int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors
             if (shortestSpanPossible == 1)
             {  
                 Location threshold = startLocation + Requirements::TOPSPANSIZE;
+                if (anchorLocations.size() > 32)
+                {
+                    auto it_first_outside_range = std::lower_bound(
+                        anchorLocations.begin(),
+                        anchorLocations.end(),
+                        threshold);
 
-                auto it_first_outside_range = std::lower_bound(
-                                                  anchorLocations.begin(),
-                                                  anchorLocations.end(),
-                                                  threshold);
+                    nearTopAnchor = std::distance(anchorLocations.begin(), it_first_outside_range);
 
-                nearTopAnchor = std::distance(anchorLocations.begin(), it_first_outside_range);
-
-                return nearTopAnchor;
-            }
+                    return nearTopAnchor;
+                }
+                else
+                {
+                    for (const auto & loc : anchorLocations) 
+                    {
+                        if (loc < threshold) nearTopAnchor++;
+                        else return nearTopAnchor;
+                    }
+                }
             // Vector to hold min span calculations for anchor word
             locationVector minSpansVector(anchorLocations.size(), 0);
             
