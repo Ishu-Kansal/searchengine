@@ -14,7 +14,7 @@
 #include "ranker/dynamic_rank.h"
 
 
-constexpr size_t TOTAL_DOCS_TO_RETURN = 128;
+constexpr size_t TOTAL_DOCS_TO_RETURN = 32;
 /** @brief Weights for url matching */
 constexpr size_t HOST_MATCH_SCORE = 256;
 constexpr size_t PATH_MATCH_SCORE = 128;

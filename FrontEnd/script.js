@@ -5,8 +5,8 @@ let currentPage = 0;
 const pageSize = 10;
 
 const distribute_query = true;
-const server_ip_addresses = ['34.136.244.115', '35.222.111.74'/*, '34.58.101.252', '34.71.3.113'*/];
-const server_ports = ['8000', '8000'/*, '8000', '8000'*/];
+const server_ip_addresses = ['35.193.146.217','34.121.214.49', '34.170.70.111', '34.9.74.17', '34.27.61.33', '34.55.168.229', '35.188.206.235'];
+const server_ports = ['8000', '8000', '8000', '8000', '8000', '8000', '8000'];
 
 // DOM References
 const searchForm = document.getElementById('searchForm');
