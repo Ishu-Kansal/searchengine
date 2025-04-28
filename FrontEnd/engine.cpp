@@ -17,7 +17,7 @@ pthread_mutex_t result_mutex = PTHREAD_MUTEX_INITIALIZER;
 // Shared driver instance
 Driver driver;
 
-const uint32_t numChunks = 460;
+const uint32_t numChunks = 500;
 IndexFileReader reader(numChunks);
 
 std::string clean_url(std::string& url) {
