@@ -472,7 +472,7 @@ std::vector<UrlRank> constraint_solver(
                 shortestSpanPossible);
               // std::cout << "Dynamic rank: " << dynamic_score << '\n';
               // Dynamic score for title words
-            
+  /*          
               int title_score = get_dynamic_rank(
                 rarestTermInOrder,
                 titleTerms,
@@ -482,10 +482,10 @@ std::vector<UrlRank> constraint_solver(
                 chunkNum,
                 !bodyText,
                 shortestSpanPossible);
-              
+*/              
               // if (parsedUrl.host.size() < MAX_SHORT_URL_LEN) url_score += SHORT_URL_BOOST;
               // Add weights to the score later
-              UrlRank urlRank(doc->url, dynamic_score + url_score + title_score); /*title_score + url_score + doc->staticRank*/
+              UrlRank urlRank(doc->url, dynamic_score + url_score); /*title_score + url_score + doc->staticRank*/
               // cout << urlRank.rank << '\n';
               insertionSort(topNdocs, urlRank); 
           }

@@ -199,7 +199,7 @@ std::vector<UrlRank> run_engine(std::string& query, uint32_t numChunks,
 int main(int argc, char** argv) 
 {
   const std::string data_filename = "websites_data.jsonl";
-  const uint32_t numChunks = 100;
+  const uint32_t numChunks = 400;
 /*
   const uint32_t chunkNum = 0;
 
@@ -217,7 +217,7 @@ int main(int argc, char** argv)
 
   int matches = 0;
 
-  std::string test1 = argc > 1 ? argv[1] : "the";
+  std::string test1 = argc > 1 ? argv[1] : "pope francis";
   std::string test2 = "united states of america";
   std::string test3 = "ann arbor michigan";
   std::string test4 = "computer science";
