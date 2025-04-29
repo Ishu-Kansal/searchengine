@@ -199,7 +199,7 @@ std::vector<UrlRank> run_engine(std::string& query, uint32_t numChunks,
 int main(int argc, char** argv) 
 {
   const std::string data_filename = "websites_data.jsonl";
-  const uint32_t numChunks = 100;
+  const uint32_t numChunks = 400;
 /*
   const uint32_t chunkNum = 0;
 

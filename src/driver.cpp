@@ -57,10 +57,10 @@ std::string Driver::decode_html_entities(const std::string& input) {
 
         // Check for numeric entity
         if (!entity.empty() && entity[0] == '#') {
-          char decoded_char = '?';  // fallback
+          char decoded_char = ' ';  // fallback
           try {
             if (!entity.empty() && entity[0] == '#') {
-              std::string decoded_char = "?";  // fallback
+              std::string decoded_char = "";  // fallback
               try {
                 int code = 0;
                 if (entity[1] == 'x' || entity[1] == 'X') {
@@ -88,13 +88,13 @@ std::string Driver::decode_html_entities(const std::string& input) {
                       static_cast<char>(0x80 | (code & 0x3F))};
                 }
               } catch (...) {
-                decoded_char = "?";
+                decoded_char = "";
               }
               output += decoded_char;
               i = semicolon + 1;
             }
           } catch (...) {
-            decoded_char = '?';
+            decoded_char = ' ';
           }
           output += decoded_char;
           i = semicolon + 1;
@@ -153,44 +153,12 @@ std::vector<UrlRank> run_engine_helper(std::string& query, uint32_t numChunks,
   QueryParser parser(query, numChunks, reader);
   std::unique_ptr<Constraint> constraint = parser.Parse();
 
-<<<<<<< Updated upstream
-   std::cout << "Calling parser" << std::endl;
-   QueryParser parser(query, numChunks, reader);
-   std::cout << "Out of parser" << std::endl;
-   std::unique_ptr<Constraint> constraint = parser.Parse();
-
-   if (constraint)
-   {
-      std::unique_ptr<ISR> isrs = constraint->Eval(sequences);
-
-      if (!isrs)
-      {
-         std::cerr << "Warning: Constraint evaluation returned null ISR." << std::endl;
-         return {};
-      }
-
-      int sequences_length = 0;
-      for (auto& sequence : sequences)
-      {
-          sequences_length += sequence.size();
-      }
-
-      std::cout << "Calling constraint solver" << std::endl;
-      std::vector<UrlRank> raw_results = constraint_solver(isrs, sequences, numChunks, reader, matches, sequences_length);
-
-      return raw_results;
-   }
-   else
-   {
-      std::cerr << "Query parsing failed for: " << query << std::endl;
-=======
   if (constraint) {
     std::unique_ptr<ISR> isrs = constraint->Eval(sequences);
 
     if (!isrs) {
       std::cerr << "Warning: Constraint evaluation returned null ISR."
                 << std::endl;
->>>>>>> Stashed changes
       return {};
     }
 
@@ -209,43 +177,14 @@ std::vector<UrlRank> run_engine_helper(std::string& query, uint32_t numChunks,
   }
 }
 
-<<<<<<< Updated upstream
-std::vector<std::pair<std::string, int>> Driver::run_engine(std::string& query, std::string& summary, IndexFileReader& reader) {
-=======
-<<<<<<< Updated upstream
-std::vector<std::string> Driver::run_engine(std::string& query, std::string& summary, IndexFileReader& reader) {
->>>>>>> Stashed changes
+std::vector<std::pair<std::string, int>> Driver::run_engine(std::string& query, std::string& summary, IndexFileReader& reader, const uint32_t numChunks) {
+
    const std::string data_filename = "websites_data.jsonl";
-   const uint32_t numChunks = 100;
-=======
-std::vector<std::string> Driver::run_engine(std::string& query,
-                                            std::string& summary) {
-  const std::string data_filename = "websites_data.jsonl";
-  const uint32_t numChunks = 1010;
->>>>>>> Stashed changes
 
-  const uint32_t chunkNum = 0;
+   const uint32_t chunkNum = 0;
 
-<<<<<<< Updated upstream
    int matches = 0;
-=======
-  IndexFileReader reader(numChunks);
 
-  int matches = 0;
->>>>>>> Stashed changes
-
-<<<<<<< Updated upstream
-   std::vector<std::pair<std::string, int>> urls;
-   if (!results.empty())
-   {
-      std::cout << "Found " << matches << " results for query (showing top " << results.size() << "):" << std::endl;
-      for (const auto &url_sv : results)
-      {
-         std::cout << "  Rank: " << url_sv.rank << " - " << url_sv.url << std::endl;
-         urls.emplace_back(url_sv.url, url_sv.rank);
-      }
-   }
-=======
   std::cout << "\n--- Running Query: [" << query << "] ---" << std::endl;
   auto start = std::chrono::high_resolution_clock::now();
   std::vector<UrlRank> results =
@@ -254,17 +193,15 @@ std::vector<std::string> Driver::run_engine(std::string& query,
   std::chrono::duration<double> elapsed = end - start;
   std::cout << "Query execution time: " << elapsed.count() << " seconds"
             << std::endl;
->>>>>>> Stashed changes
 
-  std::vector<std::string> urls;
+  std::vector<std::pair<std::string, int>> urls;
   if (!results.empty()) {
-    std::cout << "Found " << matches << " results for query (showing top "
-              << results.size() << "):" << std::endl;
-    for (const auto& url_sv : results) {
-      std::cout << "  Rank: " << url_sv.rank << " - " << url_sv.url
-                << std::endl;
-      urls.emplace_back(url_sv.url);
-    }
+     std::cout << "Found " << matches << " results for query (showing top " << results.size() << "):" << std::endl;
+     for (const auto &url_sv : results)
+     {
+        std::cout << "  Rank: " << url_sv.rank << " - " << url_sv.url << std::endl;
+        urls.emplace_back(url_sv.url, url_sv.rank);
+     }
   }
 
   std::ostringstream oss;

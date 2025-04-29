@@ -4,9 +4,9 @@ let allResults = [];
 let currentPage = 0;
 const pageSize = 10;
 
-const distribute_query = false;
-const server_ip_addresses = ['10.0.0.141', '10.0.0.141', '10.0.0.141'];
-const server_ports = ['8000', '8000', '8000'];
+const distribute_query = true;
+const server_ip_addresses = ['35.193.146.217','34.121.214.49', '34.170.70.111', '34.9.74.17', '34.27.61.33', '34.55.168.229', '35.188.206.235'];
+const server_ports = ['8000', '8000', '8000', '8000', '8000', '8000', '8000'];
 
 // DOM References
 const searchForm = document.getElementById('searchForm');
@@ -49,16 +49,29 @@ searchForm.addEventListener('submit', async function (e) {
   currentPage = 0;
   allResults = [];
   searchResultsContainer.innerHTML = '';
-  document.getElementById('aiSummaryContainer').style.display = 'none';
-  paginationControls.style.display = 'none';
-  aiSummaryImageContainer.style.display = 'none';
-  toggleAISummary();
-  document.getElementById('aiSummaryTitle').innerText = 'AI Summary';
 
+  // Set up AI summary container to say Generating...
+  document.getElementById('aiSummaryContainer').style.display = 'block';
+  document.getElementById('aiSummaryContent').style.display = 'block';
+  document.getElementsByClassName('panel-heading')[0].style.borderBottomLeftRadius = '0px';
+  document.getElementsByClassName('panel-heading')[0].style.borderBottomRightRadius = '0px';
+  const icon = document.getElementById('aiToggleIcon');
+  icon.classList.remove('glyphicon-chevron-down');
+  icon.classList.add('glyphicon-chevron-up');
+  document.getElementById('aiSummaryTitle').innerText = 'AI Summary';
+  document.getElementById('aiSummaryText').innerText = 'Generating...';
+  aiSummaryImageContainer.style.display = 'none';
+  let aiText = "";
+  
+  // Hide pagination controls
+  paginationControls.style.display = 'none';
+
+  // Add loading animation to search button and prevent it from being clicked again
   submitButton.classList.add('loading');
   submitButton.disabled = true;
   loadingIndicator.style.display = 'block';
 
+  // Hide search summary containing number of found documents and speed
   document.getElementById('searchSummaryBox').style.display = 'none';
 
   // Choose a random GIF
@@ -81,9 +94,8 @@ searchForm.addEventListener('submit', async function (e) {
     }, 2000);
   }, 1000);
 
-  let aiText = "";
-
   try {
+    // Send a request to OpenAI to summarize the topic of the search query
     const aiPromise = fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -108,6 +120,7 @@ searchForm.addEventListener('submit', async function (e) {
     });
 
     if (distribute_query) {
+      // Send the search query to every machine listed at the top
       const searchPromises = [];
       for (let i = 0; i < server_ip_addresses.length; i++) {
         searchPromises.push(
@@ -121,43 +134,123 @@ searchForm.addEventListener('submit', async function (e) {
         );
       }
 
+      // Wait for the results to come back
       const results = await Promise.allSettled(searchPromises.map(p =>
         p.then(res => res.ok ? res.json() : Promise.reject(res.status))
       ));
 
+      // Filter out results that did not come back
       const searchData = results
         .filter(r => r.status === 'fulfilled')
         .map(r => r.value);
 
       console.log('Search API responses completed');
 
+      // If no results, error
       if (searchData.length <= 0) {
         searchSummaryBox.style.display = 'none';
         throw new Error('Search API error');
       }
 
-      // TODO: Aggregate all summaries into one
       const searchSummaryBox = document.getElementById('searchSummaryBox');
       const searchSummaryText = document.getElementById('searchSummaryText');
       searchSummaryText.textContent = '';
 
       const resultMap = new Map();
-      
+
+      let totalMatches = 0;
+      let maxTime = 0.0;
+      const detailedSummaries = [];
+
+      // Aggregate all search summaries
       for (let i = 0; i < searchData.length; i++) {
         if (searchData[i].summary) {
-          searchSummaryText.textContent += searchData[i].summary + '\n';
+          const summaryParts = searchData[i].summary.match(/Found (\d+) matches in ([\d.]+) seconds/);
+          if (summaryParts) {
+            const matches = parseInt(summaryParts[1], 10);
+            const seconds = parseFloat(summaryParts[2]);
+            totalMatches += matches;
+            if (seconds > maxTime) {
+              maxTime = seconds;
+            }
+
+            // Format matches with commas for detailed summary
+            detailedSummaries.push(`${server_ip_addresses[i]} - ${matches.toLocaleString()} matches, ${seconds} seconds`);
+          }
+          
           searchSummaryBox.style.display = 'block';
         }
-        console.log(searchData[i].results);
+
+        // Filter out duplicate and empty URLs
         for (let j = 0; j < searchData[i].results.length; j++) {
-          if (!resultMap.has(searchData[i].results[j].url)) {
+          if (!resultMap.has(searchData[i].results[j].url) && searchData[i].results[j].url !== '') {
             resultMap.set(searchData[i].results[j].url, searchData[i].results[j]);
           }
         }
       }
 
+      // Create a container for the aggregated text and button
+      const summaryHeader = document.createElement('div');
+      summaryHeader.style.display = 'flex';
+      summaryHeader.style.justifyContent = 'space-between';
+      summaryHeader.style.alignItems = 'center';
+
+      // Aggregated summary text
+      const aggregatedSummary = document.createElement('div');
+      aggregatedSummary.textContent = `Found ${totalMatches.toLocaleString()} matches in ${maxTime.toFixed(3)} seconds`;
+
+      // Expand button
+      const expandButton = document.createElement('button');
+      expandButton.textContent = 'See Details';
+      expandButton.style.padding = '4px 10px';
+      expandButton.style.border = 'none';
+      expandButton.style.backgroundColor = 'transparent';
+      expandButton.style.cursor = 'pointer';
+      expandButton.style.fontSize = '0.9em';
+      expandButton.style.color = '#212529';
+
+      // Make text darker on hover
+      expandButton.addEventListener('mouseenter', () => {
+        expandButton.style.color = '#0a58ca';
+      });
+
+      // Return to original color
+      expandButton.addEventListener('mouseleave', () => {
+        expandButton.style.color = '#212529'; 
+      });
+
+      // Assemble header
+      summaryHeader.appendChild(aggregatedSummary);
+      summaryHeader.appendChild(expandButton);
+
+      // Clear and insert the new header into searchSummaryText
+      searchSummaryText.innerHTML = '';
+      searchSummaryText.appendChild(summaryHeader);
+
+      // Expand/Collapse behavior
+      let expanded = false;
+      expandButton.addEventListener('click', () => {
+        if (!expanded) {
+          const detailedText = document.createElement('div');
+          detailedText.id = 'detailedSummaryText';
+          detailedText.style.marginTop = '10px';
+          detailedText.textContent = detailedSummaries.join('\n');
+          searchSummaryText.appendChild(detailedText);
+          expandButton.textContent = 'Hide Details';
+        } else {
+          const detailedText = document.getElementById('detailedSummaryText');
+          if (detailedText) {
+            detailedText.remove();
+          }
+          expandButton.textContent = 'Show Details';
+        }
+        expanded = !expanded;
+      });
+
+      // Sort the results by rank
       allResults = Array.from(resultMap.values()).sort((a, b) => b.rank - a.rank);
 
+      // If there are no results, display error
       if (allResults.length === 0) {
         searchResultsContainer.innerHTML = `
           <p style="text-align: center; color:rgb(0, 0, 0); margin-top: 30px;">
@@ -167,11 +260,13 @@ searchForm.addEventListener('submit', async function (e) {
       else {
         fetchedPages.clear();
       
-        renderPage(0); // Show results right away
+        // Show results right away
+        renderPage(0);
 
-        // Start fetching snippets immediately after search response
+        // Start fetching snippets immediately displaying after search response
         fetchSnippetsForPage(0).then(() => {
-          renderPage(currentPage); // Re-render with snippets
+          // Re-render page with snippets
+          renderPage(currentPage); 
           paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
         }).catch(error => {
           console.error('Snippet Fetch Error:', error);
@@ -223,15 +318,18 @@ searchForm.addEventListener('submit', async function (e) {
           </p>`;
       }
       else {
-        allResults = searchData.results;
+        // Filter out empty urls
+        allResults = searchData.results.filter(result => result.url !== '');
 
         fetchedPages.clear();
 
-        renderPage(0); // Show results right away
+        // Show results right away
+        renderPage(0);
 
         // Start fetching snippets immediately after search response
         fetchSnippetsForPage(0).then(() => {
-          renderPage(currentPage); // Re-render with snippets
+          // Re-render page with snippets
+          renderPage(currentPage);
           paginationControls.style.display = allResults.length > pageSize ? 'block' : 'none';
         }).catch(error => {
           console.error('Snippet Fetch Error:', error);
@@ -266,8 +364,10 @@ searchForm.addEventListener('submit', async function (e) {
     clearInterval(gifInterval);
     gifInterval = null;
 
-    loadingGif.style.display = 'none'; // Ensure GIF is hidden
-    loadingGif.src = ''; // Clear GIF source
+    // Hide GIF
+    loadingGif.style.display = 'none'; 
+    // Clear GIF source
+    loadingGif.src = ''; 
     
     loadingIndicator.style.display = 'none';
     submitButton.classList.remove('loading');
@@ -289,13 +389,26 @@ async function fetchSnippetsForPage(pageIndex) {
   }
 
   try {
-    const snippetResponse = await fetch('/api/snippets/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
-      },
-      body: JSON.stringify({ urls: urlsToFetch })
-    });
+    let snippetResponse;
+    if (distribute_query) {
+      const randomIndex = Math.floor(Math.random() * server_ip_addresses.length);
+      snippetResponse = await fetch('http://' + server_ip_addresses[randomIndex] + ':' + server_ports[randomIndex] + '/api/snippets/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8'
+        },
+        body: JSON.stringify({ urls: urlsToFetch })
+      });
+    }
+    else {
+      snippetResponse = await fetch('/api/snippets/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8'
+        },
+        body: JSON.stringify({ urls: urlsToFetch })
+      });
+    }
 
     if (!snippetResponse.ok) {
       throw new Error(`Snippet API error: ${snippetResponse.status}`);
@@ -524,7 +637,7 @@ async function handleImageSearch(e, file) {
   e.preventDefault();
 
   let questionText = "Describe what is in the image in as few words as possible, no more than 3 words";
-  console.log("Image selected:", file);
+  //console.log("Image selected:", file);
 
   // Reset UI and state
   currentPage = 0;
@@ -600,7 +713,7 @@ async function handleImageSearch(e, file) {
         const uploadData = await uploadResponse.json();
         if (!uploadData.id) throw new Error("File upload failed.");
         const fileId = uploadData.id;
-        console.log("Uploaded file ID:", fileId);
+        //console.log("Uploaded file ID:", fileId);
 
         // Query using file_id
         const response = await fetch("https://api.openai.com/v1/responses", {
@@ -636,7 +749,7 @@ async function handleImageSearch(e, file) {
         }
 
         if (!resultText) throw new Error("No valid response from API.");
-        console.log("Response:", resultText);
+        //console.log("Response:", resultText);
         queryInput.value = resultText;
         searchForm.dispatchEvent(new Event('submit'));
 

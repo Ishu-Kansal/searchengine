@@ -55,7 +55,7 @@ int get_rank_score(int nearTopAnchorCount, int shortSpans, int topSpans, bool is
    // assign the weights based on what we are running the ranker on
    // urls will get higher weights than titles, titles will get higher weights than body, and body gets a normal weight
    if (isBody) {
-       sectionWeight = BODYWEIGHT;
+       sectionWeight = BODYWEIGHT;  
    }
    else {
        sectionWeight = TITLEWEIGHT;
@@ -93,29 +93,33 @@ int get_dynamic_rank(const std::vector<AnchorTermIndex> &rarestAnchorTermVectors
 
        const std::string & anchorWord = anchorTerm->GetWord();
        // Attempts to load all postings in this document for the current anchor
-       locationVector anchorLocations = reader.LoadChunkOfPostingList(
-           anchorWord,
-           currChunk,  
-           startLocation,
-           endLocation,
-           anchorTerm->GetSeekTableIndex()
-       );
+        if (shortestSpanPossible == 1)
+        {
+            // If the query is one term long
+            // count the number of occurence near the top of the document and treat it as its rank
+            if (isBody) return 0;
+            return reader.LoadChunkOfPostingList
+            (
+                anchorWord,
+                currChunk,  
+                startLocation,
+                std::min(startLocation + Requirements::TOPSPANSIZE, endLocation),
+                anchorTerm->GetSeekTableIndex()
+            ).size();
+
+        }
+        locationVector anchorLocations = reader.LoadChunkOfPostingList(
+            anchorWord,
+            currChunk,  
+            startLocation,
+            endLocation,
+            anchorTerm->GetSeekTableIndex()
+        );
+       
+       
        
        if (!anchorLocations.empty())
        {
-            // If the query is one term long
-            // count the number of occurence near the top of the document and treat it as its rank
-            if (shortestSpanPossible == 1)
-            {  
-                for (const auto & loc : anchorLocations)
-                {
-                    if (loc < startLocation + Requirements::TOPSPANSIZE)
-                    {
-                        ++nearTopAnchor;
-                    }
-                }
-            return nearTopAnchor;
-            }
             // Vector to hold min span calculations for anchor word
             locationVector minSpansVector(anchorLocations.size(), 0);
             

@@ -8,12 +8,13 @@
 #include <algorithm>
 #include <cctype>
 #include <sstream>
+#include <array>
 
 #include "isr/isr.h"
 #include "ranker/dynamic_rank.h"
 
 
-constexpr size_t TOTAL_DOCS_TO_RETURN = 128;
+constexpr size_t TOTAL_DOCS_TO_RETURN = 32;
 /** @brief Weights for url matching */
 constexpr size_t HOST_MATCH_SCORE = 256;
 constexpr size_t PATH_MATCH_SCORE = 128;
@@ -67,6 +68,19 @@ int getShortestSpan(int queryLen)
   return SHORTEST_SPAN_TABLE[queryLen];
 }
 
+std::string to_lower_copy(const std::string& input) 
+{
+  std::string result;
+  result.reserve(input.length()); 
+  std::transform(
+      input.begin(),
+      input.end(),
+      std::back_inserter(result),
+      [](unsigned char c) { return std::tolower(c); }
+  );
+  return result;
+}
+
 struct ParsedUrlRanking 
 {
   std::string host;               // e.g., "www.example.com", "example.co.uk:8080"
@@ -112,6 +126,12 @@ ParsedUrlRanking parseUrl(const std::string& url_string) {
       {
            result.path = "/";
       }
+  }
+
+  std::string lower_url_temp = to_lower_copy(url_string);
+  if (lower_url_temp.find("wikipedia") != std::string::npos) {
+      result.host = to_lower_copy(result.host);
+      result.path = to_lower_copy(result.path);
   }
 
   if (result.path.length() > 1 && result.path[0] == '/') 
@@ -234,6 +254,28 @@ void insertionSort(vector<UrlRank> & topRankedDocs, UrlRank & rankedDoc)
   topRankedDocs[pos] = std::move(docToInsert);
 }
 
+bool isSpecificWordInPath(const std::string& path, const std::string& word) 
+{
+  if (word.empty() || path.length() < word.length()) return false;
+
+      size_t foundPos = path.find(word);
+
+      if (foundPos == std::string::npos) {
+          return false;
+      }
+
+      bool beforeOk = (foundPos == 0) || (path[foundPos - 1] == '/');
+
+      size_t afterPos = foundPos + word.length();
+      bool afterOk = (afterPos == path.length()) ||
+                      (afterPos < path.length() && (path[afterPos] == '/'));
+
+      if (beforeOk && afterOk) {
+          return true;
+      }
+
+  return false;
+}
 float calculateURLscore(const ParsedUrlRanking & parsedUrl,
                        const std::vector<std::vector<std::unique_ptr<ISRWord>>> &orderedQueryTerms)
 {
@@ -342,6 +384,23 @@ float calculateURLscore(const ParsedUrlRanking & parsedUrl,
     }
     return currScore;
 }
+int calculateSingleWordQueryScore(const ParsedUrlRanking & parsedUrl,
+  const std::unique_ptr<ISRWord> & queryWord)
+  {
+    auto foundWiki = parsedUrl.host.find("wikipedia");
+    auto foundDict = parsedUrl.host.find("dictionary");
+    const auto & word = queryWord->GetWord();
+    if (foundWiki == std::string::npos && foundDict == std::string::npos) 
+    {
+      return 0;
+    }
+    if (isSpecificWordInPath(parsedUrl.path, word))
+    {
+      return 1000;
+    }
+    return 0;
+  }
+
 // actual constraint solver function
 std::vector<UrlRank> constraint_solver(
   std::unique_ptr<ISR> &queryISR,
@@ -393,38 +452,44 @@ std::vector<UrlRank> constraint_solver(
           if (!doc) break;
 
           int shortestSpanPossible = getShortestSpan(queryLength);
-          int dynamic_score = get_dynamic_rank(
-            rarestTermInOrder,
-            orderedQueryTerms, 
-            docStartLoc, 
-            docEndLoc,
-            reader,
-            chunkNum,
-            bodyText,
-            shortestSpanPossible);
-          // std::cout << "Dynamic rank: " << dynamic_score << '\n';
-          // Dynamic score for title words
-
-          /*
-          int title_score = get_dynamic_rank(
-            rarestTermInOrder,
-            titleTerms,
-            docStartLoc,
-            docEndLoc,
-            reader,
-            chunkNum,
-            !bodyText,
-            shortestSpanPossible);
-            */
-          ParsedUrlRanking parsedUrl = parseUrl(doc->url);
-          int url_score = calculateURLscore(parsedUrl, orderedQueryTerms);
-          if (parsedUrl.path.size() <= MAX_SHORT_URL_LEN) url_score += SHORT_URL_BOOST;
-
-          // if (parsedUrl.host.size() < MAX_SHORT_URL_LEN) url_score += SHORT_URL_BOOST;
-          // Add weights to the score later
-          UrlRank urlRank(doc->url, dynamic_score + url_score); /*title_score + url_score + doc->staticRank*/
-          // cout << urlRank.rank << '\n';
-          insertionSort(topNdocs, urlRank); 
+          if (shortestSpanPossible > 1 || doc->url.size() < 64)
+          {
+              ParsedUrlRanking parsedUrl = parseUrl(doc->url);
+              int url_score = calculateURLscore(parsedUrl, orderedQueryTerms);
+              if (parsedUrl.path.size() <= MAX_SHORT_URL_LEN) url_score += SHORT_URL_BOOST;
+              if (shortestSpanPossible == 1)
+              {
+                url_score += calculateSingleWordQueryScore(parsedUrl, orderedQueryTerms[0][0]);
+              }
+              int dynamic_score = get_dynamic_rank(
+                rarestTermInOrder,
+                orderedQueryTerms, 
+                docStartLoc, 
+                docEndLoc,
+                reader,
+                chunkNum,
+                bodyText,
+                shortestSpanPossible);
+              // std::cout << "Dynamic rank: " << dynamic_score << '\n';
+              // Dynamic score for title words
+  /*          
+              int title_score = get_dynamic_rank(
+                rarestTermInOrder,
+                titleTerms,
+                docStartLoc,
+                docEndLoc,
+                reader,
+                chunkNum,
+                !bodyText,
+                shortestSpanPossible);
+*/              
+              // if (parsedUrl.host.size() < MAX_SHORT_URL_LEN) url_score += SHORT_URL_BOOST;
+              // Add weights to the score later
+              UrlRank urlRank(doc->url, dynamic_score + url_score); /*title_score + url_score + doc->staticRank*/
+              // cout << urlRank.rank << '\n';
+              insertionSort(topNdocs, urlRank); 
+          }
+        
           currMatch = queryISR->NextDocument(currLoc, chunkNum); 
           if (!currMatch) 
           {
