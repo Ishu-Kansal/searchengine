@@ -17,6 +17,9 @@ This project features all the components of a large-scale search engine. It incl
 *   **Frontend:** JavaScript, HTML, CSS
 *   **Backend & Core Logic:** C++
 *   **Deployment & Infrastructure:** Google Cloud Platform (GCP)
+  
+## Architecture
+![System Architecture Diagram](searchengine_arch.pdf)
 
 ## Team Members  
 - **Alex Radomski** ([alexrad@umich.edu](mailto:alexrad@umich.edu))  
