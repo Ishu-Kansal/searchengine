@@ -19,7 +19,7 @@ This project features all the components of a large-scale search engine. It incl
 *   **Deployment & Infrastructure:** Google Cloud Platform (GCP)
   
 ## Architecture
-![System Architecture Diagram](searchengine_arch.pdf)
+![System Architecture Diagram](searchengine_arch.png)
 
 ## Team Members  
 - **Alex Radomski** ([alexrad@umich.edu](mailto:alexrad@umich.edu))  
